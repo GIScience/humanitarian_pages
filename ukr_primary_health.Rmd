@@ -1,0 +1,169 @@
+---
+title: "UKR primary health"
+author: "Marcel Reinmuth"
+date: "`r Sys.Date()`"
+output: 
+  html_document:
+    code_folding: hide
+    toc: true
+    number_sections: true
+    toc_float:
+      collapsed: false
+    theme: cerulean
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, collapse = TRUE, message=FALSE, warning=FALSE)
+```
+
+This is an exploratory analysis for access to primary healthcare of places/settlements in Ukraine .
+
+# Setup
+
+## Libraries
+
+The following libraries are used for in this R markdown document.
+
+```{r "Libraries", warning = FALSE, message = FALSE}
+library(sf)
+library(tidyverse)
+library(tmap)
+library(units)
+
+```
+
+## input data
+
+```{r}
+ukr_health <- st_read("places_vinnytska.gpkg", quiet=T)
+union_isochrones <- st_read("isochrones_union_vinnytska.gpkg", quiet=T)
+
+
+ukr_health$travel_time <- ukr_health$travel_time |> set_units("seconds") |>  set_units("minutes") |> round(3)
+
+ukr_health$travel_distance <- ukr_health$travel_distance |> set_units("meter") |> set_units("km") |> round(3)
+
+ukr_health$min_distance <- ukr_health$min_distance |> set_units("meter") |> set_units("km") |> round(3)
+
+
+union_isochrones$value <- union_isochrones$value |> set_units("seconds") |>  set_units("minutes") |> round(3)
+
+union_isochrones <- union_isochrones |> arrange(desc(value))
+
+```
+
+# Explorative analysis
+
+## Travel Time
+
+```{r}
+tmap_mode("view")
+
+tm_basemap("OpenStreetMap") +
+  tm_shape(ukr_health) +
+  tm_symbols(
+    col = "travel_time",
+    palette = viridis::viridis(6),
+    n=6,
+    size = 0.1,
+    border.lwd = 0,
+    popup.vars = c("settlement", "travel_time", "travel_distance")
+  )
+
+```
+
+## Travel distance vs. euclidean distance
+
+
+### Distribution of distances
+
+We see that the travel distances are much longer than the Euclidean distances.
+
+
+```{r}
+
+library(plyr)
+library(ggplot2)
+
+
+df <- rbind(
+  data.frame(level4=ukr_health$level4,
+             distance=ukr_health$min_distance,
+             type="euclidean dist"),
+  data.frame(level4=ukr_health$level4,
+             distance=ukr_health$travel_distance,
+             type="travel distance")
+)
+
+mu <- ddply(df, "type", summarise, grp.mean=mean(distance, na.rm=T))
+
+
+
+ggplot(df, aes(x=distance, color=type, fill=type)) +
+geom_histogram(aes(y=..density..), position="identity", alpha=0.5)+
+geom_density(alpha=0.6)+
+geom_vline(data=mu, aes(xintercept=grp.mean, color=type),
+           linetype="dashed")+
+labs(title="Distance histogram",x="Distance", y = "Density")
+
+```
+
+
+
+### Map
+
+
+```{r}
+
+m.1 <- tm_basemap("OpenStreetMap") +
+  tm_shape(ukr_health) +
+  tm_symbols(
+    col = "travel_distance",
+    palette = viridis::viridis(6),
+    n=6,
+    size = 0.1,
+    border.lwd = 0,
+    popup.vars = c("settlement", "travel_distance", "min_distance")
+  )
+
+m.2 <- tm_basemap("OpenStreetMap") +
+  tm_shape(ukr_health) +
+  tm_symbols(
+    col = "min_distance",
+    palette = viridis::viridis(6),
+    n=6,
+    size = 0.1,
+    border.lwd = 0,
+    popup.vars = c("settlement", "travel_distance", "min_distance")
+  )
+
+tmap_arrange(m.1,m.2, sync = T)
+
+```
+
+
+
+## Map Isochrones
+
+```{r}
+
+tm_basemap("OpenStreetMap") +
+  tm_shape(union_isochrones |> st_make_valid()) +
+  tm_polygons(
+    col = "value",
+    palette = viridis::viridis(6),
+    n=6,
+    alpha = 0.75,
+    border.col = 0.1
+  ) 
+# +
+#   tm_shape(ukr_health) +
+#   tm_dots(
+#     size = 0.1,
+#     border.lwd = 0,
+#     popup.vars = c("settlement", "travel_distance", "min_distance")
+#   )
+#   
+
+
+```
