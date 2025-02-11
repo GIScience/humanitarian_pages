@@ -1,0 +1,104 @@
+---
+title: "Sketch Map Tool Numbers"
+author: "Team Sketch Map Tool"
+date: "`r Sys.Date()`"
+output: 
+  html_document:
+    code_folding: hide
+    toc: true
+    number_sections: true
+    toc_float:
+      collapsed: true
+    theme: cerulean
+editor_options: 
+  chunk_output_type: console
+  markdown: 
+    wrap: sentence
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(readr)
+library(ggplot2)
+library(lubridate)
+library(plotly)
+
+
+```
+
+# lol cap 1
+
+we load the data
+
+```{r,message=FALSE}
+sketchmap_report_sketchmaps_20250115 <- read_delim("sketchmap-report-sketchmaps_20250115.csv",
+                                                   delim = ";", escape_double = FALSE, trim_ws = TRUE)
+
+sketchmap_report_sketchmaps_20250115_filter <- sketchmap_report_sketchmaps_20250115 |> filter(created_at > '2024-12-05' |> as.Date())
+# cum counts per day for each layer
+cumulative_counts <- sketchmap_report_sketchmaps_20250115_filter |>
+  arrange(created_at) |>
+  mutate(day = floor_date(created_at, "day")) |>
+  count(day, layer) |>
+  group_by(layer) |>
+  arrange(day) |>  # Ensure correct order within each layer
+  mutate(cumulative_count = cumsum(n)) |>
+  ungroup()
+
+# cum counts per day for all sketch maps
+total_counts <- cumulative_counts |>
+  group_by(day) |>
+  summarise(n = sum(n), .groups = "drop") |>
+  mutate(layer = "Total") |>
+  arrange(day) |>
+  mutate(cumulative_count = cumsum(n))
+
+# combine to one long table
+final_counts <- bind_rows(cumulative_counts, total_counts) |>
+  arrange(day, layer)
+
+
+# plot
+chart1 <- final_counts |>
+  ggplot(aes(x = day, y = cumulative_count, color=layer)) +
+  geom_line() +
+  geom_point() +
+  labs(title = "Cumulative Count of Sketchmaps Over Time",
+       x = "Days",
+       y = "Cumulative Count") +
+  theme_classic()
+
+ggplotly(chart1)
+```
+
+
+
+# lol cap 2
+
+```{r}
+#osm esri chart
+
+donut <-sketchmap_report_sketchmaps_20250115_filter |> 
+  group_by(layer) |> 
+  summarise(count=n())
+
+donut$fraction <- donut$count / sum(donut$count)
+donut$ymax <- cumsum(donut$fraction)
+donut$ymin <- c(0, head(donut$ymax, n=-1))
+
+
+chart2 <- ggplot(donut, aes(ymax=ymax, ymin=ymin, xmax=2, xmin=1, fill=layer)) +
+  geom_rect() +
+  coord_polar(theta="y") +
+  xlim(c(0.2, 2.5)) + 
+  theme_void() +  
+  theme(legend.position = "right") +
+  labs(fill="Layer")
+
+chart2
+
+```
+
+
+#cap3
