@@ -23,15 +23,23 @@ library(readr)
 library(ggplot2)
 library(lubridate)
 library(plotly)
+library(tmap)
+library(sf)
+library(rnaturalearth)
+
 
 
 ```
+# Background and data
 
-# lol cap 1
+Since 2024-12-05 we are analyzing the Apache Log which provides us with insides of the tool usage based in the IP adress.
 
-we load the data
 
-```{r,message=FALSE}
+# Creation of Sketch Maps
+
+
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
 sketchmap_report_sketchmaps_20250115 <- read_delim("sketchmap-report-sketchmaps_20250115.csv",
                                                    delim = ";", escape_double = FALSE, trim_ws = TRUE)
 
@@ -74,9 +82,9 @@ ggplotly(chart1)
 
 
 
-# lol cap 2
+# Use of baselayers
 
-```{r}
+```{r,message=FALSE}
 #osm esri chart
 
 donut <-sketchmap_report_sketchmaps_20250115_filter |> 
@@ -100,5 +108,158 @@ chart2
 
 ```
 
+# Map format used for map creation
 
-#cap3
+```{r,message=FALSE}
+donut_format <-sketchmap_report_sketchmaps_20250115_filter |> 
+  group_by(format) |> 
+  summarise(count=n())
+
+donut_format$fraction <- donut_format$count / sum(donut_format$count)
+donut_format$ymax <- cumsum(donut_format$fraction)
+donut_format$ymin <- c(0, head(donut_format$ymax, n=-1))
+
+
+chart_format <- ggplot(donut_format, aes(ymax=ymax, ymin=ymin, xmax=2, xmin=1, fill=format)) +
+  geom_rect() +
+  coord_polar(theta="y") +
+  xlim(c(0.2, 2.5)) + 
+  theme_void() +  
+  theme(legend.position = "right") +
+  labs(fill="Layer")
+
+chart_format
+
+
+```
+
+
+# Orientation chosen for map creation
+
+```{r,message=FALSE}
+
+#why is this not binary and other languages included
+
+donut_orientation <-sketchmap_report_sketchmaps_20250115_filter |> 
+  group_by(orientation) |> 
+  summarise(count=n())
+
+donut_orientation$fraction <- donut_orientation$count / sum(donut_format$count)
+donut_orientation$ymax <- cumsum(donut_orientation$fraction)
+donut_orientation$ymin <- c(0, head(donut_orientation$ymax, n=-1))
+
+
+chart_orientation <- ggplot(donut_orientation, aes(ymax=ymax, ymin=ymin, xmax=2, xmin=1, fill=orientation)) +
+  geom_rect() +
+  coord_polar(theta="y") +
+  xlim(c(0.2, 2.5)) + 
+  theme_void() +  
+  theme(legend.position = "right") +
+  labs(fill="Layer")
+
+chart_orientation
+```
+
+
+
+# Language used to create Sketch Map
+
+```{r, message = FALSE}
+
+#why are there ES and es, why are there missing values if we have filtered already to dec 5
+
+donut_lang <-sketchmap_report_sketchmaps_20250115_filter |> 
+  group_by(created_lang) |> 
+  summarise(count=n())
+
+donut_lang$fraction <- donut_lang$count / sum(donut_lang$count)
+donut_lang$ymax <- cumsum(donut_lang$fraction)
+donut_lang$ymin <- c(0, head(donut_lang$ymax, n=-1))
+
+# Total count of all values(to put to the legend, does not work so far)
+total_count <- sum(donut_lang$count)
+
+chart_lang <- ggplot(donut_lang, aes(ymax=ymax, ymin=ymin, xmax=2, xmin=1, fill=created_lang)) +
+  geom_rect() +
+  coord_polar(theta="y") +
+  xlim(c(0.2, 2.5)) + 
+  theme_void() +  
+  theme(legend.position = "right") +
+  labs(fill="Layer") +
+  annotate("text", x = 2.7, y = 0, label = paste("Total: ", total_count), size = 5,hjust = 0)
+
+chart_lang
+```
+
+
+# Countries where Sketch Maps have been created from
+
+```{r,message=FALSE}
+
+plot_data_country <- sketchmap_report_sketchmaps_20250115_filter %>%
+  group_by(created_from_country) %>%
+  summarise(n = n())
+
+#why are there entries since dec 5 without information created_from_country (as well as no information for other columns based on Apache)
+
+
+#download worldmap
+world <- ne_countries(scale = "medium", returnclass = "sf")
+#world_lokal <- st_read("/Users/aschauss/Documents/SketchMapTool/Statistics/Map/world-administrative-boundaries.geojson")
+
+
+#transfrom to Mollweide
+world_mollweide <- st_transform(world, crs = "+proj=moll")
+#world_lokal <- st_transform(world_lokal, crs = "+proj=moll")
+
+#group by iso code
+sketchmap_report_sketchmaps_20250115_filter_iso <- sketchmap_report_sketchmaps_20250115_filter %>%
+  group_by(created_from_iso_code) %>%
+  summarise(count = sum(!is.na(created_from_iso_code)))
+
+#rightjoin with world
+sketchmap_report_world_iso <- sketchmap_report_sketchmaps_20250115_filter_iso %>%
+  rename(iso_a2 = created_from_iso_code) %>%
+  right_join(world_mollweide, by = "iso_a2")
+
+#back to sf
+sketchmap_report_world_iso <- st_as_sf(sketchmap_report_world_iso)
+
+tmap_mode("view")
+
+#print map
+tm_shape(sketchmap_report_world_iso) +
+  tm_polygons("count", 
+              palette = "brewer.reds",
+              title = "Count per Country",
+              style = "jenks",  # Change classification method
+              n = 5  # Number of classes
+              ) +
+  tm_borders() +
+  tm_layout(main.title = "Created Sketch Maps",
+            legend.outside = TRUE,
+            legend.position = c("left", "bottom"),
+            legend.bg.color = "white",
+            legend.frame = FALSE,
+            frame = FALSE
+  )
+
+
+```
+
+
+# Number of downloaded Sketch Maps vs. created Sketch Maps
+
+
+```{r}
+
+```
+
+
+# Uploaded Sketch Maps and share of dowloaded results
+
+```{r}
+
+```
+
+# SHare of Opt-in used
