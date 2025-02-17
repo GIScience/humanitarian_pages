@@ -80,6 +80,46 @@ chart1 <- final_counts |>
 ggplotly(chart1)
 ```
 
+# Downloaded Sketch Maps
+
+
+```{r,message=FALSE}
+
+#How many created SKetch Maps were actually dowloaded?
+sketchmap_report_sketchmaps_20250115_filter |> filter(!is.na(downloaded_at))|> nrow()
+
+
+```
+#Mapframes with downloads and uploads (can be multiple uploads per mapframe)
+
+```{r,message=FALSE}
+
+# Number of downloaded Sketch Maps vs. created Sketch Maps
+sketchmap_report_sketchmaps_20250115_filter |>  filter(!is.na(downloaded_at) & uploads>0) |> nrow()
+#67
+#67 downloads mapframes show and uploads. Uploads csv = 296. Does that mean that there were several multiple uploads???
+
+```
+
+#How was often consent was given to use uploaded sketchmaps to contribute to model training?
+
+
+```{r,message=FALSE}
+
+sketchmap_report_sketchmaps_20250115_filter |>  filter(!is.na(downloaded_at) & uploads>0 & consenses>0) |> nrow()
+#24
+
+
+```
+
+
+# Uploaded Sketch Maps and share of dowloaded results
+
+```{r}
+
+```
+
+# SHare of Opt-in used
 
 
 # Use of baselayers
@@ -227,7 +267,7 @@ sketchmap_report_world_iso <- st_as_sf(sketchmap_report_world_iso)
 
 tmap_mode("view")
 
-#print map
+#print map vr
 tm_shape(sketchmap_report_world_iso) +
   tm_polygons("count", 
               palette = "brewer.reds",
@@ -248,18 +288,3 @@ tm_shape(sketchmap_report_world_iso) +
 ```
 
 
-# Number of downloaded Sketch Maps vs. created Sketch Maps
-
-
-```{r}
-
-```
-
-
-# Uploaded Sketch Maps and share of dowloaded results
-
-```{r}
-
-```
-
-# SHare of Opt-in used
