@@ -26,7 +26,8 @@ library(plotly)
 library(tmap)
 library(sf)
 library(rnaturalearth)
-
+library(ggVennDiagram)
+library(ggmosaic)
 
 
 ```
@@ -35,17 +36,45 @@ library(rnaturalearth)
 Since 2024-12-05 we are analyzing the Apache Log which provides us with insides of the tool usage based in the IP adress.
 
 
-# Creation of Sketch Maps
+# Creation of Map Frames
 
 
 
 ```{r, echo=FALSE, message=FALSE, warning=FALSE}
-sketchmap_report_sketchmaps_20250115 <- read_delim("sketchmap-report-sketchmaps_20250115.csv",
-                                                   delim = ";", escape_double = FALSE, trim_ws = TRUE)
 
-sketchmap_report_sketchmaps_20250115_filter <- sketchmap_report_sketchmaps_20250115 |> filter(created_at > '2024-12-05' |> as.Date())
+#load the data. Ne newest csv files will be saved in a folder, which should always only contain the three files.
+
+files <- list.files("SMT_Input/", full.names = TRUE)
+
+if (length(files) >= 3) {
+  first_file <- files[1]
+  second_file <- files[2]
+  third_file <- files[3]
+  
+  # Read files using read_delim (or read.csv if needed)
+  sketchmap_report_map_frames <- read_delim(first_file, delim = ";", escape_double = FALSE, trim_ws = TRUE)
+  sketchmap_report_sketches <- read_delim(second_file, delim = ";", escape_double = FALSE, trim_ws = TRUE)
+  sketchmap_report_uploads <- read_delim(third_file, delim = ";", escape_double = FALSE, trim_ws = TRUE)
+} else {
+  stop("Not enough files in the folder.")
+}
+
+#sketchmap_report_uploads_20250215 <- read_delim("SMT_Input/sketchmap_report_uploads_20250215.csv", 
+   # delim = ";", escape_double = FALSE, trim_ws = TRUE)
+#View(sketchmap_report_uploads_20250215)
+
+
+#sketchmap_report_sketches_20250215 <- read_delim("SMT_Input/sketchmap_report_sketches_20250215.csv", 
+   # delim = ";", escape_double = FALSE, trim_ws = TRUE)
+#View(sketchmap_report_sketches_20250215)
+
+#sketchmap_report_map_frames_20250215 <- read_delim("SMT_Input/sketchmap_report_map-frames_20250215.csv", 
+   # delim = ";", escape_double = FALSE, trim_ws = TRUE)
+#View(sketchmap_report_map_frames_20250215)
+
+sketchmap_report_map_frames_filter <- sketchmap_report_map_frames |> filter(created_at > '2024-12-05' |> as.Date())
 # cum counts per day for each layer
-cumulative_counts <- sketchmap_report_sketchmaps_20250115_filter |>
+cumulative_counts <- sketchmap_report_map_frames_filter |>
   arrange(created_at) |>
   mutate(day = floor_date(created_at, "day")) |>
   count(day, layer) |>
@@ -72,7 +101,7 @@ chart1 <- final_counts |>
   ggplot(aes(x = day, y = cumulative_count, color=layer)) +
   geom_line() +
   geom_point() +
-  labs(title = "Cumulative Count of Sketchmaps Over Time",
+  labs(title = "Cumulative Count of Mapframes Over Time",
        x = "Days",
        y = "Cumulative Count") +
   theme_classic()
@@ -80,13 +109,73 @@ chart1 <- final_counts |>
 ggplotly(chart1)
 ```
 
-# Downloaded Sketch Maps
+# Bounding Boxes
+```{r,message=FALSE}
+#switch to interactive
+tmap_mode("view")
 
+mapframes_bboxes <- st_as_sf(sketchmap_report_map_frames, wkt = "bbox", crs = 4326)
+
+tm_shape(mapframes_bboxes) +
+  tm_basemap("OpenStreetMap") +
+  tm_borders() +
+  tm_layout(title = "Bounding Box Localization for Generated Map Frames")
+
+
+```
+
+
+
+# Bounding Boxes per Country
+
+```{r,message=FALSE}
+
+#areas of bounding boxes: not sure yet if of interest
+#mapframes_bboxes_proj <- st_transform(mapframes_bboxes, crs = 32633)
+
+#calculate areas
+#mapframes_bboxes_proj$area <- st_area(mapframes_bboxes_proj)
+
+
+# Calculate centroids of the bounding boxes
+
+mapframes_bboxes_sf <- st_as_sf(mapframes_bboxes, wkt = "bbox", crs = 4326)
+mapframes_bboxes_sf$centroid <- st_centroid(mapframes_bboxes_sf)
+
+#Spatial join with world
+world <- ne_countries(scale = "medium", returnclass = "sf")
+
+centroids_with_country <- st_join(mapframes_bboxes_sf$centroid , world)
+
+#Groupby
+centroid_counts <- centroids_with_country %>%
+  group_by(iso_a2) %>%
+  summarise(countbbox = n_distinct(centroid), .groups = "drop")
+#join back
+centroid_counts_sf <- st_join(world, centroid_counts)
+
+tmap_mode("view")
+
+tm_shape(centroid_counts_sf ) + 
+  tm_borders() +  # Add borders of countries
+  tm_fill(col = "countbbox", 
+          palette = "brewer.reds", 
+          title = "Centroid Count",
+          style = "jenks",  # Change classification method 
+          na.color = "gray",
+          n = 5) +  # Number of classes for Jenks classification
+  tm_layout(title = "Map Frames created for Countries")
+
+```
+
+
+
+# Downloaded Sketch Maps
 
 ```{r,message=FALSE}
 
 #How many created SKetch Maps were actually dowloaded?
-sketchmap_report_sketchmaps_20250115_filter |> filter(!is.na(downloaded_at))|> nrow()
+sketchmap_report_map_frames_filter |> filter(!is.na(downloaded_at))|> nrow()
 
 
 ```
@@ -94,10 +183,17 @@ sketchmap_report_sketchmaps_20250115_filter |> filter(!is.na(downloaded_at))|> n
 
 ```{r,message=FALSE}
 
+#any possibility to track multiple uploads?
+
 # Number of downloaded Sketch Maps vs. created Sketch Maps
-sketchmap_report_sketchmaps_20250115_filter |>  filter(!is.na(downloaded_at) & uploads>0) |> nrow()
+sketchmap_report_map_frames_filter |>  filter(!is.na(downloaded_at) & uploads>0) |> nrow()
 #67
 #67 downloads mapframes show and uploads. Uploads csv = 296. Does that mean that there were several multiple uploads???
+#im Schnitt 4,5 auf einmal upgeloaded?
+
+#general number of uploads
+no_uploads <- nrow(sketchmap_report_uploads)
+#296
 
 ```
 
@@ -106,8 +202,12 @@ sketchmap_report_sketchmaps_20250115_filter |>  filter(!is.na(downloaded_at) & u
 
 ```{r,message=FALSE}
 
-sketchmap_report_sketchmaps_20250115_filter |>  filter(!is.na(downloaded_at) & uploads>0 & consenses>0) |> nrow()
+sketchmap_report_map_frames_filter |>  filter(!is.na(downloaded_at) & uploads>0 & consenses>0) |> nrow()
 #24
+
+test <- sketchmap_report_map_frames_filter |>  filter(!is.na(downloaded_at) & uploads>0)
+test$uploads |> sum()
+round(test$consenses |> sum() / test$uploads |> sum() *100,2)
 
 
 ```
@@ -115,7 +215,74 @@ sketchmap_report_sketchmaps_20250115_filter |>  filter(!is.na(downloaded_at) & u
 
 # Uploaded Sketch Maps and share of dowloaded results
 
-```{r}
+```{r,message=FALSE}
+
+sketchmap_report_uploads |> filter(is.na(download_raster) & is.na(download_vector)) |> nrow()
+#22
+
+download_raster <- sketchmap_report_uploads |> filter(!is.na(download_raster))
+no_raster_downloads <- nrow(download_raster) 
+# 141
+share_raster_downloads <- no_raster_downloads / no_uploads
+
+download_raster$uuid |> unique() |> length()
+#  79
+download_vector <- sketchmap_report_uploads |> filter(!is.na(download_vector))
+no_vector_downloads <- nrow(download_vector) 
+# 230
+
+share_vector_downloads <- no_vector_downloads / no_uploads
+
+download_vector$uuid |> unique() |> length()
+# 138
+
+#interesting that it is from different uuids?
+
+#try a Venn diagram
+
+#sketchmap_report_uploads_20250115 <- sketchmap_report_uploads_20250115 |> 
+  #mutate(has_raster = !is.na(download_raster),
+         #has_vector = !is.na(download_vector))
+#enn_counts <- with(sketchmap_report_uploads_20250115, table(has_raster, has_vector))
+
+#venn_data <- list(
+  #Raster = which(sketchmap_report_uploads_20250115$has_raster),
+  #Vector = which(sketchmap_report_uploads_20250115$has_vector)
+#)
+#ggVennDiagram(venn_data)
+
+# Bar Chart 
+
+
+# Categorize downloads based on raster and vector presence
+sketchmap_report_uploads <- sketchmap_report_uploads |> 
+  mutate(category = case_when(
+    !is.na(download_raster) & !is.na(download_vector) ~ "Both",
+    !is.na(download_raster) ~ "Raster Only",
+    !is.na(download_vector) ~ "Vector Only",
+    TRUE ~ "None"  # This covers cases where neither raster nor vector is downloaded
+  ))
+
+# Count each category
+category_counts <- table(sketchmap_report_uploads$category)
+total <- sum(category_counts) 
+
+# Convert to data frame for ggplot
+category_df <- as.data.frame(category_counts)
+colnames(category_df) <- c("Category", "Count")
+
+# Calculate percentage
+category_df$Percentage <- (category_df$Count / total) * 100
+
+# Plot bar chart with percentages
+ggplot(category_df, aes(x = Category, y = Percentage, fill = Category)) +
+  geom_bar(stat = "identity") +
+  labs(title = "Distribution of Raster and Vector Geodata Downloads", 
+       x = "Download Type", 
+       y = "Percentage") +
+  theme_minimal()
+
+
 
 ```
 
@@ -127,7 +294,7 @@ sketchmap_report_sketchmaps_20250115_filter |>  filter(!is.na(downloaded_at) & u
 ```{r,message=FALSE}
 #osm esri chart
 
-donut <-sketchmap_report_sketchmaps_20250115_filter |> 
+donut <-sketchmap_report_map_frames_filter |> 
   group_by(layer) |> 
   summarise(count=n())
 
@@ -151,7 +318,7 @@ chart2
 # Map format used for map creation
 
 ```{r,message=FALSE}
-donut_format <-sketchmap_report_sketchmaps_20250115_filter |> 
+donut_format <-sketchmap_report_map_frames_filter |> 
   group_by(format) |> 
   summarise(count=n())
 
@@ -180,7 +347,7 @@ chart_format
 
 #why is this not binary and other languages included
 
-donut_orientation <-sketchmap_report_sketchmaps_20250115_filter |> 
+donut_orientation <-sketchmap_report_map_frames_filter |> 
   group_by(orientation) |> 
   summarise(count=n())
 
@@ -208,7 +375,7 @@ chart_orientation
 
 #why are there ES and es, why are there missing values if we have filtered already to dec 5
 
-donut_lang <-sketchmap_report_sketchmaps_20250115_filter |> 
+donut_lang <-sketchmap_report_map_frames_filter |> 
   group_by(created_lang) |> 
   summarise(count=n())
 
@@ -236,7 +403,7 @@ chart_lang
 
 ```{r,message=FALSE}
 
-plot_data_country <- sketchmap_report_sketchmaps_20250115_filter %>%
+plot_data_country <- sketchmap_report_map_frames_filter %>%
   group_by(created_from_country) %>%
   summarise(n = n())
 
@@ -253,12 +420,12 @@ world_mollweide <- st_transform(world, crs = "+proj=moll")
 #world_lokal <- st_transform(world_lokal, crs = "+proj=moll")
 
 #group by iso code
-sketchmap_report_sketchmaps_20250115_filter_iso <- sketchmap_report_sketchmaps_20250115_filter %>%
+sketchmap_report_map_frames_filter_iso <- sketchmap_report_map_frames_filter %>%
   group_by(created_from_iso_code) %>%
   summarise(count = sum(!is.na(created_from_iso_code)))
 
 #rightjoin with world
-sketchmap_report_world_iso <- sketchmap_report_sketchmaps_20250115_filter_iso %>%
+sketchmap_report_world_iso <- sketchmap_report_map_frames_filter_iso %>%
   rename(iso_a2 = created_from_iso_code) %>%
   right_join(world_mollweide, by = "iso_a2")
 
