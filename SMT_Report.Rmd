@@ -374,7 +374,8 @@ ggplot(mapframe_counts_stacked, aes(x = "Mapframes", y = count, fill = Status)) 
 
 
 ```
-#Mapframes with downloads and uploads (can be multiple uploads per mapframe)
+
+# Mapframes with downloads and uploads (can be multiple uploads per mapframe) - under constrcution
 
 ```{r,message=FALSE, warning=FALSE}
 
@@ -428,7 +429,7 @@ final_uploads <- bind_rows(cumulative_uploads, total_uploads) |>
   arrange(day, consent)%>%
   mutate(day = as.Date(day))
 
-ggplot(final_uploads, aes(x = day, y = cumulative_count, color = consent)) +
+uploads_fig <- ggplot(final_uploads, aes(x = day, y = cumulative_count, color = consent)) +
   geom_line(size = 1) +  # Line for cumulative count
   geom_point(size = 2) + # Optional: Points for each day
   labs(title = "Cumulative Uploads Over Time",
@@ -438,6 +439,8 @@ ggplot(final_uploads, aes(x = day, y = cumulative_count, color = consent)) +
   theme_minimal() +
   scale_x_date(date_labels = "%b %d", date_breaks = "1 week") + 
   theme(axis.text.x = element_text(angle = 45, hjust = 1))  
+
+ggplotly(uploads_fig)
 
 ```
 
