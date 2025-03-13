@@ -32,16 +32,19 @@ library(ggmosaic)
 
 ```
 # Background and data
-
-Since 2024-12-05 we are analyzing the Apache Log which provides us with insides of the tool usage based in the IP adress.
-
 All data shown is from 2024-12-05 onwards.
 
+Since 2024-12-05 we are analyzing the Apache Log which provides us with insides of the tool usage based in the IP adress. 
+
 Terminology:
+
 Created Mapframe: A mapframe is considered as "created mapframe" when the user clicks the "Next" button after the appearance of the area of interest. 
-Downloaded Mapframe: If in the next step the "DOwnload PDF" button is clicked, the mapframe is consideres a "downloaded mapframe"
-Uploaded Sketch Map: A downloaded mapframe has been uploaded by clicking "Digitize your Sketch Maps"
-Geodata Downloads: The user download Raster and/or Vector results by clicking "Download ZIP" and/or "Download GeoJSON"
+
+Downloaded Mapframe: If in the next step the "DOonload PDF" button is clicked, the mapframe is considered a "downloaded mapframe"
+
+Uploaded Sketch Map: AT the moment we are tracking uplaods with in two different ways. 1) A downloaded mapframe has been uploaded by clicking "Digitize your Sketch Maps". Here we are not able to consider multiple-uploads. 2) We save the BB of uploaded Sketch Maps in a databsae and can therefore count these as real upload number. Currently we have the information of geodata downlaods only for approach 1). Soon we will be able to connect this information with approach 2) and plan to dismiss approach 1).
+
+Geodata Downloads: The user download Raster and/or Vector results by clicking "Download ZIP" and/or "Download GeoJSON" (currently only avalaible for uploads tracked through Apache)
 
 
 # Creation of Map Frames
@@ -285,7 +288,7 @@ tm_shape(sketchmap_report_world_iso) +
 
 # Bounding Boxes from created Mapframes
 
-Overview of the bounding boxes chosen whenc reating mapframes
+Overview of the bounding boxes chosen when creating mapframes
 
 ```{r,message=FALSE, warning=FALSE}
 #switch to interactive
@@ -353,14 +356,15 @@ A mapframe is counted as downloaded as soon as the user clicks on "Download" PDF
 
 ```{r,message=FALSE, warning=FALSE}
 
-#How many created SKetch Maps were actually dowloaded?
-sketchmap_report_map_frames_filter |> filter(!is.na(downloaded_at))|> nrow()
+#How many created Sketch Maps were actually dowloaded?
+#sketchmap_report_map_frames_filter |> filter(!is.na(downloaded_at))
 
 # Data for stacked bar chart
 mapframe_counts_stacked <- data.frame(
-  category = c("Created", "Downloaded"),
-  count = c(nrow(sketchmap_report_map_frames_filter), sum(!is.na(sketchmap_report_map_frames_filter$downloaded_at))),
-  Status = c("Created", "Downloaded")  # Add a status column for stacking
+  category = c("Downloaded", "Not Downloaded"),
+  count = c(sum(!is.na(sketchmap_report_map_frames_filter$downloaded_at)), 
+            nrow(sketchmap_report_map_frames_filter) - sum(!is.na(sketchmap_report_map_frames_filter$downloaded_at))),
+  Status = c("Downloaded", "Not Downloaded")  # Add a status column for stacking
 )
 
 # Stacked Bar Chart
@@ -369,31 +373,103 @@ ggplot(mapframe_counts_stacked, aes(x = "Mapframes", y = count, fill = Status)) 
   labs(title = "Created vs. Downloaded Mapframes",
        x = "Mapframes",
        y = "Count") +
-  scale_fill_manual(values = c("lightblue", "lightgreen")) +  # Custom colors
+  scale_fill_manual(values = c("lightgreen", "lightgray")) +  # Different colors for clarity
   theme_minimal()
-
 
 ```
 
-# Mapframes with downloads and uploads (can be multiple uploads per mapframe) - under constrcution
+# Mapframes with downloads and uploads 
+
+Uploads as number of Sketch Maps (former blobs) registered in the database. This is independent from upload clicks and multi uploads.
 
 ```{r,message=FALSE, warning=FALSE}
+
+
+sketchmap_report_sketches_filter <- sketchmap_report_sketches |> filter(sketch_uploaded > '2024-12-05' |> as.Date())
+
+mapframes_total <- sketchmap_report_map_frames_filter 
+downloads <- sketchmap_report_map_frames_filter |> filter(!is.na(downloaded_at))
+uploads <- sketchmap_report_sketches_filter
+
+sketchmap_report_map_frames_filter <- sketchmap_report_map_frames |> filter(created_at > '2024-12-05' |> as.Date())
+
+#take care of timestamps
+mapframes_total <- sketchmap_report_map_frames_filter |> 
+  mutate(day = floor_date(created_at, "day"))
+
+downloads <- sketchmap_report_map_frames_filter |> 
+  filter(!is.na(downloaded_at)) |> 
+  mutate(day = floor_date(downloaded_at, "day"))
+
+uploads <- sketchmap_report_sketches_filter |> 
+  mutate(sketch_uploaded = as.POSIXct(sketch_uploaded, format = "%Y-%m-%d %H:%M:%S", tz = "UTC")) |> 
+  mutate(day = floor_date(sketch_uploaded, "day"))
+
+# Cumulative counts per day for each dataset
+mapframes_cum <- mapframes_total |> count(day) |> 
+  arrange(day) |> 
+  mutate(cumulative_count = cumsum(n), dataset = "Mapframes Created")
+
+downloads_cum <- downloads |> count(day) |> 
+  arrange(day) |> 
+  mutate(cumulative_count = cumsum(n), dataset = "Downloads")
+
+uploads_cum <- uploads |> count(day) |> 
+  arrange(day) |> 
+  mutate(cumulative_count = cumsum(n), dataset = "Sketches Uploaded")
+
+
+# Combine datasets
+final_counts_3 <- bind_rows(mapframes_cum, downloads_cum, uploads_cum)
+
+chartupdown <- ggplot(final_counts_3, aes(x = day, y = cumulative_count, color = dataset)) +
+  geom_line() +
+  geom_point() +
+  labs(title = "Cumulative Count of Mapframes, Downloads, and Uploads Over Time",
+       x = "Days",
+       y = "Cumulative Count") +
+  theme_minimal()
+
+
+ggplotly(chartupdown)
+
+
+#olot only downlaods versus uploads
+
+filtered_counts <- final_counts_3 |> filter(dataset %in% c("Sketches Uploaded", "Downloads"))
+
+# Create the plot
+chartupdown2 <- ggplot(filtered_counts, aes(x = day, y = cumulative_count, color = dataset)) +
+  geom_line() +
+  geom_point() +
+  labs(title = "Cumulative Count of Downloads and Uploads Over Time",
+       x = "Days",
+       y = "Cumulative Count") +
+  theme_minimal()
+
+# Convert to plotly
+ggplotly(chartupdown2)
+
+
+
 
 #any possibility to track multiple uploads?
 
 # Number of downloaded Sketch Maps vs. created Sketch Maps
-sketchmap_report_map_frames_filter |>  filter(!is.na(downloaded_at) & uploads>0) |> nrow()
+#sketchmap_report_map_frames_filter |>  filter(!is.na(downloaded_at) & uploads>0) |> nrow()
 #67
 #67 downloads mapframes show and uploads. Uploads csv = 296. Does that mean that there were several multiple uploads???
 #im Schnitt 4,5 auf einmal upgeloaded?
 
 #general number of uploads
-no_uploads <- nrow(sketchmap_report_sketches)
+#no_uploads <- nrow(sketchmap_report_sketches)
 #296
 
 ```
 
 # Uploaded Sketch Maps and consent given over time
+
+Total uploaded Sketch Maps (former blobs) based on database entry from 2024-12-05 on.
 
 ```{r,message=FALSE, warning=FALSE}
 
@@ -475,6 +551,8 @@ ggplot(sketchmap_report_sketches_filter, aes(x = as.factor(consent), fill = as.f
 
 
 # Uploaded Sketch Maps and share of dowloaded results
+
+Analysis is based on Apache log. Uploads = click on upload. This analysis does not consider multiple uplaods. It will be soon replaced by geodata download information on sketches database uplaods.
 
 ```{r,message=FALSE, warning=FALSE}
 
