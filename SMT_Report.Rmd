@@ -31,21 +31,26 @@ library(ggmosaic)
 
 
 ```
+
 # Background and data
+
 All data shown is from 2024-12-05 onwards.
 
-Since 2024-12-05 we are analyzing the Apache Log which provides us with insides of the tool usage based in the IP adress. 
+Since 2024-12-05 we are analyzing the Apache Log which provides us with insides of the tool usage based on the IP address.
 
 Terminology:
 
-Created Mapframe: A mapframe is considered as "created mapframe" when the user clicks the "Next" button after the appearance of the area of interest. 
+**Created Mapframe:** A mapframe is considered a "created mapframe" when the user clicks the "Next" button after the selection of an area of interest.
 
-Downloaded Mapframe: If in the next step the "DOonload PDF" button is clicked, the mapframe is considered a "downloaded mapframe"
+**Downloaded Mapframe:** A mapframe is considered a "downloaded mapframe" when the processing of the *Sketch Map Template* is done and the user clicks the "Download PDF" button.
 
-Uploaded Sketch Map: AT the moment we are tracking uplaods with in two different ways. 1) A downloaded mapframe has been uploaded by clicking "Digitize your Sketch Maps". Here we are not able to consider multiple-uploads. 2) We save the BB of uploaded Sketch Maps in a databsae and can therefore count these as real upload number. Currently we have the information of geodata downlaods only for approach 1). Soon we will be able to connect this information with approach 2) and plan to dismiss approach 1).
+**Uploaded Sketch Map:** At the moment we are tracking uploads in two different ways.
+1) A downloaded mapframe has been uploaded by clicking "Digitize your Sketch Maps".
+Here we are not able to differentiate between single and multiple map uploads.
+We are working on a solution account for this difference.
+2) We save the bbox of uploaded Sketch Maps in a database and can therefore count these as real uploads.
 
-Geodata Downloads: The user download Raster and/or Vector results by clicking "Download ZIP" and/or "Download GeoJSON" (currently only avalaible for uploads tracked through Apache)
-
+**Geodata Downloads:** The user downloads Raster and/or Vector results by clicking "Download ZIP" and/or "Download GeoJSON" (currently only avalaible for uploads tracked through Apache).
 
 # Creation of Map Frames
 
@@ -118,7 +123,6 @@ chart1 <- final_counts |>
 ggplotly(chart1)
 ```
 
-
 # Use of baselayers
 
 ```{r,message=FALSE, warning=FALSE}
@@ -170,7 +174,6 @@ chart_format
 
 ```
 
-
 # Orientation chosen for map creation
 
 ```{r,message=FALSE, warning=FALSE}
@@ -196,8 +199,6 @@ chart_orientation <- ggplot(donut_orientation, aes(ymax=ymax, ymin=ymin, xmax=2,
 
 chart_orientation
 ```
-
-
 
 # Language used to create Sketch Map
 
@@ -228,10 +229,10 @@ chart_lang <- ggplot(donut_lang, aes(ymax=ymax, ymin=ymin, xmax=2, xmin=1, fill=
 chart_lang
 ```
 
-
 # Countries where Sketch Maps have been created from
 
-Information retrieved via Apache log. The IP address of the uses gives insights on where the user was located when created mapframes
+Information retrieved via Apache log.
+The IP address of the users give insights on where the user was located when they created their mapframes.
 
 ```{r,message=FALSE, warning=FALSE}
 
@@ -269,7 +270,7 @@ tmap_mode("view")
 #print map vr
 tm_shape(sketchmap_report_world_iso) +
   tm_polygons("count", 
-              palette = "brewer.reds",
+              palette = "Reds",
               title = "Count per Country",
               style = "jenks",  # Change classification method
               n = 5  # Number of classes
@@ -288,7 +289,7 @@ tm_shape(sketchmap_report_world_iso) +
 
 # Bounding Boxes from created Mapframes
 
-Overview of the bounding boxes chosen when creating mapframes
+Overview of the bounding boxes chosen when creating mapframes.
 
 ```{r,message=FALSE, warning=FALSE}
 #switch to interactive
@@ -338,7 +339,7 @@ tmap_mode("view")
 tm_shape(centroid_counts_sf ) + 
   tm_borders() +  # Add borders of countries
   tm_fill(col = "countbbox", 
-          palette = "brewer.reds", 
+          palette = "Reds", 
           title = "Centroid Count",
           style = "jenks",  # Change classification method 
           na.color = "gray",
@@ -347,12 +348,9 @@ tm_shape(centroid_counts_sf ) +
 
 ```
 
-
-
 # Created vs. Downloaded Sketch Maps
 
-A mapframe is counted as downloaded as soon as the user clicks on "Download" PDF. 
-
+A mapframe is counted as downloaded as soon as the user clicks on "Download" PDF.
 
 ```{r,message=FALSE, warning=FALSE}
 
@@ -378,9 +376,10 @@ ggplot(mapframe_counts_stacked, aes(x = "Mapframes", y = count, fill = Status)) 
 
 ```
 
-# Mapframes with downloads and uploads 
+# Mapframes with downloads and uploads
 
-Uploads as number of Sketch Maps (former blobs) registered in the database. This is independent from upload clicks and multi uploads.
+Uploads as number of Sketch Maps (former blobs) registered in the database.
+This is independent from upload clicks and multi uploads.
 
 ```{r,message=FALSE, warning=FALSE}
 
@@ -434,7 +433,7 @@ chartupdown <- ggplot(final_counts_3, aes(x = day, y = cumulative_count, color =
 ggplotly(chartupdown)
 
 
-#olot only downlaods versus uploads
+#olot only downloads versus uploads
 
 filtered_counts <- final_counts_3 |> filter(dataset %in% c("Sketches Uploaded", "Downloads"))
 
@@ -520,8 +519,6 @@ ggplotly(uploads_fig)
 
 ```
 
-
-
 # How was often consent was given to use uploaded sketchmaps to contribute to model training?
 
 ```{r,message=FALSE, warning=FALSE}
@@ -549,10 +546,12 @@ ggplot(sketchmap_report_sketches_filter, aes(x = as.factor(consent), fill = as.f
 
 ```
 
-
 # Uploaded Sketch Maps and share of dowloaded results
 
-Analysis is based on Apache log. Uploads = click on upload. This analysis does not consider multiple uplaods. It will be soon replaced by geodata download information on sketches database uplaods.
+Analysis is based on Apache log.
+Uploads = click on upload.
+This analysis does not consider multiple uploads.
+It will be soon replaced by geodata download information on sketches database uploads.
 
 ```{r,message=FALSE, warning=FALSE}
 
@@ -610,8 +609,3 @@ ggplot(category_df, aes(x = Category, y = Percentage, fill = Category)) +
 
 
 ```
-
-
-
-
-
