@@ -180,8 +180,8 @@ chart_format
 
 #why is this not binary and other languages included
 
-donut_orientation <-sketchmap_report_map_frames_filter |> 
-  group_by(orientation) |> 
+donut_orientation <-sketchmap_report_sketches |> 
+  group_by(orientation_det) |> 
   summarise(count=n())
 
 donut_orientation$fraction <- donut_orientation$count / sum(donut_format$count)
@@ -189,7 +189,7 @@ donut_orientation$ymax <- cumsum(donut_orientation$fraction)
 donut_orientation$ymin <- c(0, head(donut_orientation$ymax, n=-1))
 
 
-chart_orientation <- ggplot(donut_orientation, aes(ymax=ymax, ymin=ymin, xmax=2, xmin=1, fill=orientation)) +
+chart_orientation <- ggplot(donut_orientation, aes(ymax=ymax, ymin=ymin, xmax=2, xmin=1, fill=orientation_det)) +
   geom_rect() +
   coord_polar(theta="y") +
   xlim(c(0.2, 2.5)) + 
