@@ -22,3 +22,5 @@ Each project is more or less thematically independent, providing distinct exampl
 
 5. [Somalia access to markets](https://giscience.github.io/humanitarian_pages//somalia_foodmarkets.html)
 
+6. [Food Insecurity datasets](https://giscience.github.io/humanitarian_pages//Food-Insecurity.html)
+
