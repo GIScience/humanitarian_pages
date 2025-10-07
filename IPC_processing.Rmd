@@ -23,7 +23,7 @@ knitr::opts_chunk$set(echo = TRUE)
 ## Setup
 
 Load necessary packages, if not installed install with "install.packages()
-```{r cars}
+```{r message=F, warning=F}
 library(sf)
 library(dplyr)
 library(stringr)
@@ -34,25 +34,23 @@ library(scales)
 ```
 
 Setup data
-```{r cars}
+```{r message=F, warning=F}
 # Turn off s2 fo planar instead of spherical geodata handling
 sf_use_s2(FALSE)  
 
-# Set directory where data is located
-setwd("/Users/ferdinandseyffer/Desktop/HeiGIT/Food_insecurity_comparison/")
 
 # Load Somalia districts
 districts <- st_read("Admin/som_adm_ocha_20250108_ab_shp/som_admbnda_adm2_ocha_20250108.shp")
 
 # List and load FEWSNET shapefiles
-foodsec_files <- list.files(path = "IPC_all/", pattern = "\\.geojson$",  full.names = TRUE)
+foodsec_files <- list.files(path = "FI_data/IPC_all/", pattern = "\\.geojson$",  full.names = TRUE)
 ```
 
 
 ## Preprocessing
 
 Loop through FEWSNET files, intersect with ADM2
-```{r cars}
+```{r message=F, warning=F}
 intersections <- list()
 
 for (fp in foodsec_files) {
@@ -90,8 +88,8 @@ for (fp in foodsec_files) {
 
 
 Convert distinct intersections to one dataframe
-```{r cars}
-all_intersections <- map_dfr(intersections, \(x) st_drop_geometry(x))|> # drop geometries and combine to dataframe
+```{r message=F, warning=F}
+all_intersections <- map_dfr(intersections, \(x) st_drop_geometry(x))|># drop geometries and combine to dataframe
   distinct(.data[["ADM2_EN"]], ADM2_EN, overall_phase, date, .keep_all = TRUE) |> # keep just rows where ADM2_EN, overall_phase and date are unique
   
   # Add TRUE/FALSE columns for different conditions
@@ -106,7 +104,7 @@ all_intersections <- map_dfr(intersections, \(x) st_drop_geometry(x))|> # drop g
 
 
 Convert distinct intersections to one dataframe
-```{r cars}
+```{r message=F, warning=F}
 clean_intersections <- all_intersections |>
   # drop invalid/missing values
   filter(overall_phase != 99) |>
@@ -117,7 +115,7 @@ clean_intersections <- all_intersections |>
 
 
 Group by districts and calculate different basic stats
-```{r cars}
+```{r message=F, warning=F}
 ipc_stats <- clean_intersections |>
   group_by(ADM2_PCODE, ADM2_EN) |>       # group by districts
   
@@ -135,7 +133,7 @@ ipc_stats <- clean_intersections |>
 ```
 
 Join ipc stats back to district geometries (e.g. for import in QGIS)
-```{r cars}
+```{r message=F, warning=F}
 # Join data back to geometries
 ipc_stats_sf <- districts |>
   select(ADM2_PCODE, geometry) |>   # keep only join key + geometry
@@ -156,7 +154,7 @@ ipc_stats_final <- ipc_stats
 ##  Data Analysis
 
 Timeseries plots for IPC for four selected districts
-```{r cars}
+```{r message=F, warning=F}
 # Enter districts of interest here
 sel_districts <- c("Luuq", "Xudur", "Xarardheere", "Hobyo")
 
@@ -191,7 +189,7 @@ ggplot(district_summary, aes(x = date, group = ADM2_EN)) +
 
 
 Barcharts for times in IPC ≥3/4 & mean IPC for all districts
-```{r cars}
+```{r message=F, warning=F}
 # --- IPC ≥ 3 ---
 ggplot(ipc_stats, aes(x = reorder(ADM2_EN, sum_ipc_gr2))) +
   geom_col(aes(y = sum_ipc_gr2), fill = "red3") +
@@ -226,7 +224,7 @@ ggplot(ipc_stats, aes(x = reorder(ADM2_EN, sum_ipc_gr3))) +
 ```
 
 Histogramms for districts in IPC ≥3/4 over whole time period
-```{r cars}
+```{r message=F, warning=F}
 # group by date to get district nr. per period
 counts <- clean_intersections %>%
   group_by(date) %>%
@@ -248,10 +246,6 @@ ggplot(counts, aes(x = date, y = n_ipc4plus)) +
   labs(title = "Districts in IPC ≥ 4", x = "Date", y = "Count") +
   theme_minimal()
 
-
-```
-
-```{r cars}
 
 ```
 
