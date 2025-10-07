@@ -1,0 +1,259 @@
+---
+title: "IPC_processing"
+author: "Ferdinand Seyffer"
+date: "2025-10-06"
+output:
+  html_document:
+    code_folding: hide
+    toc: true
+    number_sections: true
+    toc_float:
+      collapsed: true
+    theme: cerulean
+editor_options: 
+  chunk_output_type: console
+  markdown: 
+    wrap: sentence
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Setup
+
+Load necessary packages, if not installed install with "install.packages()
+```{r cars}
+library(sf)
+library(dplyr)
+library(stringr)
+library(ggplot2)
+library(purrr)
+library(tidyr)
+library(scales)
+```
+
+Setup data
+```{r cars}
+# Turn off s2 fo planar instead of spherical geodata handling
+sf_use_s2(FALSE)  
+
+# Set directory where data is located
+setwd("/Users/ferdinandseyffer/Desktop/HeiGIT/Food_insecurity_comparison/")
+
+# Load Somalia districts
+districts <- st_read("Admin/som_adm_ocha_20250108_ab_shp/som_admbnda_adm2_ocha_20250108.shp")
+
+# List and load FEWSNET shapefiles
+foodsec_files <- list.files(path = "IPC_all/", pattern = "\\.geojson$",  full.names = TRUE)
+```
+
+
+## Preprocessing
+
+Loop through FEWSNET files, intersect with ADM2
+```{r cars}
+intersections <- list()
+
+for (fp in foodsec_files) {
+  food_sec <- st_read(fp, quiet = TRUE) # load food security file
+  
+  # Reproject to CRS of districts file
+  if (is.na(st_crs(food_sec))) st_crs(food_sec) <- 4326
+  food_sec <- st_transform(food_sec, 4326)
+  
+  # Fix geometries because of common invalid geometries with FEWSNET data
+  food_sec <- st_make_valid(food_sec)
+  
+  # Intersect FS file with districts, keeping only column "overall_phase" from FS layer
+  intersection <- st_intersection(districts, food_sec["overall_phase"])
+  
+  # extract base name (without .shp) for both naming + date
+  basename <- tools::file_path_sans_ext(basename(fp))
+  
+  # add date column based on basename of FS files
+  intersection <- intersection %>%
+    mutate(
+      source = basename,
+      # extract "August_2022" (month name + underscore + year)
+      month_year = str_extract(basename, "[A-Za-z]+_[0-9]{4}"),
+      # replace underscore with space -> "August 2022"
+      month_year = gsub("_", " ", month_year),
+      # parse into a Date (assume day = 01)
+      date = as.Date(paste0("01 ", month_year), format = "%d %B %Y")
+    )
+  
+  # Add each file to intersections list
+  intersections[[basename]] <- intersection
+}
+```
+
+
+Convert distinct intersections to one dataframe
+```{r cars}
+all_intersections <- map_dfr(intersections, \(x) st_drop_geometry(x))|> # drop geometries and combine to dataframe
+  distinct(.data[["ADM2_EN"]], ADM2_EN, overall_phase, date, .keep_all = TRUE) |> # keep just rows where ADM2_EN, overall_phase and date are unique
+  
+  # Add TRUE/FALSE columns for different conditions
+  mutate(
+    ipc3 = overall_phase == 3,    # overall_phase = 3
+    ipc4 = overall_phase == 4,    # overall_phase = 4
+    ipc5 = overall_phase == 5,    # overall_phase = 5
+    ipc_gr2 = overall_phase >= 3, # overall_phase over 2
+    ipc_gr3 = overall_phase >= 4  # overall_phase over 3
+  )
+```
+
+
+Convert distinct intersections to one dataframe
+```{r cars}
+clean_intersections <- all_intersections |>
+  # drop invalid/missing values
+  filter(overall_phase != 99) |>
+  # keep only selected columns
+  select(ADM2_EN, date, ADM2_PCODE, overall_phase, ipc3, ipc4, ipc5, ipc_gr2, ipc_gr3)
+
+```
+
+
+Group by districts and calculate different basic stats
+```{r cars}
+ipc_stats <- clean_intersections |>
+  group_by(ADM2_PCODE, ADM2_EN) |>       # group by districts
+  
+  # Summarise per districts: times in specific IPC, times in IPC >2/ >3
+  summarise(
+    sum_ipc3   = sum(ipc3,   na.rm = TRUE),
+    sum_ipc4   = sum(ipc4,   na.rm = TRUE),
+    sum_ipc5   = sum(ipc5,   na.rm = TRUE),
+    sum_ipc_gr2 = sum(ipc_gr2, na.rm = TRUE),
+    sum_ipc_gr3 = sum(ipc_gr3, na.rm = TRUE),
+    mean_ipc   = mean(overall_phase,   na.rm = TRUE),
+    .groups = "drop"
+  )
+
+```
+
+Join ipc stats back to district geometries (e.g. for import in QGIS)
+```{r cars}
+# Join data back to geometries
+ipc_stats_sf <- districts |>
+  select(ADM2_PCODE, geometry) |>   # keep only join key + geometry
+  left_join(ipc_stats, by = "ADM2_PCODE") |>
+  st_as_sf()
+
+# Write file 
+st_write(ipc_stats_sf,
+         "ipc_adm2_stats.gpkg",
+         delete_dsn = TRUE) 
+
+# Keep a copy of IPC results
+ipc_clean <- clean_intersections
+ipc_stats_final <- ipc_stats
+```
+
+
+##  Data Analysis
+
+Timeseries plots for IPC for four selected districts
+```{r cars}
+# Enter districts of interest here
+sel_districts <- c("Luuq", "Xudur", "Xarardheere", "Hobyo")
+
+# Summarise per district & month
+district_summary <- clean_intersections %>%
+  filter(ADM2_EN %in% sel_districts) %>%
+  group_by(ADM2_EN, date) %>%
+  summarise(
+    mean_ipc = mean(overall_phase, na.rm = TRUE),
+    max_IPC  = max(overall_phase, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+# Calculate overall IPC mean per district (for dashed mean line)
+overall_means <- district_summary %>%
+  group_by(ADM2_EN) %>%
+  summarise(overall_mean = mean(mean_ipc, na.rm = TRUE))
+
+# Plot
+ggplot(district_summary, aes(x = date, group = ADM2_EN)) +
+  geom_line(aes(y = mean_ipc, color = "Mean IPC"), linewidth = 1) +
+  geom_line(aes(y = max_IPC,  color = "Max IPC"),  linewidth = 1, linetype = "dashed") +
+  geom_hline(data = overall_means, aes(yintercept = overall_mean),
+             linetype = "dashed", color = "black") +
+  facet_wrap(~ ADM2_EN, ncol = 2) +
+  scale_x_date(date_breaks = "1 year", date_labels = "%Y") +
+  scale_color_manual(values = c("Mean IPC" = "steelblue", "Max IPC" = "red3")) +
+  labs(x = "Date", y = "IPC", color = "Statistic") +
+  theme_minimal()
+
+```
+
+
+Barcharts for times in IPC ≥3/4 & mean IPC for all districts
+```{r cars}
+# --- IPC ≥ 3 ---
+ggplot(ipc_stats, aes(x = reorder(ADM2_EN, sum_ipc_gr2))) +
+  geom_col(aes(y = sum_ipc_gr2), fill = "red3") +
+  geom_line(aes(y = rescale(mean_ipc, to = c(0, max(sum_ipc_gr2)), from = c(2, 3)), group = 1),
+            color = "black") +
+  geom_point(aes(y = rescale(mean_ipc, to = c(0, max(sum_ipc_gr2)), from = c(2, 3))),
+             color = "black") +
+  scale_y_continuous(
+    name = "Count of IPC ≥ 3",
+    sec.axis = sec_axis(~rescale(., from = c(0, max(ipc_stats$sum_ipc_gr2)), to = c(2, 3)),
+                        name = "Mean IPC")
+  ) +
+  coord_flip() +
+  labs(title = "Districts with IPC ≥ 3") +
+  theme_minimal()
+
+# --- IPC ≥ 4 ---
+ggplot(ipc_stats, aes(x = reorder(ADM2_EN, sum_ipc_gr3))) +
+  geom_col(aes(y = sum_ipc_gr3), fill = "steelblue") +
+  geom_line(aes(y = rescale(mean_ipc, to = c(0, max(sum_ipc_gr3)), from = c(2, 3)), group = 1),
+            color = "black") +
+  geom_point(aes(y = rescale(mean_ipc, to = c(0, max(sum_ipc_gr3)), from = c(2, 3))),
+             color = "black") +
+  scale_y_continuous(
+    name = "Count of IPC ≥ 4",
+    sec.axis = sec_axis(~rescale(., from = c(0, max(ipc_stats$sum_ipc_gr3)), to = c(2, 3)),
+                        name = "Mean IPC")
+  ) +
+  coord_flip() +
+  labs(title = "Districts with IPC ≥ 4") +
+  theme_minimal()
+```
+
+Histogramms for districts in IPC ≥3/4 over whole time period
+```{r cars}
+# group by date to get district nr. per period
+counts <- clean_intersections %>%
+  group_by(date) %>%
+  summarise(
+    n_ipc3plus = sum(ipc_gr2, na.rm = TRUE),
+    n_ipc4plus = sum(ipc_gr3, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+# plot for IPC ≥3
+blabla = ggplot(counts, aes(x = date, y = n_ipc3plus)) +
+  geom_col(fill = "red3") +
+  labs(title = "Districts in IPC ≥ 3", x = "Date", y = "Count") +
+  theme_minimal()
+
+# plot for IPC ≥4
+ggplot(counts, aes(x = date, y = n_ipc4plus)) +
+  geom_col(fill = "steelblue") +
+  labs(title = "Districts in IPC ≥ 4", x = "Date", y = "Count") +
+  theme_minimal()
+
+
+```
+
+```{r cars}
+
+```
+
+
+
