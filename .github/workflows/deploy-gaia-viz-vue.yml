@@ -1,9 +1,7 @@
-name: Deploy Hazard Risk Dashboard
+name: Deploy Hazard Risk Dashboard and other static pages
 on:
   push:
     branches: [main]
-    paths:
-      - 'gaia-viz-vue/**' # Only run when you change the Vue code
 
 jobs:
   build-and-deploy:
@@ -18,9 +16,16 @@ jobs:
           npm install
           npm run build
 
+      - name: Prep staging folder
+        run: |
+          mkdir _site
+          rsync -av --exclude='gaia-viz-vue' --exclude='_site' --exclude='.git' --exclude='.github' ./ ./_site/
+          mkdir -p ./_site/gaia-dashboard
+          cp -r ./gaia-viz-vue/dist/* ./_site/gaia-dashboard/
+
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./gaia-viz-vue/dist
-          destination_dir: gaia-dashboard # This creates the /gaia-dashboard/ folder
+          publish_dir: ./_site
+  
