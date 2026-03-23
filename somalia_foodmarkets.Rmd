@@ -1,0 +1,467 @@
+---
+title: "Market Access Somalia"
+author: "Valentin Böhmer"
+date: "`r Sys.Date()`"
+output: 
+  html_document:
+    code_folding: hide
+    toc: true
+    number_sections: true
+    toc_float:
+      collapsed: true
+    theme: cerulean
+editor_options: 
+  chunk_output_type: console
+  markdown: 
+    wrap: sentence
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+knitr::knit_hooks$set(time_it = local({
+  now <- NULL
+  function(before, options) {
+    if (before) {
+      # record the current time before each chunk
+      now <<- Sys.time()
+    } else {
+      # calculate the time difference after a chunk
+      res <- difftime(Sys.time(), now, units = "secs")
+      # return a character string to show the time
+      paste("Time for this code chunk to run:", round(res,
+        2), "seconds")
+    }
+  }
+}))
+
+options(openrouteservice.url = "http://0.0.0.0:8080/ors")
+
+```
+
+# Intro
+
+Analysis of market access in Somalia. 
+We will look at food market locations in Somalia and assess their accessibilty by regular sampled points.
+
+# Setup
+
+This section for reproducibility.
+We use R in the version 4.2.2.
+In order to be able to reproduce this analysis you need an openrouteservice API key.
+Get one [here](https://openrouteservice.org/sign-up/).
+Put it in a text file file called `config.txt` in the working directory.
+It has no structure, just the key in the first line.
+
+``` txt
+ZXCVBNMLKJHGFDSAQWERTYUIOP
+```
+
+## libraries
+
+Almost all of the libraries can be installed via CRAN with the command `install.packages('packagename')`.
+The openrouteservice package is not on CRAN and needs to be installed via github.
+With the command `remotes::install_github("GIScience/openrouteservice-r");` Also tmap in its most recent version 4 is not yet available on CRAN so we need to download and install it via github too.
+
+```{r import libs, message=F, warning=F}
+# main libraries
+library(tidyverse)
+library(glue)
+library(sf)
+library(units)
+library(ggplot2)
+library(tictoc)
+library(openrouteservice) # remotes::install_github("GIScience/openrouteservice-r");
+library(jsonlite)
+library(terra)
+library(exactextractr)
+library(tmap) # remotes::install_github("r-tmap/tmap")
+library(leaflet)
+library(furrr)
+library(purrr)
+library(kableExtra)
+library(mapsf)
+library(RColorBrewer)
+library(geonode4R)
+library(scales)
+
+
+#config <- readLines("config.txt")
+#api_key <- config[1]
+#user <- config[2]
+#password <- config[3]
+api_key <- ""
+# Function to  adjust a list of coordinates to the location of the closest road segment via the snapping endpoint of ORS. ORS itself only allows for a maximum distance of 350m to snap.
+ors_snap <- function(x, rowids, local=F) {
+  x=coord_list
+  rowids=grid5km$rowid
+  local = T
+  
+  library(httr)
+  
+  # Define the body
+  body <- list(
+    locations = x,
+    radius = 100000000 # apparently the maximum snapping distance is 5km
+  )
+  
+  # Define the headers
+  headers <- c(
+    'Accept' = 'application/json, application/geo+json, application/gpx+xml, img/png; charset=utf-8',
+    'Authorization' = api_key,
+    'Content-Type' = 'application/json; charset=utf-8'
+  )
+  
+  endpoint <- if(local){'http://0.0.0.0:8080/ors/v2/snap/driving-car'} else {'https://api.openrouteservice.org/v2/snap/driving-car'}
+  # Make the POST request
+  response <- POST( endpoint,
+                    #'https://api.openrouteservice.org/v2/snap/driving-car', 
+                    body = body, 
+                    add_headers(headers), 
+                    encode = "json")
+  
+  resp_content <- content(response)
+  
+  extract_data <- function(x, index) {
+    if (is.null(x)) {
+      return(data.frame(
+        rowid = index,
+        lon = NA,
+        lat = NA,
+        snapped_distance = NA
+      ))
+    } else {
+      return(data.frame(
+        rowid = index,
+        lon = x$location[[1]],
+        lat = x$location[[2]],
+        snapped_distance = x$snapped_distance
+      ))
+    }
+  }
+  
+  # Extract data from the list and create a dataframe
+  df <- do.call(rbind, lapply(seq_along(resp_content$locations), function(i) extract_data(resp_content$locations[[i]], i)))
+  df$rowid <- rowids
+  # Convert the dataframe to an sf object
+  sf_df <- df |> 
+    drop_na(lon, lat) |>  # Drop rows with NA coordinates
+    st_as_sf(coords = c("lon", "lat"), crs = 4326) |>  # Define the coordinate columns and set CRS
+    st_sf()
+  
+  return(sf_df)
+  
+}
+
+```
+
+# Processing pipeline
+
+The workflow is as follows:
+
+* prepare market location data
+* generate hexagonal 5km grid in Somalia
+* add worldpop data per grid cell
+* snap the grid centroids to the nearest road segment
+* create a matrix for the distance and time for each market to the snapped centroids
+* detect the closest market for each grid cell
+
+By snapping we refer to the process of changing the location of an origin or destination of a route to the nearest road segment. This is necessary because the openrouteservice API only allows for a maximum distance of 350m to snap. However in the context of Somalia greater snapping distances are desired as the road density in some regions might be low.
+
+## Data input
+
+We use the following datasets as inputs:
+
+* pop: WorldPop population counts constrained
+* market locations data
+* admin boundaries level 2
+
+```{r input, message=F, warning=F}
+pop <- rast('data/som_ppp_2020_UNadj_constrained.tif')
+markets_som <- read_csv("data/wfp_food_prices_som.csv")
+admin <- st_read('data/Som_Admbnda_Adm2_UNDP.shp', quiet = T)
+```
+
+## Markets preprocessing
+
+In order to use the market locations we need to create a sf object by converting the latitude and longitude columns to a point geometry column. By checking the distinct locations of the geometry column we got 44 food markets in Somalia.
+
+```{r markets prep, message=F, warning=F, cache=T}
+# Clean the latitude and longitude columns
+markets_som_clean <- markets_som |> 
+  filter(!is.na(latitude) & !is.na(longitude)) |> 
+  slice(-1) |> 
+  mutate(latitude = as.numeric(latitude),
+         longitude = as.numeric(longitude),
+         date = as.Date(date, format = "%Y-%m-%d"))
+         
+#add year
+markets_som_clean <- markets_som_clean |> 
+  mutate(year = as.numeric(format(date, "%Y")))
+
+# Convert to sf object
+markets_som_sf <- markets_som_clean |> 
+  st_as_sf(coords = c("longitude", "latitude"), crs = 4326) 
+
+#unique markets
+markets_som_asc_sf <- markets_som_sf |> 
+  distinct(geometry, .keep_all = TRUE) 
+
+#unique markets descending
+markets_som_desc_sf <- markets_som_sf |> 
+  arrange(desc(row_number())) |>    # Sort the dataframe such that the last rows come first
+  distinct(geometry, .keep_all = TRUE)
+
+#combine both
+markets_som_sf <- markets_som_desc_sf |> left_join(markets_som_asc_sf |> st_drop_geometry() |> select(market, year), by ="market")
+
+#prepare final market sf
+markets_som_sf <- markets_som_sf |> rename(first_year = year.y, last_year = year.x) |> 
+  select(-date) |>
+  mutate(rowid = row_number())
+```
+
+# Grid sampling
+
+Finding the shortest/fastest way between a number of origins and destinations is a job for the Matrix endpoint of ors. 
+Lets start with the grid sampling. We decide for a 5000m width hexagonal grid. A hexagonal grid is closer to a circle and therefore the better joice for our analysis. Within each grid cell we will use the centroid and search for road network locations to snap to.
+
+```{r create grid, cache=T, message=F, warning=F, time_it=T}
+
+# create 5km grid
+grid5km <-
+  st_make_grid(admin |> st_transform(20538), cellsize = 5000, square = F, flat_topped = T)
+# convert to sf df
+grid5km <- grid5km |> st_as_sf()
+names(grid5km) <- 'geometry'
+st_geometry(grid5km) <- 'geometry'
+# get rid of all cells that are not within somalia
+grid5km <-
+  grid5km |> st_transform(4326) |> st_filter(admin |> st_union())
+# join admin codes
+grid5km <-
+  grid5km |> st_join(admin |> select(admin2Name, admin2Pcod, admin1Name, admin1Pcod, admin0Name, admin0Pcod),
+                     left = T,
+                     largest = T)
+# join pop information
+grid5km$pop <- exact_extract(pop, grid5km, 'sum', progress = F)
+
+# add rowid
+grid5km <- grid5km |> mutate(rowid = row_number())
+
+#filter for pop > 0
+grid5km <- grid5km |> filter(pop > 0)
+```
+
+## Snapping
+
+The grid is created, now snap the centroids.
+
+```{r snap, cache=T, time_it=T}
+# convert
+coord_list <-
+  lapply(grid5km$geometry |> st_centroid(), function(x)
+    c(st_coordinates(x)[, 1], st_coordinates(x)[, 2]))
+
+# snap the list of cords
+snapped_coords <- ors_snap(coord_list,rowids=grid5km$rowid, local = T)
+
+# join back
+grid5km_snapped <- grid5km |>
+  left_join(snapped_coords |> tibble(), by = "rowid") |>
+  mutate(centroid = st_centroid(geometry.x))
+
+# refactor names in order to keep, the grid geometry, centorid and snapped centroid
+names(grid5km_snapped)[10:11] <- c('geometry', 'snapped_centroid')
+st_geometry(grid5km_snapped) <- 'geometry'
+
+grid5km_snapped <- grid5km_snapped |> mutate(snapped = ifelse(is.na(snapped_distance), F, T)) 
+
+#filter for snapped values
+grid5km_snapped_NA <- grid5km_snapped |> filter(snapped == F)
+grid5km_snapped_notNA <- grid5km_snapped |> filter(snapped == T)
+```
+
+Awesome we now got 17738 snapped and 3045 not snapped grid cells.
+
+## ORS matrix request and post processing
+
+In the next chunk we will calculate the travel times and distances from each grid cell to each market. We will use the openrouteservice API for this.
+
+```{r, echo=F}
+# create a list of coordinates for the grid again but from snapped coords
+coord_list <-
+  lapply(grid5km_snapped_notNA$snapped_centroid, function(x)
+    c(st_coordinates(x)[, 1], st_coordinates(x)[, 2]))
+
+# run through all markets and calculate travel times an distances to each grid cell.
+# For 44 markets and 17738 grid cells this is 17738*44 = 780472 results.
+for ( i in 1:nrow(markets_som_sf)) { 
+  # log the current iteration
+  tic(glue("run {i} / {nrow(markets_som_sf)}"))
+  # extract single market by iteration index
+  markets_subset <- markets_som_sf[i,]
+  # get the coordinates as vector
+  markets_coords <-
+    lapply(markets_subset$geometry, function(x)
+      c(st_coordinates(x)[, 1], st_coordinates(x)[, 2]))  
+  # add the market coordinates at the first position before our grid centroid coordinates
+  coord_list_run <- c(markets_coords, coord_list)
+  
+  # run the ors matrix request
+  res1 = ors_matrix(
+    coord_list_run, # list of all grid and one single market coordinate at the top
+    sources = 0, # index of the coordiante which shall serve as origin. In our case the market. If we dont set it we get the matrix for all coords * all cords
+    metrics = c("duration", "distance"), # we want duration and distance, not only one of it
+    units = "km", # units is km
+    api_key = api_key, # api key
+    output = 'parsed') # output as parsed json
+  
+  rm(coord_list_run) # get rid of the list of coordinates as we create a new one the next iteration with a different market at the top
+  
+  # create a dataframe from the results if it is the first iteration, otherwise create and append to the existing one
+  if (i == 1) {
+    result_matrix <- data.frame(
+      market_id = markets_subset$rowid |> rep((res1$distances |> as.vector())[-1] |>
+                                             length()),
+      grid_id = grid5km_snapped_notNA$rowid,
+      durations = (res1$durations |> as.vector())[-1] |> as.numeric(),
+      distances = (res1$distances |> as.vector())[-1] |> as.numeric()
+    ) |> tibble()
+  } else {
+    result_matrix <- rbind(result_matrix,data.frame(
+      market_id = markets_subset$rowid |> rep((res1$distances |> as.vector())[-1] |>
+                                             length()),
+      grid_id = grid5km_snapped_notNA$rowid,
+      durations = (res1$durations |> as.vector())[-1] |> as.numeric(),
+      distances = (res1$distances |> as.vector())[-1] |> as.numeric()
+    ))
+  }
+  toc()
+}
+
+```
+
+Awesome we now have the distances from all 44 markets to all grids. The resulting dataframe has 780472 rows. Now we want to find the market that is closest from every grid cell in terms of traveltime.
+
+
+```{r, echo=F}
+# Identify the lowest duration from each grid city combination
+lowest_duration <- result_matrix |> 
+  group_by(grid_id) |> 
+  slice_min(durations, with_ties = F) |> 
+  select(grid_id, market_id, durations, distances) |> 
+  rename(shortest_duration = durations)
+
+# Join the lowest duration to the grid data
+grid5km_snapped_notNA <- grid5km_snapped_notNA |>
+  left_join(lowest_duration, by = c('rowid' = 'grid_id')) |>
+  mutate(shortest_duration = shortest_duration / 3600) # convert seconds to hours
+names(grid5km_snapped_notNA)[c(12, 13)] <-
+  c('duration_h', 'distance_km') # account for naming 
+
+# join back in the not snapped grid cells. Those will bear a NA in the shortest_duration column
+grid_final <- bind_rows(grid5km_snapped_notNA,
+                        grid5km_snapped_NA)
+```
+
+# Visualization and Assessment
+
+In the following chunks some visualizations are executed to assess the results.
+
+## Non Spatial
+
+What is the relation between Traveltime and population for each grid cell?
+
+```{r, echo=F, warning=F}
+grid_final |> 
+  ggplot(aes(x = duration_h, y = pop)) +
+  geom_point() + theme_minimal() + 
+  xlab('Traveltime in h') + ylab('Population')  +
+  scale_y_continuous(labels = comma)
+```
+
+
+```{r, echo=F, warning=F}
+grid_final |> 
+  ggplot(aes(x = duration_h, y = pop |> log())) +
+  geom_point() + theme_minimal() + 
+  xlab('Traveltime in h') + ylab('Population log scaled')
+```
+
+
+## Spatial
+
+Maps of population distribution, travel time to the closest market and the closest market with respective administrative boundaries and the markets locations.
+
+### Population distribution
+
+```{r, echo=F, warning=F}
+tmap_mode('view')
+tm_shape(grid_final, name = 'Population') +
+  tm_polygons(
+    'pop',
+    fill.scale = tm_scale_intervals(
+      values = '-viridis',
+      breaks = c(0, 1, 500, 1000, 5000, 10000, 50000, 2000000)
+    ),
+    fill.title = tm_legend(title = 'Population'),
+    lwd = 0.1,
+    border = 'white'
+  ) +
+  grid_final |> group_by(admin2Pcod) |> summarise(admin2Pcod = first(admin2Pcod)) |>
+  tm_shape(name = 'Admin(2) boundaries') +
+  tm_borders(lwd = 0.5) +
+  tm_shape(markets_som_sf, name = "Market") +
+  tm_dots()
+```
+
+### Traveltime to closest market
+
+```{r, echo=F, warning=F}
+tm_shape(grid_final, name = 'Traveltime to next market') +
+  tm_polygons(
+    'duration_h',
+    fill.scale = tm_scale_intervals(
+      values = 'hcl.heat',
+      breaks = c(0, 2, 4, 6, 8, 10, 12, 14, 16)
+    ),
+    fill.title = tm_legend(title = 'Traveltime to closest market'),
+    lwd = 0.1,
+    border = 'white'
+  ) +
+  grid_final |> group_by(admin2Pcod) |> summarise(admin2Pcod = first(admin2Pcod)) |>
+  tm_shape(name = 'Admin(2) boundaries') +
+  tm_borders(lwd = 0.5) +
+  tm_shape(markets_som_sf, name = "Market") +
+  tm_dots()
+```
+
+### Closest market
+
+```{r, echo=F, warning=F}
+tm_shape(grid_final, name = 'Closest Market') +
+  tm_polygons(
+    fill = 'market_id',
+    fill.scale = tm_scale_discrete(values = 'brewer.pastel1'),
+    fill.title = tm_legend(title = 'Traveltime to closest market'),
+    lwd = 0.1,
+    border = 'white',
+    fill.legend = tm_legend_hide()
+  ) +
+  grid_final |> group_by(admin2Pcod) |> summarise(admin2Pcod = first(admin2Pcod)) |>
+  tm_shape(name = 'Admin(2) boundaries') +
+  tm_borders(lwd = 0.5) +
+  tm_shape(markets_som_sf, name = "Market") +
+  tm_dots()
+```
+
+# Output
+
+Grid export in geopackage format.
+
+```{r, echo=F}
+grid_final |> select(-c(snapped_centroid, centroid)) |>
+  st_write('somalia_grid_access_markets.gpkg', append = F, quiet = T)
+```
+

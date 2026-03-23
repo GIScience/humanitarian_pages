@@ -1,0 +1,611 @@
+---
+title: "Sketch Map Tool Numbers"
+author: "Team Sketch Map Tool"
+date: "`r Sys.Date()`"
+output: 
+  html_document:
+    code_folding: hide
+    toc: true
+    number_sections: true
+    toc_float:
+      collapsed: true
+    theme: cerulean
+editor_options: 
+  chunk_output_type: console
+  markdown: 
+    wrap: sentence
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(readr)
+library(ggplot2)
+library(lubridate)
+library(plotly)
+library(tmap)
+library(sf)
+library(rnaturalearth)
+library(ggVennDiagram)
+library(ggmosaic)
+
+
+```
+
+# Background and data
+
+All data shown is from 2024-12-05 onwards.
+
+Since 2024-12-05 we are analyzing the Apache Log which provides us with insides of the tool usage based on the IP address.
+
+Terminology:
+
+**Created Mapframe:** A mapframe is considered a "created mapframe" when the user clicks the "Next" button after the selection of an area of interest.
+
+**Downloaded Mapframe:** A mapframe is considered a "downloaded mapframe" when the processing of the *Sketch Map Template* is done and the user clicks the "Download PDF" button.
+
+**Uploaded Sketch Map:** At the moment we are tracking uploads in two different ways.
+1) A downloaded mapframe has been uploaded by clicking "Digitize your Sketch Maps".
+Here we are not able to differentiate between single and multiple map uploads.
+We are working on a solution account for this difference.
+2) We save the bbox of uploaded Sketch Maps in a database and can therefore count these as real uploads.
+
+**Geodata Downloads:** The user downloads Raster and/or Vector results by clicking "Download ZIP" and/or "Download GeoJSON" (currently only avalaible for uploads tracked through Apache).
+
+# Creation of Map Frames
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+
+#load the data. Ne newest csv files will be saved in a folder, which should always only contain the three files.
+
+files <- list.files("SMT_Input/", full.names = TRUE)
+
+if (length(files) >= 3) {
+  first_file <- files[1]
+  second_file <- files[2]
+  third_file <- files[3]
+  
+  # Read files using read_delim (or read.csv if needed)
+  sketchmap_report_map_frames <- read_delim(first_file, delim = ";", escape_double = FALSE, trim_ws = TRUE)
+  sketchmap_report_sketches <- read_delim(second_file, delim = ";", escape_double = FALSE, trim_ws = TRUE)
+  sketchmap_report_uploads <- read_delim(third_file, delim = ";", escape_double = FALSE, trim_ws = TRUE)
+} else {
+  stop("Not enough files in the folder.")
+}
+
+#sketchmap_report_uploads_20250215 <- read_delim("SMT_Input/sketchmap_report_uploads_20250215.csv", 
+   # delim = ";", escape_double = FALSE, trim_ws = TRUE)
+#View(sketchmap_report_uploads_20250215)
+
+
+#sketchmap_report_sketches_20250215 <- read_delim("SMT_Input/sketchmap_report_sketches_20250215.csv", 
+   # delim = ";", escape_double = FALSE, trim_ws = TRUE)
+#View(sketchmap_report_sketches_20250215)
+
+#sketchmap_report_map_frames_20250215 <- read_delim("SMT_Input/sketchmap_report_map-frames_20250215.csv", 
+   # delim = ";", escape_double = FALSE, trim_ws = TRUE)
+#View(sketchmap_report_map_frames_20250215)
+
+sketchmap_report_map_frames_filter <- sketchmap_report_map_frames |> filter(created_at > '2024-12-05' |> as.Date())
+# cum counts per day for each layer
+cumulative_counts <- sketchmap_report_map_frames_filter |>
+  arrange(created_at) |>
+  mutate(day = floor_date(created_at, "day")) |>
+  count(day, layer) |>
+  group_by(layer) |>
+  arrange(day) |>  # Ensure correct order within each layer
+  mutate(cumulative_count = cumsum(n)) |>
+  ungroup()
+
+# cum counts per day for all sketch maps
+total_counts <- cumulative_counts |>
+  group_by(day) |>
+  summarise(n = sum(n), .groups = "drop") |>
+  mutate(layer = "Total") |>
+  arrange(day) |>
+  mutate(cumulative_count = cumsum(n))
+
+# combine to one long table
+final_counts <- bind_rows(cumulative_counts, total_counts) |>
+  arrange(day, layer)
+
+
+# plot
+chart1 <- final_counts |>
+  ggplot(aes(x = day, y = cumulative_count, color=layer)) +
+  geom_line() +
+  geom_point() +
+  labs(title = "Cumulative Count of created Mapframes Over Time",
+       x = "Days",
+       y = "Cumulative Count") +
+  theme_classic()
+
+ggplotly(chart1)
+```
+
+# Use of baselayers
+
+```{r,message=FALSE, warning=FALSE}
+#osm esri chart
+
+donut <-sketchmap_report_map_frames_filter |> 
+  group_by(layer) |> 
+  summarise(count=n())
+
+donut$fraction <- donut$count / sum(donut$count)
+donut$ymax <- cumsum(donut$fraction)
+donut$ymin <- c(0, head(donut$ymax, n=-1))
+
+
+chart2 <- ggplot(donut, aes(ymax=ymax, ymin=ymin, xmax=2, xmin=1, fill=layer)) +
+  geom_rect() +
+  coord_polar(theta="y") +
+  xlim(c(0.2, 2.5)) + 
+  theme_void() +  
+  theme(legend.position = "right") +
+  labs(fill="Layer")
+
+chart2
+
+```
+
+# Map format used for map creation
+
+```{r,message=FALSE, warning=FALSE}
+donut_format <-sketchmap_report_map_frames_filter |> 
+  group_by(format) |> 
+  summarise(count=n())
+
+donut_format$fraction <- donut_format$count / sum(donut_format$count)
+donut_format$ymax <- cumsum(donut_format$fraction)
+donut_format$ymin <- c(0, head(donut_format$ymax, n=-1))
+
+
+chart_format <- ggplot(donut_format, aes(ymax=ymax, ymin=ymin, xmax=2, xmin=1, fill=format)) +
+  geom_rect() +
+  coord_polar(theta="y") +
+  xlim(c(0.2, 2.5)) + 
+  theme_void() +  
+  theme(legend.position = "right") +
+  labs(fill="Layer")
+
+chart_format
+
+
+```
+
+# Orientation chosen for map creation
+
+```{r,message=FALSE, warning=FALSE}
+
+#why is this not binary and other languages included
+
+donut_orientation <-sketchmap_report_sketches |> 
+  group_by(orientation_det) |> 
+  summarise(count=n())
+
+donut_orientation$fraction <- donut_orientation$count / sum(donut_format$count)
+donut_orientation$ymax <- cumsum(donut_orientation$fraction)
+donut_orientation$ymin <- c(0, head(donut_orientation$ymax, n=-1))
+
+
+chart_orientation <- ggplot(donut_orientation, aes(ymax=ymax, ymin=ymin, xmax=2, xmin=1, fill=orientation_det)) +
+  geom_rect() +
+  coord_polar(theta="y") +
+  xlim(c(0.2, 2.5)) + 
+  theme_void() +  
+  theme(legend.position = "right") +
+  labs(fill="Layer")
+
+chart_orientation
+```
+
+# Language used to create Sketch Map
+
+```{r, message = FALSE}
+
+#why are there ES and es, why are there missing values if we have filtered already to dec 5
+
+donut_lang <-sketchmap_report_map_frames_filter |> 
+  group_by(created_lang) |> 
+  summarise(count=n())
+
+donut_lang$fraction <- donut_lang$count / sum(donut_lang$count)
+donut_lang$ymax <- cumsum(donut_lang$fraction)
+donut_lang$ymin <- c(0, head(donut_lang$ymax, n=-1))
+
+# Total count of all values(to put to the legend, does not work so far)
+total_count <- sum(donut_lang$count)
+
+chart_lang <- ggplot(donut_lang, aes(ymax=ymax, ymin=ymin, xmax=2, xmin=1, fill=created_lang)) +
+  geom_rect() +
+  coord_polar(theta="y") +
+  xlim(c(0.2, 2.5)) + 
+  theme_void() +  
+  theme(legend.position = "right") +
+  labs(fill="Layer") +
+  annotate("text", x = 2.7, y = 0, label = paste("Total: ", total_count), size = 5,hjust = 0)
+
+chart_lang
+```
+
+# Countries where Sketch Maps have been created from
+
+Information retrieved via Apache log.
+The IP address of the users give insights on where the user was located when they created their mapframes.
+
+```{r,message=FALSE, warning=FALSE}
+
+plot_data_country <- sketchmap_report_map_frames_filter %>%
+  group_by(created_from_country) %>%
+  summarise(n = n())
+
+#why are there entries since dec 5 without information created_from_country (as well as no information for other columns based on Apache)
+
+
+#download worldmap
+world <- ne_countries(scale = "medium", returnclass = "sf")
+#world_lokal <- st_read("/Users/aschauss/Documents/SketchMapTool/Statistics/Map/world-administrative-boundaries.geojson")
+
+
+#transfrom to Mollweide
+world_mollweide <- st_transform(world, crs = "+proj=moll")
+#world_lokal <- st_transform(world_lokal, crs = "+proj=moll")
+
+#group by iso code
+sketchmap_report_map_frames_filter_iso <- sketchmap_report_map_frames_filter %>%
+  group_by(created_from_iso_code) %>%
+  summarise(count = sum(!is.na(created_from_iso_code)))
+
+#rightjoin with world
+sketchmap_report_world_iso <- sketchmap_report_map_frames_filter_iso %>%
+  rename(iso_a2 = created_from_iso_code) %>%
+  right_join(world_mollweide, by = "iso_a2")
+
+#back to sf
+sketchmap_report_world_iso <- st_as_sf(sketchmap_report_world_iso)
+
+tmap_mode("view")
+
+#print map vr
+tm_shape(sketchmap_report_world_iso) +
+  tm_polygons("count", 
+              palette = "Reds",
+              title = "Count per Country",
+              style = "jenks",  # Change classification method
+              n = 5  # Number of classes
+              ) +
+  tm_borders() +
+  tm_layout(main.title = "Created Sketch Maps",
+            legend.outside = TRUE,
+            legend.position = c("left", "bottom"),
+            legend.bg.color = "white",
+            legend.frame = FALSE,
+            frame = FALSE
+  )
+
+
+```
+
+# Bounding Boxes from created Mapframes
+
+Overview of the bounding boxes chosen when creating mapframes.
+
+```{r,message=FALSE, warning=FALSE}
+#switch to interactive
+tmap_mode("view")
+
+mapframes_bboxes <- st_as_sf(sketchmap_report_map_frames, wkt = "bbox", crs = 4326)
+
+tm_shape(mapframes_bboxes) +
+  tm_basemap("OpenStreetMap") +
+  tm_borders() +
+  tm_layout(title = "Bounding Box Localization for Generated Map Frames")
+
+
+```
+
+# Bounding Boxes from created Mapframes per Country
+
+Count of bounding boxes from mapframes per country to assess use of Sketch Map Tool per country
+
+```{r,message=FALSE, warning=FALSE}
+#areas of bounding boxes: not sure yet if of interest
+#mapframes_bboxes_proj <- st_transform(mapframes_bboxes, crs = 32633)
+
+#calculate areas
+#mapframes_bboxes_proj$area <- st_area(mapframes_bboxes_proj)
+
+
+# Calculate centroids of the bounding boxes
+
+mapframes_bboxes_sf <- st_as_sf(mapframes_bboxes, wkt = "bbox", crs = 4326)
+mapframes_bboxes_sf$centroid <- st_centroid(mapframes_bboxes_sf)
+
+#Spatial join with world
+world <- ne_countries(scale = "medium", returnclass = "sf")
+
+centroids_with_country <- st_join(mapframes_bboxes_sf$centroid , world)
+
+#Groupby
+centroid_counts <- centroids_with_country %>%
+  group_by(iso_a2) %>%
+  summarise(countbbox = n_distinct(centroid), .groups = "drop")
+#join back
+centroid_counts_sf <- st_join(world, centroid_counts)
+
+tmap_mode("view")
+
+tm_shape(centroid_counts_sf ) + 
+  tm_borders() +  # Add borders of countries
+  tm_fill(col = "countbbox", 
+          palette = "Reds", 
+          title = "Centroid Count",
+          style = "jenks",  # Change classification method 
+          na.color = "gray",
+          n = 5) +  # Number of classes for Jenks classification
+  tm_layout(title = "Map Frames created for Countries")
+
+```
+
+# Created vs. Downloaded Sketch Maps
+
+A mapframe is counted as downloaded as soon as the user clicks on "Download" PDF.
+
+```{r,message=FALSE, warning=FALSE}
+
+#How many created Sketch Maps were actually dowloaded?
+#sketchmap_report_map_frames_filter |> filter(!is.na(downloaded_at))
+
+# Data for stacked bar chart
+mapframe_counts_stacked <- data.frame(
+  category = c("Downloaded", "Not Downloaded"),
+  count = c(sum(!is.na(sketchmap_report_map_frames_filter$downloaded_at)), 
+            nrow(sketchmap_report_map_frames_filter) - sum(!is.na(sketchmap_report_map_frames_filter$downloaded_at))),
+  Status = c("Downloaded", "Not Downloaded")  # Add a status column for stacking
+)
+
+# Stacked Bar Chart
+ggplot(mapframe_counts_stacked, aes(x = "Mapframes", y = count, fill = Status)) +
+  geom_bar(stat = "identity") +
+  labs(title = "Created vs. Downloaded Mapframes",
+       x = "Mapframes",
+       y = "Count") +
+  scale_fill_manual(values = c("lightgreen", "lightgray")) +  # Different colors for clarity
+  theme_minimal()
+
+```
+
+# Mapframes with downloads and uploads
+
+Uploads as number of Sketch Maps (former blobs) registered in the database.
+This is independent from upload clicks and multi uploads.
+
+```{r,message=FALSE, warning=FALSE}
+
+
+sketchmap_report_sketches_filter <- sketchmap_report_sketches |> filter(sketch_uploaded > '2024-12-05' |> as.Date())
+
+mapframes_total <- sketchmap_report_map_frames_filter 
+downloads <- sketchmap_report_map_frames_filter |> filter(!is.na(downloaded_at))
+uploads <- sketchmap_report_sketches_filter
+
+sketchmap_report_map_frames_filter <- sketchmap_report_map_frames |> filter(created_at > '2024-12-05' |> as.Date())
+
+#take care of timestamps
+mapframes_total <- sketchmap_report_map_frames_filter |> 
+  mutate(day = floor_date(created_at, "day"))
+
+downloads <- sketchmap_report_map_frames_filter |> 
+  filter(!is.na(downloaded_at)) |> 
+  mutate(day = floor_date(downloaded_at, "day"))
+
+uploads <- sketchmap_report_sketches_filter |> 
+  mutate(sketch_uploaded = as.POSIXct(sketch_uploaded, format = "%Y-%m-%d %H:%M:%S", tz = "UTC")) |> 
+  mutate(day = floor_date(sketch_uploaded, "day"))
+
+# Cumulative counts per day for each dataset
+mapframes_cum <- mapframes_total |> count(day) |> 
+  arrange(day) |> 
+  mutate(cumulative_count = cumsum(n), dataset = "Mapframes Created")
+
+downloads_cum <- downloads |> count(day) |> 
+  arrange(day) |> 
+  mutate(cumulative_count = cumsum(n), dataset = "Downloads")
+
+uploads_cum <- uploads |> count(day) |> 
+  arrange(day) |> 
+  mutate(cumulative_count = cumsum(n), dataset = "Sketches Uploaded")
+
+
+# Combine datasets
+final_counts_3 <- bind_rows(mapframes_cum, downloads_cum, uploads_cum)
+
+chartupdown <- ggplot(final_counts_3, aes(x = day, y = cumulative_count, color = dataset)) +
+  geom_line() +
+  geom_point() +
+  labs(title = "Cumulative Count of Mapframes, Downloads, and Uploads Over Time",
+       x = "Days",
+       y = "Cumulative Count") +
+  theme_minimal()
+
+
+ggplotly(chartupdown)
+
+
+#olot only downloads versus uploads
+
+filtered_counts <- final_counts_3 |> filter(dataset %in% c("Sketches Uploaded", "Downloads"))
+
+# Create the plot
+chartupdown2 <- ggplot(filtered_counts, aes(x = day, y = cumulative_count, color = dataset)) +
+  geom_line() +
+  geom_point() +
+  labs(title = "Cumulative Count of Downloads and Uploads Over Time",
+       x = "Days",
+       y = "Cumulative Count") +
+  theme_minimal()
+
+# Convert to plotly
+ggplotly(chartupdown2)
+
+
+
+
+#any possibility to track multiple uploads?
+
+# Number of downloaded Sketch Maps vs. created Sketch Maps
+#sketchmap_report_map_frames_filter |>  filter(!is.na(downloaded_at) & uploads>0) |> nrow()
+#67
+#67 downloads mapframes show and uploads. Uploads csv = 296. Does that mean that there were several multiple uploads???
+#im Schnitt 4,5 auf einmal upgeloaded?
+
+#general number of uploads
+#no_uploads <- nrow(sketchmap_report_sketches)
+#296
+
+```
+
+# Uploaded Sketch Maps and consent given over time
+
+Total uploaded Sketch Maps (former blobs) based on database entry from 2024-12-05 on.
+
+```{r,message=FALSE, warning=FALSE}
+
+#no_uploads <- nrow(sketchmap_report_sketches)
+
+sketchmap_report_sketches_filter <- sketchmap_report_sketches %>%
+  filter(sketch_uploaded > as.Date('2024-12-05')) %>%  
+  mutate(sketch_uploaded = as.POSIXct(sketch_uploaded))  
+
+
+#Prepare cumulative counts per day for consent status
+cumulative_uploads <- sketchmap_report_sketches_filter |>
+  arrange(sketch_uploaded) |>
+  mutate(day = floor_date(sketch_uploaded, "day")) |> 
+  count(day, consent) |>  # Count uploads per day for each consent status
+  group_by(consent) |>
+  arrange(day) |>  
+  mutate(cumulative_count = cumsum(n)) |>
+  ungroup()
+
+# Calculate the total number of uploads per day (regardless of consent status)
+total_uploads <- cumulative_uploads |>
+  group_by(day) %>%
+  summarise(n = sum(n), .groups = "drop") %>%
+  mutate(consent = "Total Uploads")%>%  
+  arrange(day) %>%
+  mutate(cumulative_count = cumsum(n))
+
+cumulative_uploads <- cumulative_uploads %>%
+  mutate(consent = as.character(consent))
+# Combine individual consent-based cumulative counts with the total uploads
+final_uploads <- bind_rows(cumulative_uploads, total_uploads) |>
+  arrange(day, consent)%>%
+  mutate(day = as.Date(day))
+
+uploads_fig <- ggplot(final_uploads, aes(x = day, y = cumulative_count, color = consent)) +
+  geom_line(size = 1) +  # Line for cumulative count
+  geom_point(size = 2) + # Optional: Points for each day
+  labs(title = "Cumulative Uploads Over Time",
+       x = "Date",
+       y = "Cumulative Count",
+       color = "Consent Status") +
+  theme_minimal() +
+  scale_x_date(date_labels = "%b %d", date_breaks = "1 week") + 
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))  
+
+ggplotly(uploads_fig)
+
+```
+
+# How was often consent was given to use uploaded sketchmaps to contribute to model training?
+
+```{r,message=FALSE, warning=FALSE}
+
+no_uploads <- nrow(sketchmap_report_sketches)
+sketchmap_report_sketches_filter <- sketchmap_report_sketches |> filter(sketch_uploaded > '2024-12-05' |> as.Date())
+
+#sketchmap_report_map_frames_filter |>  filter(!is.na(downloaded_at) & uploads>0 & consenses>0) |> nrow()
+#24
+
+#test <- sketchmap_report_map_frames_filter |>  filter(!is.na(downloaded_at) & uploads>0)
+#test$uploads |> sum()
+#round(test$consenses |> sum() / test$uploads |> sum() *100,2)
+
+ggplot(sketchmap_report_sketches_filter, aes(x = as.factor(consent), fill = as.factor(consent))) +
+  geom_bar() +
+  geom_text(stat = "count", aes(label = after_stat(count)), vjust = -0.5) +  # Add count labels
+  theme_minimal() +
+  labs(x = "Consent Given", y = "Number of Uploads", fill = "Consent",
+       title = paste("Total Sketch Map Uploads:", nrow(sketchmap_report_sketches_filter))) +  # Show total in title
+  scale_fill_manual(values = c("TRUE" = "steelblue", "FALSE" = "tomato"))
+
+
+
+
+```
+
+# Uploaded Sketch Maps and share of dowloaded results
+
+Analysis is based on Apache log.
+Uploads = click on upload.
+This analysis does not consider multiple uploads.
+It will be soon replaced by geodata download information on sketches database uploads.
+
+```{r,message=FALSE, warning=FALSE}
+
+#sketchmap_report_uploads |> filter(is.na(download_raster) & is.na(download_vector)) |> nrow()
+#22
+
+#download_raster <- sketchmap_report_uploads |> filter(!is.na(download_raster))
+#no_raster_downloads <- nrow(download_raster) 
+# 141
+#share_raster_downloads <- no_raster_downloads / no_uploads
+
+#download_raster$uuid |> unique() |> length()
+#  79
+#download_vector <- sketchmap_report_uploads |> filter(!is.na(download_vector))
+#no_vector_downloads <- nrow(download_vector) 
+# 230
+
+#share_vector_downloads <- no_vector_downloads / no_uploads
+
+#download_vector$uuid |> unique() |> length()
+# 138
+
+#interesting that it is from different uuids?
+
+ 
+
+# Categorize downloads based on raster and vector presence
+sketchmap_report_uploads <- sketchmap_report_uploads |> 
+  mutate(category = case_when(
+    !is.na(download_raster) & !is.na(download_vector) ~ "Both",
+    !is.na(download_raster) ~ "Raster Only",
+    !is.na(download_vector) ~ "Vector Only",
+    TRUE ~ "None"  # This covers cases where neither raster nor vector is downloaded
+  ))
+
+# Count each category
+category_counts <- table(sketchmap_report_uploads$category)
+total <- sum(category_counts) 
+
+# Convert to data frame for ggplot
+category_df <- as.data.frame(category_counts)
+colnames(category_df) <- c("Category", "Count")
+
+# Calculate percentage
+category_df$Percentage <- (category_df$Count / total) * 100
+
+# Plot bar chart with percentages
+ggplot(category_df, aes(x = Category, y = Percentage, fill = Category)) +
+  geom_bar(stat = "identity") +
+  labs(title = "Distribution of Raster and Vector Geodata Downloads", 
+       x = "Download Type", 
+       y = "Percentage") +
+  theme_minimal()
+
+
+
+```

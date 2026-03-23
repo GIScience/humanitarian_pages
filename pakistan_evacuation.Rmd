@@ -1,0 +1,870 @@
+---
+title: "Evacuation Routing Pakistan"
+author: "Marcel Reinmuth"
+date: "`r Sys.Date()`"
+output: 
+  html_document:
+    code_folding: hide
+    toc: true
+    number_sections: true
+    toc_float:
+      collapsed: true
+    theme: cerulean
+editor_options: 
+  chunk_output_type: console
+  markdown: 
+    wrap: sentence
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+knitr::knit_hooks$set(time_it = local({
+  now <- NULL
+  function(before, options) {
+    if (before) {
+      # record the current time before each chunk
+      now <<- Sys.time()
+    } else {
+      # calculate the time difference after a chunk
+      res <- difftime(Sys.time(), now, units = "secs")
+      # return a character string to show the time
+      paste("Time for this code chunk to run:", round(res,
+        2), "seconds")
+    }
+  }
+}))
+
+options(openrouteservice.url = "http://localhost:8080/ors")
+
+```
+
+# Intro
+
+Analysis of evacuation routing in Pakistan. 
+We will look at flooded populated areas in Pakistan and assess their distance on major roads towards the next non flooded location.
+
+# Setup
+
+This section for reproducibility.
+We use R in the version 4.3.2.
+In order to be able to reproduce this analysis you need an openrouteservice API key.
+Get one [here](https://openrouteservice.org/sign-up/).
+Put it in a text file file called `config.txt` in the working directory.
+It has no structure, just the key in the first line.
+
+``` txt
+ZXCVBNMLKJHGFDSAQWERTYUIOP
+```
+
+## libraries
+
+Almost all of the libraries can be installed via CRAN with the command `install.packages('packagename')`.
+The openrouteservice package is not on CRAN and needs to be installed via github.
+With the command `remotes::install_github("GIScience/openrouteservice-r");` Also tmap in its most recent version 4 is not yet available on CRAN so we need to download and install it via github too.
+
+```{r import libs, message=F, warning=F}
+# main libraries
+library(tidyverse)
+library(glue)
+library(sf)
+library(units)
+library(ggplot2)
+library(tictoc)
+library(openrouteservice) # remotes::install_github("GIScience/openrouteservice-r");
+library(jsonlite)
+library(terra)
+library(exactextractr)
+library(tmap) # remotes::install_github("r-tmap/tmap")
+library(leaflet)
+library(furrr)
+library(purrr)
+library(kableExtra)
+library(mapsf)
+library(RColorBrewer)
+library(geonode4R)
+
+config <- readLines("config.txt")
+api_key <- config[1]
+user <- config[2]
+password <- config[3]
+# Function to  adjust a list of coordinates to the location of the closest road segment via the snapping endpoint of ORS. ORS itself only allows for a maximum distance of 350m to snap.
+ors_snap <- function(x, rowids, local=F) {
+  
+  library(httr)
+  
+  # Define the body
+  body <- list(
+    locations = x,
+    radius = 100000000 # apparently the maximum snapping distance is 5km
+  )
+  
+  # Define the headers
+  headers <- c(
+    'Accept' = 'application/json, application/geo+json, application/gpx+xml, img/png; charset=utf-8',
+    'Authorization' = api_key,
+    'Content-Type' = 'application/json; charset=utf-8'
+  )
+  
+  endpoint <- if(local){'http://localhost:8080/ors/v2/snap/driving-car'} else {'https://api.openrouteservice.org/v2/snap/driving-car'}
+  # Make the POST request
+  response <- POST( endpoint,
+    #'https://api.openrouteservice.org/v2/snap/driving-car', 
+                   body = body, 
+                   add_headers(headers), 
+                   encode = "json")
+  
+  resp_content <- content(response)
+  
+  extract_data <- function(x, index) {
+    if (is.null(x)) {
+      return(data.frame(
+        rowid = index,
+        lon = NA,
+        lat = NA,
+        snapped_distance = NA
+      ))
+    } else {
+      return(data.frame(
+        rowid = index,
+        lon = x$location[[1]],
+        lat = x$location[[2]],
+        snapped_distance = x$snapped_distance
+      ))
+    }
+  }
+  
+  # Extract data from the list and create a dataframe
+  df <- do.call(rbind, lapply(seq_along(resp_content$locations), function(i) extract_data(resp_content$locations[[i]], i)))
+  df$rowid <- rowids
+  # Convert the dataframe to an sf object
+  sf_df <- df |> 
+    drop_na(lon, lat) |>  # Drop rows with NA coordinates
+    st_as_sf(coords = c("lon", "lat"), crs = 4326) |>  # Define the coordinate columns and set CRS
+    st_sf()
+  
+  return(sf_df)
+
+}
+
+```
+
+# Processing pipeline
+
+The workflow is as follows:
+
+* Sample locations in pakistan
+* Enrich in order to differentiate in to 
+  * flooded and not flooded
+  * snapped and not snapped
+  * with population and without population
+* Take the snapped, populated, flooded locations and find the 100 nearest non flooded, snapped locations
+
+By snapping we refer to the process of changing the location of an origin or destination of a route to the nearest road segment. This is necessary because the openrouteservice API only allows for a maximum distance of 350m to snap. However in the context of Pakistan greater snapping distances are desired as the road density in some regions might be low.
+
+
+## Data input
+
+We use the following datasets as inputs:
+
+* pop: WorldPop population counts constrained
+* flood exposure data
+* admin boundaries level 3 (Tehsil)
+
+```{r input, message=F, warning=F}
+pop <- rast('pak_ppp_2020_UNadj_constrained.tif')
+admin <- st_read('pak_admin3_pop.shp', quiet = T)
+
+
+```
+
+## Flood preprocessing
+
+In order to join the flood data with the admin boundaries we crop and mask it to the exact boundaries of Pakistan. We change all negative values which could represent no data values to 0. That why we don't ran into aggregation problems when up cells within a grid cell or other boundary that are less than 0, NA, Inf or NaN. For our analysis we have 9 different scenarios. The scenarios are based on the combinations of
+
+**Return periods** of 5 years, 50 years and 100 years
+
+**Flood depth** of 30, 110 and 200 cm
+
+```{r flood prep, message=F, warning=F, cache=T}
+# define flood scenarios
+scenarios <- list(
+  list(returnperiod = "1in5", depths = c(30, 110, 200)),
+  list(returnperiod = "1in50", depths = c(30, 110, 200)),
+  list(returnperiod = "1in100", depths = c(30, 110, 200))
+)
+
+load_raster_data <- function(returnperiod) {
+  file_path <- paste0(returnperiod, "_resampled_100m_merged.tif")
+  rast(file_path)
+}
+
+# Process each scenario
+process_scenario <- function(raster_data, depth) {
+  scenario <- raster_data
+  scenario[scenario < depth] <- 0
+  scenario <- scenario |> terra::crop(admin) 
+  scenario <- scenario |> terra::mask(admin)
+  return(scenario)
+}
+
+# Initialize an empty list to store floods
+floods <- list()
+
+# Loop through each scenario
+for (scenario in scenarios) {
+  returnperiod <- scenario$returnperiod
+  raster_data <- load_raster_data(returnperiod)
+  
+  for (depth in scenario$depths) {
+    scenario_name <- paste0('flood_', returnperiod, "_", depth)
+    filtered_raster <- process_scenario(raster_data, depth)
+    
+    # Store the result
+    floods[[scenario_name]] <- filtered_raster
+  }
+}
+
+```
+
+# Grid sampling
+
+Finding the shortest/fastes way between a number of origins and destinations is a job for the Matrix endpoint of ors. 
+However our endeavour is not a typical matrix request. We are not interested in all possible connections but only for the 100 closest non flooded locations from a flooded one. So basically for each origins one request with 100 destinations. Lets start with the grid sampling. We decide for a 5000m width hexagonal grid. A hexagonal grid is closer to a circle and therefore the better joice for our analysis. Within each grid cell we will use the centroid and search for road network locations to snap to.
+
+```{r create grid, cache=T, message=F, warning=F, time_it=T}
+# create 15km grid
+grid1km <-
+  st_make_grid(admin |> st_transform(32642), cellsize = 5000, square = F, flat_topped = T)
+# convert to sf df
+grid1km <- grid1km |> st_as_sf()
+names(grid1km) <- 'geometry'
+st_geometry(grid1km) <- 'geometry'
+# get rid of all cells that are not within somalia
+grid1km <-
+  grid1km |> st_transform(4326) |> st_filter(admin |> st_union())
+# join admin codes
+grid1km <-
+  grid1km |> st_join(admin |> select(admin3_teh, admin3_te0, admin3_pop, admin3_po0, admin3_po1),
+                     left = T,
+                     largest = T)
+# join pop information
+grid1km$pop <- exact_extract(pop, grid1km, 'sum', progress = F)
+#grid1km$flood <- exact_extract(flood, grid1km, 'max', progress = F)
+extract_flood <- function(raster, grid, scenario_name) {
+  flood_values <- exact_extract(raster, grid, 'max', progress = FALSE)
+  col_name <- paste0(scenario_name, "_max")
+  grid[[col_name]] <- flood_values
+  return(grid[[col_name]])
+}
+
+scenario_names <- names(floods)
+flood_results <- map2(floods, scenario_names, ~extract_flood(.x, grid1km, .y))
+grid1km <- grid1km |> cbind(flood_results)
+
+# add rowid
+grid1km <- grid1km |> mutate(rowid = row_number())
+```
+
+## Snapping
+
+The grid is created, now snap the centroids.
+
+```{r snap, cache=T, time_it=T}
+# convert
+coord_list <-
+    lapply(grid1km$geometry |> st_centroid(), function(x)
+      c(st_coordinates(x)[, 1], st_coordinates(x)[, 2]))
+
+# snap the list of cords
+snapped_coords <- ors_snap(coord_list,rowids=grid1km$rowid, local = T)
+
+# join back
+grid1km_snapped <- grid1km |>
+  left_join(snapped_coords |> tibble(), by = "rowid") |>
+  mutate(centroid = st_centroid(geometry.x))
+
+# refactor names in order to keep, the grid geometry, centorid and snapped centroid
+names(grid1km_snapped)[18:19] <- c('geometry', 'snapped_centroid')
+st_geometry(grid1km_snapped) <- 'geometry'
+
+grid1km_snapped <- grid1km_snapped |> mutate(snapped = ifelse(is.na(snapped_distance), F, T)) 
+```
+
+## Overview grid & base data
+
+```{r first plots, cache=T, warning=F, message=F}
+tmap_mode('plot')
+grid1km_snapped |> tm_shape() +
+  tm_polygons(fill='snapped', lwd=.1, fill.legend = tm_legend(title='Snapped centroid')) + tm_place_legends_inside()
+
+grid1km_snapped |> mutate(pop=ifelse(pop<=0, F, T)) |> 
+  tm_shape() +
+  tm_polygons(fill='pop', lwd=.1,  fill.legend = tm_legend(title='Inhabited')) + tm_place_legends_inside()
+
+grid1km_snapped |> select(-c(admin3_teh, admin3_te0, admin3_pop, admin3_po0, admin3_po1, pop, snapped, snapped_distance, snapped, snapped_centroid, centroid)) |> 
+  pivot_longer(cols = -c(rowid,geometry), # Exclude geometry column from pivoting
+               names_to = "category", # Name of the new category column
+               values_to = "value") |> mutate(flood = ifelse(value<=0, F, T))  |> 
+  tm_shape() +
+  tm_polygons(fill='flood', lwd=.1,  fill.legend = tm_legend(title='Flood affected'), fill.free=T) + tm_place_legends_inside() |> tm_facets( by="category", nrow=3)
+
+# grid1km_snapped |> mutate(flood=ifelse(flood<=0, F, T)) |>
+#   tm_shape() +
+#   tm_polygons(fill='flood', lwd=.1,  fill.legend = tm_legend(title='Flood affected')) + tm_place_legends_inside()
+```
+
+Out of the `r nrow(grid1km_snapped)` cells covering Pakistan `grid1km_snapped |> filter(pop>0) |> nrow()` are inhabited. 
+
+```{r, include=F, echo=F, eval=F}
+grid1km_snapped |> st_drop_geometry() |> mutate(
+  flood_1in5_30 = ifelse(flood_1in5_30>0,1,0),
+  flood_1in5_110 = ifelse(flood_1in5_110>0,1,0),
+  flood_1in5_200 = ifelse(flood_1in5_200>0,1,0),
+  flood_1in50_30 = ifelse(flood_1in50_30>0,1,0),
+  flood_1in50_110 = ifelse(flood_1in50_110>0,1,0),
+  flood_1in50_200 = ifelse(flood_1in50_200>0,1,0),
+  flood_1in100_30 = ifelse(flood_1in100_30>0,1,0),
+  flood_1in100_110 = ifelse(flood_1in100_110>0,1,0),
+  flood_1in100_200 = ifelse(flood_1in100_200>0,1,0)
+) |> group_by(flood_1in5_30, flood_1in5_110, flood_1in5_200, flood_1in50_30, flood_1in50_110, flood_1in50_200, flood_1in100_30, flood_1in100_110, flood_1in100_200) |> summarise(n=n()) |> kable(latex_options='striped', caption = 'Population in flooded areas') |> suppressMessages()
+```
+
+
+## Assess flooded and snapped locations
+
+
+```{r differentiate in or and dest, cache=T, message=F, warning=F}
+
+grid1km_snapped |> st_drop_geometry() |> mutate(flooded = ifelse(flood_1in5_30 <=0 | is.na(flood_1in5_30), T, F)) |>
+  group_by(snapped, flooded) |> summarise(pop=sum(pop)) |> kable(latex_options='striped') |> suppressMessages()
+
+
+grid1km_snapped |> st_drop_geometry() |> filter(!is.na(snapped)) |> mutate(
+                                      flood_1in5_30 = ifelse(flood_1in5_30 <=0 | is.na(flood_1in5_30), T, F),
+                                      flood_1in5_110 = ifelse(flood_1in5_110 <=0 | is.na(flood_1in5_110), T, F),
+                                      flood_1in5_200 = ifelse(flood_1in5_200 <=0 | is.na(flood_1in5_200), T, F),
+                                      ) |>
+  group_by(snapped, 
+           flood_1in5_30, flood_1in5_110, flood_1in5_200,
+           ) |> summarise(pop=sum(pop)) |> kable(latex_options='striped', 
+                                                 caption = 'Snapped grid cells 5 years return period flood') |> suppressMessages()
+
+
+grid1km_snapped |> st_drop_geometry() |> filter(!is.na(snapped)) |> mutate(
+                                      flood_1in50_30 = ifelse(flood_1in50_30 <=0 | is.na(flood_1in50_30), T, F),
+                                      flood_1in50_110 = ifelse(flood_1in50_110 <=0 | is.na(flood_1in50_110), T, F),
+                                      flood_1in50_200 = ifelse(flood_1in50_200 <=0 | is.na(flood_1in50_200), T, F),
+                                      ) |>
+  group_by(snapped, 
+           flood_1in50_30, flood_1in50_110, flood_1in50_200,
+           ) |> summarise(pop=sum(pop)) |> kable(latex_options='striped', 
+                                                 caption = 'Snapped grid cells 50 years return period flood') |> suppressMessages()
+
+
+grid1km_snapped |> st_drop_geometry() |> filter(!is.na(snapped)) |> mutate(
+                                      flood_1in100_30 = ifelse(flood_1in100_30 <=0 | is.na(flood_1in100_30), T, F),
+                                      flood_1in100_110 = ifelse(flood_1in100_110 <=0 | is.na(flood_1in100_110), T, F),
+                                      flood_1in100_200 = ifelse(flood_1in100_200 <=0 | is.na(flood_1in100_200), T, F)
+                                      ) |>
+  group_by(snapped, 
+           flood_1in100_30, flood_1in100_110, flood_1in100_200,
+           ) |> summarise(pop=sum(pop)) |> kable(latex_options='striped', 
+                                                 caption = 'Snapped grid cells 100 years return period flood') |> suppressMessages()
+
+```
+
+
+**How many source points do we miss due to not snapping in the 5 years period and 200cm depth?**
+
+<!-- `r grid1km_snapped |> filter(flood_1in5_200>0 & pop>0 & is.na(flood_1in5_200)) |> nrow()` -->
+
+**How many source points do we miss due to not snapping in the 100 years period and 30cm depth?**
+
+<!-- `r grid1km_snapped |> filter(flood_1in100_30>0 & pop>0 & is.na(flood_1in100_30)) |> nrow()` -->
+
+
+**How many destination points?**
+
+5 years & 200cm
+
+<!-- `r grid1km_snapped |> filter(is.na(snapped_distance) &( flood_1in5_200<= 0 | is.na(flood_1in5_200))) |> nrow()` -->
+
+100 years & 30cm
+
+<!-- `r grid1km_snapped |> filter(is.na(snapped_distance) &( flood_1in100_30<= 0 | is.na(flood_1in100_30))) |> nrow()` -->
+
+
+# O/D creation and matrix request
+
+Now we fire for each origin location a request to the ors matrix endpoint to get the 100 nearest destinations.
+We iterate over all 'SOURCE POINTS' source points.
+This process is paralellized via the furrr package to speed up the process.
+
+
+```{r matrix request, cache=T, message=F, warning=F, time_it=T}
+
+run_scenario <- function(scenario, grid1km_snapped) {
+  
+  # source points are only grids that are affected by flooding, contain population and are snapped
+  source_pts <- grid1km_snapped |> filter(!!sym(scenario)>0 & pop>0 & !is.na(snapped_distance))
+  
+  # destination points are all grid cells that are not affected by flooding and snap
+  destination_pts <- grid1km_snapped |> filter(!is.na(snapped_distance) & (!!sym(scenario)<= 0 | is.na(!!sym(scenario))))
+  
+  nearest_threshold <- 100
+
+# Set up parallel backend using furrr
+  plan(multisession, workers = 8) # Use 8 cores for parallel processing
+  
+  # Function to process each row
+  process_row <- function(i) {
+    
+    # Select single grid cell
+    grid1km_subset <- source_pts[i, ]
+    
+    
+    destination_pts <- destination_pts |>
+      mutate(dist = st_distance(st_centroid(destination_pts), 
+                                st_centroid(grid1km_subset)))
+    
+    # Select the top 10 rows with the lowest distance
+    next_10 <- destination_pts |>
+      arrange(dist) |>
+      slice_head(n = nearest_threshold)
+    
+    #next_10 |> mapview::mapview(next_10)
+    #next_10$geometry |> plot()
+    #grid1km_subset$geometry |> plot(add=T, col='red')
+    
+    # next_10 <- grid1km_subset |>
+    #   mutate(dist = st_distance(st_centroid(grid1km_subset), st_centroid(grid1km_notflooded_snapped_notNA))) |>
+    #   group_by(admin3_teh) |>
+    #   slice_min(dist, n = 10)
+    
+    coord_list <- map(next_10$snapped_centroid |> st_centroid(), ~ c(st_coordinates(.x)[, 1], st_coordinates(.x)[, 2]))
+    
+    source_coords <- map(grid1km_subset$snapped_centroid |> st_centroid(), ~ c(st_coordinates(.x)[, 1], st_coordinates(.x)[, 2]))
+    
+    coord_list_run <- c(source_coords, coord_list)
+    attempt <- 1
+    while(!exists('res1') && attempt <= 5) {
+      tryCatch({
+        res1 <- ors_matrix(
+        coord_list_run,
+        sources = 0,
+        metrics = c("duration", "distance"),
+        units = "km",
+        api_key = api_key,
+        output = 'parsed'
+      )
+      }, error = function(e) {
+      message("Attempt ", attempt, " failed: ", conditionMessage(e))
+      Sys.sleep(2) # Wait for 2 seconds before retrying
+    })
+    attempt <- attempt + 1
+  }
+  
+  if (!exists('res1')) {
+    stop("Failed to get a valid response after 5 attempts.")
+  }
+ 
+    
+    source_id <- grid1km_subset$rowid
+    destination_ids <- next_10$rowid
+    bird_dists <- next_10$dist
+    
+    result <- data.frame(
+      source_id = source_id,
+      destination_ids = I(list(next_10$rowid)),
+      durations = (res1$durations |> as.vector())[-1] |> as.numeric() |> list() |> I(),
+      distances = (res1$distances |> as.vector())[-1] |> as.numeric() |> list() |> I(),
+      bird_dist = bird_dists |> as.numeric() |> list() |> I(),
+      min_dist = min((res1$distances |> as.vector())[-1] |> as.numeric(), na.rm = TRUE),
+      max_dist = max((res1$distances |> as.vector())[-1] |> as.numeric(), na.rm = TRUE),
+      mean_dist = mean((res1$distances |> as.vector())[-1] |> as.numeric(), na.rm = TRUE),
+      min_dur = min((res1$durations |> as.vector())[-1] |> as.numeric(), na.rm = TRUE),
+      max_dur = max((res1$durations |> as.vector())[-1] |> as.numeric(), na.rm = TRUE),
+      mean_dur = mean((res1$durations |> as.vector())[-1] |> as.numeric(), na.rm = TRUE),
+      na = (res1$durations |> as.vector())[-1] |> as.numeric() |> is.na() |> sum()
+    ) |> tibble()
+    
+    names(result) <- paste0(scenario, "_", names(result))
+    
+    return(result)
+  }
+  
+  # Run the parallel processing using furrr
+  results_matrix <- future_map_dfr(1:nrow(source_pts), process_row)
+  
+  # Optionally, revert to sequential plan after the parallel work is done
+  plan(sequential)
+  
+  return(results_matrix)
+
+}
+
+
+result_matrix <- map(scenario_names, ~run_scenario(.x, grid1km_snapped))
+
+#mapview::mapview(grid1km_subset, cex='red') + mapview::mapview(next_10)
+```
+
+
+From the functions above we get for every origin:
+* the source id
+* all ids of the 100 destinations
+* the travel time duration from source to all destinations
+* the travel distance
+* direct distance
+* minimum travel distance
+* maximum travel distance
+* mean travel distance
+* minimum travel duration
+* maximum travel duration
+* mean travel duration
+* Amount of NAs - Not available routes from source to all destinations
+
+Next we join the matrix result back to our grid. And do some postprocessing.
+
+```{r postprocess}
+grid1km_snapped_joined <- NULL
+for (s in 1:length(scenario_names)) {
+    # join, convert time to hours
+    scenario <- scenario_names[s]
+    result_mtrx <- result_matrix[[s]]
+    
+  if (s==1) {
+    grid1km_snapped_joined <- grid1km_snapped |> left_join(result_mtrx, by = c('rowid' = paste0(scenario,'_','source_id'))) 
+  } else {
+    grid1km_snapped_joined <- grid1km_snapped_joined |> left_join(result_mtrx, by = c('rowid' = paste0(scenario,'_','source_id'))) 
+  }
+    column_names <- lapply(c('min_dist', 'max_dist', 'mean_dist', 'min_dur', 'max_dur', 'mean_dur'), function(x) paste0(scenario, '_', x)) |> unlist()
+  
+  
+  grid1km_snapped_joined <- grid1km_snapped_joined |>
+    mutate( across(all_of(column_names), ~ifelse(is.infinite(.), NA, .))) |> 
+    mutate(across(all_of(column_names[4:6]), ~ifelse(is.na(.), NA, ./3600)))
+}
+
+```
+
+
+# Results visualization
+
+As before we focus on the best and worst case scenarios.
+
+## Maaps of minimum travel distance
+
+Map of the minimum travel distance in km from each flooded & inhabited location to the next closest non flooded location. 
+
+### Scenario 1in5 200cm
+
+```{r map 1in5 200, message=F, warning=F}
+
+tmap_mode('view')
+tm_shape(grid1km_snapped_joined) +
+  tm_polygons(fill='flood_1in5_200_min_dist', 
+              lwd=.1, 
+              fill.legend=tm_legend(title='Travel distance in km')) 
+
+```
+
+### Scenario 1in100 30cm
+
+```{r map 1in100 30, message=F, warning=F}
+
+tm_shape(grid1km_snapped_joined) +
+  tm_polygons(fill='flood_1in100_30_min_dist', 
+              lwd=.1, 
+              fill.legend=tm_legend(title='Travel distance in km')) 
+
+```
+
+
+
+## Distribution of population x travel distance
+
+### Scenario 1in5 200cm
+
+```{r viz 1in5 200, message=F, warning=F}
+
+grid1km_snapped_joined |> 
+  ggplot(aes(x = flood_1in5_200_mean_dist, y = pop)) +
+    geom_point() + theme_minimal() + 
+    xlab('Travel distance in km') + ylab('Population')
+```
+
+### Scenario 1in100 30cm
+
+```{r viz 1in100 30, message=F, warning=F}
+
+grid1km_snapped_joined |> 
+  ggplot(aes(x = flood_1in100_30_mean_dist, y = pop)) +
+    geom_point() + theme_minimal() + 
+    xlab('Travel distance in km') + ylab('Population')
+```
+
+
+## Distribution of population x travel time 
+
+
+### Scenario 1in5 200cm
+
+```{r viz time 1in5 200, message=F, warning=F}
+
+grid1km_snapped_joined |> 
+  ggplot(aes(x = flood_1in5_200_min_dur, y = pop)) +
+    geom_point() + theme_minimal() + 
+    xlab('Traveltime in h') + ylab('Population')
+```
+
+### Scenario 1in100 30cm
+
+```{r viz time 1in100 30, message=F, warning=F}
+
+grid1km_snapped_joined |> 
+  ggplot(aes(x = flood_1in100_30_min_dur, y = pop)) +
+    geom_point() + theme_minimal() + 
+    xlab('Traveltime in h') + ylab('Population')
+```
+
+
+## Density of distances to nearest dry location
+
+
+
+### Scenario 1in5 200cm
+
+```{r viz density 1in5 200, message=F, warning=F}
+
+density <- pivot_longer(
+  grid1km_snapped_joined |> st_drop_geometry() |> select(c(rowid, flood_1in5_200_min_dist, flood_1in5_200_mean_dist, flood_1in5_200_max_dist)), 
+  cols=c(flood_1in5_200_min_dist,flood_1in5_200_mean_dist,flood_1in5_200_max_dist), 
+  names_to = "dist_type", values_to = "dist"
+)
+
+density |> ggplot(aes(x=dist, color=dist_type, fill=dist_type)) +
+  geom_histogram(aes(y=..density..), position="identity", alpha=0.5) +
+  geom_density(alpha=0.6) + 
+  #scale_color_manual(values=c("#999999", "#E69F00", "#56B4E9")) +
+  #scale_fill_manual(values=c("#999999", "#E69F00", "#56B4E9")) +
+  labs(title='Density distances to nearest dry location',x='Time in km', y = "Density")+ xlim(c(0, 200)) +
+  theme_minimal()
+
+```
+
+### Scenario 1in100 30cm
+
+```{r viz density 1in100 30, message=F, warning=F}
+density <- pivot_longer(
+  grid1km_snapped_joined |> st_drop_geometry() |> select(c(rowid, flood_1in100_30_min_dist, flood_1in100_30_mean_dist, flood_1in100_30_max_dist)), 
+  cols=c(flood_1in100_30_min_dist,flood_1in100_30_mean_dist,flood_1in100_30_max_dist), 
+  names_to = "dist_type", values_to = "dist"
+)
+
+density |> ggplot(aes(x=dist, color=dist_type, fill=dist_type)) +
+  geom_histogram(aes(y=..density..), position="identity", alpha=0.5) +
+  geom_density(alpha=0.6) + 
+  #scale_color_manual(values=c("#999999", "#E69F00", "#56B4E9")) +
+  #scale_fill_manual(values=c("#999999", "#E69F00", "#56B4E9")) +
+  labs(title='Density distances to nearest dry location',x='Time in km', y = "Density")+ xlim(c(0, 200)) +
+  theme_minimal()
+
+```
+
+## Relation of minimum travel distance and duration
+
+
+
+### Scenario 1in5 200cm
+
+```{r viz relation dist dur 1in5 200, message=F, warning=F}
+grid1km_snapped_joined |> 
+  ggplot(aes(x = flood_1in5_200_min_dur, y = flood_1in5_200_min_dist)) +
+    geom_point() + theme_minimal() + 
+    xlab('Travel distance in km') + ylab('Travel time in h')
+
+```
+
+### Scenario 1in100 30cm
+
+```{r viz relation dist dur 1in100 30, message=F, warning=F}
+grid1km_snapped_joined |> 
+  ggplot(aes(x = flood_1in100_30_min_dur, y = flood_1in100_30_min_dist)) +
+    geom_point() + theme_minimal() + 
+    xlab('Travel distance in km') + ylab('Travel time in h')
+
+```
+
+
+## Aggregated to admin units level 3 
+
+```{r viz agg, message=F, warning=F}
+grouped_admin3 <-
+  grid1km_snapped_joined |> group_by(admin3_teh, admin3_te0) |>
+  summarise(
+    # mean_mean_dist = mean(mean_dist, na.rm = T)
+    mean_min_dist = mean(flood_1in5_200_mean_dist, na.rm = T),
+    # mean_min_dur = mean(mean_dur, na.rm = T),
+    # mean_max_dist = mean(min_dur, na.rm = T),
+    # mean_nas = mean(na, na.rm = T),
+    # pop = sum(pop, na.rm = T),
+  ) |> ungroup() |> suppressMessages()
+
+
+round_any = function(x, accuracy, f = round) {
+  f(x / accuracy) * accuracy
+}
+breaks <-
+  mapsf::mf_get_breaks(grouped_admin3$mean_min_dist,
+                       breaks = 'geom',
+                       nbreaks = 6) |> round_any(accuracy = 10)
+breaks <- c(0, breaks)
+
+quintiles <- grouped_admin3$mean_min_dist |> quantile(probs=c(.25,.5,.75,1), na.rm=T)
+
+grouped_admin3 <- grouped_admin3 |> mutate(
+  quintile = case_when(
+    mean_min_dist <= quintiles[1] ~ '0-25%',
+    mean_min_dist <= quintiles[2] ~ '25-50%',
+    mean_min_dist <= quintiles[3] ~ '50-75%',
+    TRUE ~ '75-100%'
+  )
+  )
+
+colrmp <- brewer.pal(n = 4, name = "Blues")
+
+grouped_admin3 |> ggplot(aes(x = mean_min_dist, fill=quintile)) +
+  #geom_histogram(aes(y = ..density..), position = "identity", alpha = 0.5) +
+  geom_area(stat='bin', alpha = 0.6) + xlim(c(0, 750)) +
+    scale_fill_manual(values = c("0-25%" = colrmp[1], 
+                                 "25-50%" = colrmp[2], 
+                                 "50-75%" = colrmp[3], 
+                                 "75-100%" = colrmp[4])) +
+  xlab('Mean travel distance in km on admin 3 level') + ylab('Count') + 
+  theme_minimal()
+
+tm_shape(grouped_admin3) +
+  tm_polygons(
+    fill="mean_min_dist",
+    lwd = .1,
+    fill.scale = tm_scale_intervals(breaks = breaks),
+    fill.legend = tm_legend(title = 'Mean travel distance in km')
+  )
+
+```
+
+25% of the population in admin 3 units have a mean travel distance of less than `r quintiles[1] |> as.numeric() |> round(2)` km. 
+50% have a mean travel distance of up to `r quintiles[2]  |> as.numeric() |> round(2)` km. 
+75% have a mean travel distance of up to `r quintiles[3] |> as.numeric() |> round(2)`. 
+For the last 25% (75-100%) the mean travel distance ranges from `r quintiles[3] |> as.numeric() |> round(2)` to `r quintiles[4] |> as.numeric() |> round(2)` km.
+
+```{r, message=F, warning=F, show=F, echo=F, include=F, eval=FALSE}
+
+tmap_mode('plot')
+
+breaks1 <-
+  mapsf::mf_get_breaks(grouped_admin3$mean_min_dist,
+                       breaks = 'geom',
+                       nbreaks = 3) |> round_any(accuracy = 10)
+breaks2 <-
+  mapsf::mf_get_breaks(grouped_admin3$pop +.1,
+                       breaks = 'geom',
+                       nbreaks = 3) |> round_any(accuracy = 10)
+#breaks <- c(0, breaks)
+
+grouped_admin3 |> tm_shape() +
+  tm_polygons(
+    fill = tm_mv('mean_mean_dist','pop'),
+    lwd = .1,
+    fill.scale =  tm_scale_bivariate(scale1 = tm_scale_intervals(breaks = c(0,50,100,200)),
+                                        scale2 = tm_scale_intervals(breaks = c(10, 1e+03,1e+05 ,2e+06)),
+                                        values = "brewer.qualseq"),
+    fill.legend = tm_legend(title = 'Mean travel distance in km')
+  )
+
+
+
+```
+
+# Limitation grid cell dimensions & snapping 
+
+```{r limitations, message=F, warning=F, fig.show="hold", out.width="50%"}
+
+plot(grid1km_snapped[1,]$centroid |> st_transform(32642) |> st_buffer(5000) |> st_transform(4326), border='red')
+plot(grid1km_snapped[1,]$geometry, col=alpha('grey95', .5),  add=T)
+plot(grid1km_snapped[1,]$centroid, col='green',  add=T)
+
+
+plot(grid1km_snapped[1:8,]$centroid |> st_transform(32642) |> st_buffer(5000) |> st_transform(4326), border='red')
+plot(grid1km_snapped[1:8,]$geometry, col=alpha('grey95', .5),  add=T)
+plot(grid1km_snapped[1:8,]$centroid, col='green', add=T)
+```
+
+Grid cell dimensions vs. 5km radius from centroid. For now the snapping radius is quite big. In order to match with the hexagonal boundary a value of **2887** is sufficient to search for snapping road networks within the whole area of the hexagon. With the current overlap we might introduce uncertainties for some cells.
+
+
+# Example of one single result
+
+In the following we look how the result of one single origin looks like.
+The red cell in the center is the source location. The blue cells are the destinations. The color of the destination cells represent the travel distance in km.
+
+```{r single result, message=F, warning=F}
+
+# extract a single origin and its destinations
+single_or <- grid1km_snapped_joined[2555,]
+single_dest <- grid1km_snapped_joined |> filter(rowid %in% grid1km_snapped_joined[2555,]$flood_1in100_30_destination_id[[1]])
+# re arrange accordingly
+single_dest <- single_dest[match(grid1km_snapped_joined[2555,]$flood_1in100_30_destination_id[[1]], single_dest$rowid), ]
+# bind columns
+single_dest$flood_1in100_30_durations <- single_or$flood_1in100_30_durations[[1]]
+single_dest$flood_1in100_30_distance <- single_or$flood_1in100_30_distances[[1]]
+single_dest$flood_1in100_30_bird_distance <- single_or$flood_1in100_30_bird_dist[[1]]
+
+tmap_mode('view')
+tm_shape(single_dest) +
+  tm_polygons(fill='flood_1in100_30_distance', 
+              lwd=.1, 
+              fill.legend=tm_legend(title='Travel distance in km')) +
+  tm_shape(single_or) +
+  tm_polygons(fill='rowid',fill.scale = tm_scale_categorical(values='red'), fill.legend = tm_legend_hide(), lwd=.1)
+
+```
+
+# Future improvements
+
+With the current setup we see results of travel distance from each populated and flooded location to the next closest dry location. The current workflow can be run with alterations possible to the following parameters.
+
+* Grid size: currently 5km width/height hexagons
+* Maximum snapping radius: currently 4500m
+* Number of destinations: currently 100
+* Number of parallel workers: currently 8
+
+
+# Output
+
+The desired output is a geopackage file. However our current dataframe contains a lot of list based columns. We will convert them to single strings with commas to differentiate values.
+
+```{r output, warning=F, message=F}
+
+convert_lists_to_strings <- function(df) {
+  df[] <- lapply(df, function(column) {
+    if (is.list(column) & is.na(class(column)[2] == 'sfc')) {
+      sapply(column, function(x) paste(unlist(x), collapse = ","))
+    } else {
+      column
+    }
+  })
+  st_geometry(df) <- 'geometry'
+  return(df)
+}
+
+converted_df <- convert_lists_to_strings(grid1km_snapped_joined |> select(-c(snapped_centroid, centroid)))
+converted_df[1145,]$flood_1in100_200_distances
+
+st_write(converted_df, 'pakistan_evacuation.gpkg', append=F)
+
+
+
+```
