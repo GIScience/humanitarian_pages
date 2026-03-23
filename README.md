@@ -24,5 +24,5 @@ Each project is more or less thematically independent, providing distinct exampl
 
 6. [Food Insecurity datasets](https://giscience.github.io/humanitarian_pages//Food-Insecurity.html)
 
-7. [Hazard Risk Dashboard](https://giscience.github.io/humanitarian_pages//hazard-risk-dashboard)
+7. [Hazard Risk Dashboard](https://giscience.github.io/humanitarian_pages/gaia-dashboard)
 
