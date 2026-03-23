@@ -23,4 +23,4 @@ jobs:
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./gaia-viz-vue/dist
-          destination_dir: hazard-risk-dashboard # This creates the /hazard-risk-dashboard/ folder
+          destination_dir: gaia-dashboard # This creates the /gaia-dashboard/ folder
