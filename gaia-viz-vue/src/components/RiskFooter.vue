@@ -1,4 +1,4 @@
-<script setup>
+<script setup lang="ts">
 // Define the constant here so it is available to the template
 const year = new Date().getFullYear();
 </script>
