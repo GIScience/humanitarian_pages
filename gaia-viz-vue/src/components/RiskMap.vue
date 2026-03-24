@@ -51,7 +51,7 @@ onMounted(() => {
     // Add World Boundaries for Click Interaction
     map!.addSource('world', {
       type: 'geojson',
-      data: '/data/world.json',
+      data: './data/world.json',
       promoteId: 'iso_a3'
     });
 
