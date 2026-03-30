@@ -1,0 +1,2180 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ohsome Quality Report</title>
+
+  <link rel="icon" href="https://dashboard.ohsome.org/en/favicon.ico" type="image/svg+xml">
+  <!-- Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@300;400;600;800&display=swap" rel="stylesheet">
+
+  <!-- MapLibre GL -->
+  <script src="https://unpkg.com/maplibre-gl/dist/maplibre-gl.js"></script>
+  <link href="https://unpkg.com/maplibre-gl/dist/maplibre-gl.css" rel="stylesheet" />
+
+  <!-- PMTiles -->
+  <script src="https://unpkg.com/pmtiles@3.1.0/dist/pmtiles.js"></script>
+
+  <!-- plotly -->
+  <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+
+  <script src="https://cdn.jsdelivr.net/npm/js-yaml@4.1.0/dist/js-yaml.min.js"></script>
+  <style>
+    :root {
+      --font-sans: 'Archivo', sans-serif;
+      --color-bg: #F3F3F3;
+      --color-card-bg: #fff;
+      --color-border: #E1E0E1;
+      --color-text: #2C3038;
+      --spacing: 0.5rem;
+      --border-radius: 0.5rem;
+    }
+
+    html,
+    body {
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      /* Prevent scrolling */
+    }
+
+    body {
+      padding: var(--spacing);
+      font-family: var(--font-sans);
+      background: var(--color-bg);
+      color: var(--color-text);
+      box-sizing: border-box;
+
+      display: flex;
+      flex-direction: column;
+      gap: var(--spacing);
+    }
+
+    /* ================================
+    HEADER LAYOUT
+  ================================ */
+    .header {
+      background: var(--color-card-bg);
+      border: 1px solid var(--color-border);
+      border-radius: var(--border-radius);
+      padding: 0.5rem 0.75rem;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      align-items: center;
+    }
+
+    .header-title {
+      text-align: left;
+      /* keep left-aligned */
+      justify-self: start;
+      /* align to start of first column */
+      margin-left: 1.5rem;
+      /* increase left padding/space */
+      font-size: 1.5rem;
+      /* make the title bigger */
+      font-weight: 900;
+      /* optional: extra bold for emphasis */
+    }
+
+    /* selector container */
+    .header-selectors {
+      justify-content: center;
+      /* center the selectors horizontally in their column */
+      display: flex;
+      gap: 3.75rem;
+      align-items: center;
+    }
+
+    /* horizontal layout */
+    .selector-group.horizontal {
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+      font-size: 0.75rem;
+    }
+
+    .selector-group.horizontal label {
+      color: var(--color-text);
+      font-family: var(--font-sans);
+      font-weight: 800;
+      font-size: 1rem;
+      white-space: nowrap;
+    }
+
+    .header-right {
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+    }
+
+    .header-logo {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 50px;
+      /* fixed width for all logo boxes */
+      height: 40px;
+      /* fixed height for all logo boxes */
+      border: 1px solid var(--color-border);
+      border-radius: var(--border-radius);
+      background: #fff;
+      transition: background 0.15s ease, transform 0.05s ease;
+      padding: 5px;
+      /* optional: some inner padding */
+    }
+
+    .header-logo img {
+      max-width: 100%;
+      max-height: 150%;
+      object-fit: contain;
+      /* scale logo to fit box without distortion */
+      display: block;
+    }
+
+    .header-logo:hover {
+      background: #f3f3f3;
+    }
+
+    .header-logo:active {
+      transform: translateY(1px);
+    }
+
+    /* ================================
+     BOX ROWS AND GRIDS
+  ================================ */
+    .box-row {
+      background: var(--color-card-bg);
+      border: 1px solid var(--color-border);
+      border-radius: var(--border-radius);
+      padding: var(--spacing);
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+    }
+
+    .box-row.flexible {
+      flex: 1;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--spacing);
+      height: 100%;
+    }
+
+    .box-row.flexible .grid {
+      flex: 1;
+      min-height: 0;
+      flex-wrap: nowrap;
+    }
+
+    /* ================================
+     GENERAL BOXES
+  ================================ */
+    .box,
+    .image-box {
+      background: var(--color-card-bg);
+      border: 1px solid var(--color-border);
+      border-radius: var(--border-radius);
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+      flex: 1;
+      min-height: 0;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .box-centered {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .box h3 {
+      font-size: 2rem;
+      margin: 0;
+      margin-top: 0.5rem;
+      /* smaller gap above text */
+      margin-bottom: 0rem;
+      /* remove bottom margin */
+      min-height: 2.4rem;
+      /* Stabilize height */
+    }
+
+    .box h4 {
+      margin: 0.5rem 0;
+      margin-top: 0rem;
+      /* smaller gap above text */
+      margin-bottom: 0.5rem;
+      /* remove bottom margin */
+      font-size: var(--font-size-text);
+      min-height: 1.2rem;
+      /* Stabilize height */
+    }
+
+    /* ================================
+     MAP CONTAINERS
+  ================================ */
+    .map-container {
+      flex: 1 1 0;
+      min-height: 150px;
+      width: 100%;
+      border-radius: var(--border-radius);
+      overflow: hidden;
+    }
+
+    .map-title {
+      position: absolute;
+      top: 2px;
+      left: 50%;
+      width: 80%;
+      transform: translateX(-50%);
+      background: rgba(255, 255, 255, 0.85);
+      padding: 3px 10px;
+      border-radius: 6px;
+      border: 1px solid #aaa;
+      font-size: 0.6rem;
+      font-weight: bold;
+      text-align: center;
+      z-index: 2;
+    }
+
+    .map-text {
+      position: absolute;
+      bottom: 2px;
+      right: 2px;
+      left: 2px;
+      background: rgba(255, 255, 255, 0.9);
+      padding: 6px;
+      border-radius: 6px;
+      border: 1px solid #aaa;
+      font-size: 0.65rem;
+      text-align: center;
+      z-index: 2;
+    }
+
+    .legend {
+      position: absolute;
+      bottom: 2px;
+      left: 2px;
+      background: rgba(255, 255, 255, 0.9);
+      padding: 5px 6px;
+      border-radius: 6px;
+      border: 1px solid #aaa;
+      font-size: 0.5rem;
+      line-height: 1.2;
+      z-index: 2;
+    }
+
+    .map-description {
+      border: 1px solid var(--color-border);
+      border-radius: var(--border-radius);
+      background: var(--color-card-bg);
+      padding: 0.6rem;
+      font-size: 0.75rem;
+      line-height: 1.3;
+      margin-top: 0.5rem;
+      overflow-wrap: break-word;
+      max-height: none
+    }
+
+    /* ================================
+     BAR CHARTS AND PLOTS
+  ================================ */
+    /* Ensure plot containers fill remaining vertical space */
+    .image-box .plot-container {
+      flex: 1 1 0;
+      min-height: 0;
+      width: 100%;
+    }
+
+    .indicator-selector {
+      font-size: 0.8rem;
+      /* same size */
+      padding: 0.25rem 0.5rem;
+      /* inner padding */
+      border-radius: 6px;
+      /* rounded corners */
+      border: 1px solid #aaa;
+      /* same border color */
+      background: rgba(255, 255, 255, 0.9);
+      /* white background */
+      margin-bottom: 0.5rem;
+      /* spacing from banner */
+      margin-top: 0.5rem;
+      /* spacing from box */
+    }
+
+    /* Make plot and treemap divs fill their container */
+    .plot-container>div,
+    #tile5 .treemap-container>div {
+      width: 100% !important;
+      height: 100% !important;
+      min-height: 150px;
+      /* optional minimum */
+    }
+
+    /* Ensure the container has flex-grow */
+    .plot-container,
+    #tile5 .treemap-container {
+      flex: 1 1 auto;
+      min-height: 0;
+      /* important for flex children to shrink */
+      display: flex;
+    }
+
+    .plot-container {
+      flex: 1 1 0;
+      min-height: 0;
+      width: 95%;
+      margin: 0.25rem auto;
+      overflow: hidden;
+    }
+
+    .bar-chart-container {
+      flex: 0 1 auto;
+      min-height: 0;
+      width: 95%;
+      margin: 0.25rem auto;
+      overflow-y: auto;
+    }
+
+    .bar-chart {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      margin-top: 0.5rem;
+    }
+
+    .bar-item {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .bar-item .label {
+      width: 60px;
+      font-size: 0.75rem;
+    }
+
+    .bar-container {
+      flex: 1;
+      background: #e1e0e1;
+      border-radius: 4px;
+      overflow: hidden;
+      height: 12px;
+      position: relative;
+    }
+
+    .bar-container .bar {
+      height: 100%;
+      background: #4CAF50;
+      text-align: right;
+      font-size: 0.65rem;
+      color: white;
+      line-height: 12px;
+      padding-right: 2px;
+    }
+
+    .value {
+      width: 40px;
+      font-size: 0.75rem;
+      text-align: right;
+    }
+
+    /* ================================
+     TILE 5: Tag Coverage + Treemap
+  ================================ */
+    #tile5 .bar-chart-container {
+      flex: 0 1 auto;
+      min-height: 0;
+      width: 95%;
+      overflow: hidden;
+      /* remove horizontal scroll */
+    }
+
+    #tile5 .bar-chart {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      width: 100%;
+      /* make the chart use full container width */
+    }
+
+    #tile5 .bar-item {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      width: 95%;
+      /* ensure each row fills container */
+    }
+
+    #tile5 .bar-item .bar-container {
+      flex: 1;
+      /* the bar fills remaining width */
+      background: #e1e0e1;
+      border-radius: 4px;
+      height: 12px;
+      position: relative;
+      min-width: 0;
+      /* crucial to allow shrinking in flexbox */
+    }
+
+    #tile5 .bar-item .bar {
+      height: 100%;
+      background: #4CAF50;
+      width: 100%;
+      /* fill the container proportionally via JS */
+      text-align: right;
+      font-size: 0.65rem;
+      color: white;
+      line-height: 12px;
+      padding-right: 2px;
+    }
+
+    /* =================================
+    School Treemap Switch - Segmented Look
+    ================================= */
+    #school-treemap-switch {
+      display: none;
+      /* only shown when school topic is active */
+      width: 95%;
+      margin: 3rem auto -2rem auto;
+      justify-content: center;
+      gap: 0;
+      /* joined together */
+      position: relative;
+      z-index: 10;
+    }
+
+    .switch-btn {
+      flex: 1;
+      font-family: var(--font-sans);
+      font-size: 0.75rem;
+      padding: 0.4rem 0.5rem;
+      border: 1px solid var(--color-border);
+      background: #fafafa;
+      cursor: pointer;
+      color: var(--color-text);
+      transition: all 0.2s ease;
+      font-weight: 400;
+    }
+
+    .switch-btn:first-child {
+      border-radius: 6px 0 0 6px;
+      border-right: none;
+    }
+
+    .switch-btn:last-child {
+      border-radius: 0 6px 6px 0;
+    }
+
+    .switch-btn.active {
+      background: #eee;
+      border-color: #aaa;
+      font-weight: 800;
+      box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+
+    .switch-btn:hover:not(.active) {
+      background: #f0f0f0;
+    }
+
+    /* ================================
+     GRID SELECTORS
+  ================================ */
+    .grid-selector {
+      position: absolute;
+      top: 4px;
+      left: 4px;
+      z-index: 3;
+      background: rgba(255, 255, 255, 0.9);
+      border: 1px solid #aaa;
+      border-radius: 6px;
+      font-size: 0.7rem;
+      padding: 2px 4px;
+    }
+
+    .country-select {
+      font-family: var(--font-sans);
+      font-size: 0.8rem;
+      padding: 0.25rem 0.5rem;
+      border-radius: 6px;
+      border: 1px solid var(--color-border);
+      background: #fff;
+    }
+
+    .page-content.flexible {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 0.2rem;
+      min-height: 0;
+    }
+
+    /* =================================
+    Make tile 6–8 inner content 95% width
+  ================================= */
+    /* target tiles 6–8 only */
+    .box-row.flexible .image-box:not(#tile5)>*,
+    .box-row.flexible .image-box:not(#tile5) .box,
+    .box-row.flexible .image-box:not(#tile5) .map-description,
+    .box-row.flexible .image-box:not(#tile5) .plot-container {
+      width: 95%;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    .box-row.flexible .image-box:not(#tile5) .map-description {
+      width: 95% !important;
+      max-width: 95% !important;
+      align-self: center;
+      /* prevents flex stretch */
+      box-sizing: border-box;
+    }
+
+    /* ================================
+     FOOTER
+  ================================ */
+    .footer {
+      padding: 0.25rem 1rem;
+      background: #fff;
+      border: 1px solid var(--color-border);
+      border-radius: var(--border-radius);
+
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+
+      font-size: 0.8rem;
+    }
+
+    .footer-left {
+      display: flex;
+      gap: 0.4rem;
+    }
+
+    .footer-btn {
+      padding: 0.5rem 0.5rem;
+      border-radius: 6px;
+      border: 1px solid var(--color-border);
+      background: #f7f7f7;
+      text-decoration: none;
+      color: var(--color-text);
+      font-weight: 600;
+    }
+
+    .footer-btn:hover {
+      background: #eee;
+    }
+
+    .footer-center {
+      color: #555;
+      text-align: center;
+      flex: 1;
+    }
+
+    .ohsome-link {
+      padding: 0.2rem 0.5rem;
+      border-radius: 6px;
+      border: 1px solid var(--color-border);
+      background: #fff;
+
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+
+      text-decoration: none;
+      color: var(--color-text);
+      font-weight: 700;
+      font-size: 0.6rem;
+      letter-spacing: 0.04em;
+    }
+
+    .ohsome-link img {
+      height: 25px;
+      display: block;
+    }
+
+    .ohsome-link:hover {
+      background: #f3f3f3;
+    }
+
+    .ohsome-text {
+      white-space: nowrap;
+    }
+
+    /* ================================
+     MOBILE RESPONSIVE
+  ================================ */
+    @media (max-width: 768px) {
+      .grid {
+        flex-direction: column;
+      }
+
+      .box-row.flexible .grid {
+        flex-direction: column;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <header class="header">
+    <!-- Title -->
+    <div class="header-title">Ohsome Quality Report</div>
+
+    <!-- Selectors -->
+    <div class="header-selectors">
+      <div class="selector-group horizontal">
+        <label for="country-select">Select a Country</label>
+        <select id="country-select" class="country-select">
+          <option>Loading countries…</option>
+        </select>
+      </div>
+
+      <div class="selector-group horizontal">
+        <label for="topic-select">Select a Topic</label>
+        <select id="topic-select" class="country-select">
+          <option>Loading topics…</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Logos -->
+    <div class="header-right">
+      <a href="https://heigit.org" target="_blank" class="header-logo">
+        <img src="https://hot.storage.heigit.org/heigit-hdx-public/oqapi_hdx/logos/heigit-logo.svg" alt="HeiGIT">
+      </a>
+      <a href="https://www.hotosm.org" target="_blank" class="header-logo">
+        <img src="https://raw.githubusercontent.com/hotosm/hotosm-website/gh-pages/images/hot-logo-icon-red.svg"
+          alt="HOT">
+      </a>
+    </div>
+  </header>
+
+  <div class="page-content flexible">
+    <!-- ROW 1 -->
+    <div class="box-row">
+      <div class="grid">
+        <!-- TILE 1: Feature Count -->
+        <div class="box box-centered" id="tile2">
+          <h3 id="feature-count">0</h3>
+          <h4>Features</h4>
+        </div>
+        <!-- TILE 1: Kilometers -->
+        <div class="box box-centered" id="tile1">
+          <h3 id="total-length">0</h3>
+          <h4 id="tile1-label">km of roads</h4>
+        </div>
+
+        <div class="box box-centered" id="tile3">
+        </div>
+
+        <div class="box" style="padding:0;">
+        </div>
+      </div>
+    </div>
+
+    <!-- ROW 2 -->
+    <div class="box-row flexible">
+      <div class="grid">
+
+        <!-- TILE 5: Tag Coverage &Tag Distribution -->
+        <div class="image-box" id="tile5">
+          <h4 style="margin-bottom: 0.5rem; text-align: center;">Tag Coverage</h4>
+
+          <div class="bar-chart-container">
+            <div class="bar-chart" id="tag-coverage"></div>
+          </div>
+          <h4 style="margin-top: 2rem; margin-bottom: -2rem; text-align: center;">Tag Distribution</h4>
+
+          <div id="school-treemap-switch">
+            <button class="switch-btn active" data-subtopic="operator">operator:type</button>
+            <button class="switch-btn" data-subtopic="isced">isced:level</button>
+          </div>
+
+          <div class="plot-container" id="tag-treemap"></div>
+        </div>
+
+        <!-- TILE 6: Road Comparison -->
+        <div class="image-box">
+          <select class="indicator-selector" data-map="road_comparison_map"></select>
+          <div class="banner" style="padding:0;">
+            <div id="summary-banner" style="
+            padding: 0.25rem 0.75rem;
+            font-weight: bold;
+            font-size: 0.875rem;
+            border-radius: var(--border-radius) var(--border-radius) var(--border-radius) var(--border-radius);
+            text-align: center;
+            margin-bottom: 0.75rem;">
+            </div>
+          </div>
+
+          <div class="box">
+            <div class="map-container" id="road_comparison_map"></div>
+            <select class="grid-selector" data-map="road_comparison_map">
+              <option value="ADM0">Admin 0</option>
+              <option value="ADM1">Admin 1</option>
+              <option value="square_grid" selected>Square Grid</option>
+              <option value="h3_hexgrid">Hexagonal Grid</option>
+            </select>
+            <div class="legend">
+              <div id="legend-title-1" class="legend-title"></div>
+              <span style="background:#F44336;width:10px;height:10px;display:inline-block;"></span> 0–25%<br>
+              <span style="background:#FFEB3B;width:10px;height:10px;display:inline-block;"></span> 25–75%<br>
+              <span style="background:#4CAF50;width:10px;height:10px;display:inline-block;"></span> 75–100%
+            </div>
+          </div>
+          <div id="comparison-description" class="map-description"></div>
+          <div id="comparison-plot" class="plot-container"></div>
+        </div>
+
+        <!-- TILE 7: Road Currentness -->
+        <div class="image-box">
+          <select class="indicator-selector" data-map="current_map"></select>
+          <div class="banner" style="padding:0;">
+            <div id="currentness-banner" style="
+          padding: 0.25rem 0.75rem;
+          font-weight: bold;
+          font-size: 0.875rem;
+          border-radius: var(--border-radius) var(--border-radius) var(--border-radius) var(--border-radius);
+          text-align: center;
+          margin-bottom: 0.75rem;
+        ">
+            </div>
+          </div>
+
+          <div class="box">
+            <div class="map-container" id="current_map"></div>
+            <!--div class="map-title">Road Currentness</div-->
+            <select class="grid-selector" data-map="current_map">
+              <option value="ADM0">Admin 0</option>
+              <option value="ADM1">Admin 1</option>
+              <option value="square_grid" selected>Square Grid</option>
+              <option value="h3_hexgrid">Hexagonal Grid</option>
+            </select>
+            <div class="legend">
+              <div id="legend-title-2" class="legend-title"></div>
+              <span style="background:#F44336;width:10px;height:10px;display:inline-block;"></span> 0–25%<br>
+              <span style="background:#FFEB3B;width:10px;height:10px;display:inline-block;"></span> 25–75%<br>
+              <span style="background:#4CAF50;width:10px;height:10px;display:inline-block;"></span> 75–100%
+            </div>
+          </div>
+          <div id="currentness-description" class="map-description"></div>
+          <div id="currentness-plot" class="plot-container"></div>
+        </div>
+
+        <!-- TILE 8: Attribute Completeness -->
+        <div class="image-box">
+          <select class="indicator-selector" data-map="completeness_map"></select>
+          <div class="banner" style="padding:0;">
+            <div id="completeness-banner" style="
+          padding: 0.25rem 0.75rem;
+          font-weight: bold;
+          font-size: 0.875rem;
+          border-radius: var(--border-radius) var(--border-radius) var(--border-radius) var(--border-radius);
+          text-align: center;
+          margin-bottom: 0.75rem;
+        ">
+            </div>
+          </div>
+
+          <div class="box">
+            <div class="map-container" id="completeness_map"></div>
+            <!--div class="map-title">Attribute Completeness</div-->
+            <select class="grid-selector" data-map="completeness_map">
+              <option value="ADM0">Admin 0</option>
+              <option value="ADM1">Admin 1</option>
+              <option value="square_grid" selected>Square Grid</option>
+              <option value="h3_hexgrid">Hexagonal Grid</option>
+            </select>
+            <div class="legend">
+              <div id="legend-title-3" class="legend-title"></div>
+              <span style="background:#F44336;width:10px;height:10px;display:inline-block;"></span> 0–25%<br>
+              <span style="background:#FFEB3B;width:10px;height:10px;display:inline-block;"></span> 25–75%<br>
+              <span style="background:#4CAF50;width:10px;height:10px;display:inline-block;"></span> 75–100%
+            </div>
+          </div>
+          <div id="completeness-description" class="map-description"></div>
+          <div id="completeness-plot" class="plot-container"></div>
+        </div>
+
+      </div>
+      <script type="module">
+        import * as duckdb from "https://cdn.jsdelivr.net/npm/@duckdb/duckdb-wasm@1.28.0/+esm";
+
+        /* ================================
+          PMTiles protocol
+        ================================ */
+        const protocol = new pmtiles.Protocol();
+        maplibregl.addProtocol("pmtiles", protocol.tile);
+
+        function getCurrentTopic() {
+          return document.getElementById("topic-select").value;
+        }
+
+        function updateTagCoverageVisibility(indicators) {
+          const tile = document.getElementById("tile5");
+          if (!tile) return;
+
+          const title = tile.querySelector("h4"); // first h4 = Tag Coverage title
+          const barContainer = tile.querySelector(".bar-chart-container");
+
+          const show = indicators.some(ind => ind.startsWith("attribute-completeness_"));
+
+          if (title) title.style.display = show ? "" : "none";
+          if (barContainer) barContainer.style.display = show ? "" : "none";
+        }
+
+        let currentSchoolSubTopic = "operator"; // default subtopic for schools
+
+        // Update these two functions in your <script>
+        function getTreemapTopic(topic) {
+          if (!topic) return "";
+          const topicLower = topic.toLowerCase();
+          
+          if (topicLower.startsWith("roads")) return "highway";
+          
+          // Handle Schools
+          if (topicLower.startsWith("school")) {
+            return "school_" + currentSchoolSubTopic;
+          }
+          
+          // Handle Hospitals
+          if (topicLower.startsWith("hospital")) {
+            // hospital_speciality maps to isced, hospital_operator maps to operator
+            const sub = currentSchoolSubTopic === "isced" ? "speciality" : "operator";
+            return "hospital_" + sub;
+          }
+
+          const topicMain = topic.split("-")[0].toLowerCase();
+          return topicMain;
+        }
+
+        function getFigureTopic(topic) {
+          // If it's a hospital or school topic, we usually want the base name for the figure URL
+          const topicLower = topic.toLowerCase();
+          if (topicLower.startsWith("hospital")) return "hospital";
+          if (topicLower.startsWith("school")) return "school";
+          return topic || "";
+        }
+
+        function buildUrls(code, topic) {
+          const distributionKey = getTreemapTopic(topic);
+
+          return {
+            pmtilesUrl: `https://hot.storage.heigit.org/heigit-hdx-public/oqapi_hdx/downloads/${code}/${code}_boundaries.pmtiles`,
+            parquetUrl: `https://hot.storage.heigit.org/heigit-hdx-public/oqapi_hdx/downloads/${code}/${code}_long.parquet`,
+            treemapUrl: `https://hot.storage.heigit.org/heigit-hdx-public/oqapi_hdx/osm_stats/${code}/${code}_${distributionKey}_tag_distribution.json.gz`,
+            figureBase: `https://hot.storage.heigit.org/heigit-hdx-public/oqapi_hdx/figures/${code}`
+          };
+        }
+
+
+
+        function updateHash(country, topic) {
+          if (!country || !topic) return;
+          const newHash = `#/${country}/${topic}`;
+          if (window.location.hash !== newHash) {
+            window.history.pushState(null, null, newHash);
+          }
+        }
+
+        let countryCode = "RWA";
+        let topicName = getCurrentTopic();
+
+        const topicConfig = {
+          "roads-all-highways": {
+            comparisonIndicator: "road-comparison",
+            comparisonLabel: "Road Completeness",
+            currentnessLabel: "Road Currentness",
+            completenessIndicator: "attribute-completeness_surface",
+            completenessLabel: "Attribute Completeness",
+            completenessFigure: "attribute-completeness_surface"
+          },
+          "building-area": {
+            comparisonIndicator: "building-comparison",
+            comparisonLabel: "Building Completeness",
+            currentnessLabel: "Building Currentness",
+            completenessIndicator: "user-activity",
+            completenessLabel: "User Activity",
+            completenessFigure: "user-activity"
+          }
+        };
+
+        let pmtilesUrl = "";
+        let parquetUrl = "";
+
+        const DEFAULT_INDICATORS = {
+          "roads-all-highways": {
+            tile6: "road-comparison",
+            tile7: "currentness",
+            tile8: "attribute-completeness_surface"
+          },
+          "building-area": {
+            tile6: "building-comparison",
+            tile7: "currentness",
+            tile8: "user-activity"
+          }
+        };
+
+        /* ================================
+          Bounds
+        ================================ */
+        async function getPMTilesBoundsBrowser(pmtilesUrl) {
+          const pmtilesFile = new pmtiles.PMTiles(pmtilesUrl);
+          const metadata = await pmtilesFile.getMetadata();
+          const boundsStr = metadata.bounds || metadata.antimeridian_adjusted_bounds;
+          if (!boundsStr) return null;
+          const [minLon, minLat, maxLon, maxLat] = boundsStr.split(",").map(Number);
+          return { minLon, minLat, maxLon, maxLat };
+        }
+
+        /* ================================
+          Banner
+        ================================ */
+        function updateBanner({ bannerId, avg, label }) {
+          const banner = document.getElementById(bannerId);
+          if (!banner) return;
+
+          let level, bgColor, textColor;
+
+          if (avg < 0.25) {
+            level = "Low";
+            bgColor = "#F44336";
+            textColor = "white";
+          } else if (avg < 0.75) {
+            level = "Medium";
+            bgColor = "#FFEB3B";
+            textColor = "#333";
+          } else {
+            level = "High";
+            bgColor = "#4CAF50";
+            textColor = "white";
+          }
+
+          banner.style.background = bgColor;
+          banner.style.color = textColor;
+          banner.textContent = `${level} ${label}`;
+        }
+
+        /* ================================
+          Helper
+        ================================ */
+
+        function getTopicsForQuery(topic) {
+          return [topic];
+        }
+
+        function prettifyTopic(slug) {
+          if (!slug) return "";
+          return slug
+            .replace(/_/g, " ")
+            .replace(/-/g, " ")
+            .replace(/\b\w/g, c => c.toUpperCase());
+        }
+
+        function prettifyIndicator(name) {
+          if (!name) return "";
+          return name
+            .replace(/_/g, " ")
+            .replace(/-/g, " ")
+            .replace(/\b\w/g, c => c.toUpperCase());
+        }
+
+        function updateLegendTitle(legendId, indicatorName) {
+          const el = document.getElementById(legendId);
+          if (!el) return;
+          el.textContent = prettifyIndicator(indicatorName);
+        }
+
+        function updatePlotTitle(containerId, indicatorName) {
+          const titleEl = document.querySelector(`#${containerId} .plot-title`);
+          if (!titleEl) return;
+          titleEl.textContent = prettifyIndicator(indicatorName);
+        }
+
+        /* ================================
+          Map init
+        ================================ */
+        async function initMap(containerId, sourceName, sourceLayer, bounds) {
+
+          const map = new maplibregl.Map({
+            container: containerId,
+            style: "https://tiles.openfreemap.org/styles/liberty",
+            attributionControl: false
+          });
+
+          map.on("load", () => {
+
+            const dynamicSource = `${sourceName}_${countryCode}`;
+
+            if (map.getSource(dynamicSource)) {
+              map.removeSource(dynamicSource);
+            }
+
+            map.addSource(dynamicSource, {
+              type: "vector",
+              url: `pmtiles://${pmtilesUrl}`,
+              promoteId: "id"
+            });
+
+            map.addLayer({
+              id: `${sourceName}-base`,
+              type: "fill",
+              source: dynamicSource,
+              "source-layer": sourceLayer,
+              paint: {
+                "fill-color": "#dddddd",
+                "fill-opacity": 0.4,
+                "fill-outline-color": "#555"
+              }
+            });
+
+            if (bounds) {
+              map.fitBounds(
+                [[bounds.minLon, bounds.minLat], [bounds.maxLon, bounds.maxLat]],
+                { padding: 10 }
+              );
+            }
+          });
+
+          return map;
+        }
+
+        /* ================================
+          DuckDB
+        ================================ */
+        async function initDuckDB() {
+          const JSDELIVR_BUNDLES = duckdb.getJsDelivrBundles();
+          const bundle = await duckdb.selectBundle(JSDELIVR_BUNDLES);
+
+          const worker_url = URL.createObjectURL(
+            new Blob([`importScripts("${bundle.mainWorker}");`],
+              { type: "text/javascript" })
+          );
+
+          const worker = new Worker(worker_url);
+          const silentLogger = { log: () => { }, info: () => { }, warn: () => { }, error: () => { } };
+          const db = new duckdb.AsyncDuckDB(silentLogger, worker);
+
+          await db.instantiate(bundle.mainModule, bundle.pthreadWorker);
+          URL.revokeObjectURL(worker_url);
+          return db;
+        }
+
+        async function loadAvailableTopics(parquetUrl) {
+          const db = await initDuckDB();
+          const conn = await db.connect();
+
+          try {
+            const resp = await fetch(parquetUrl);
+            const parquetData = await resp.arrayBuffer();
+            await db.registerFileBuffer("data.parquet", new Uint8Array(parquetData));
+
+            const schema = await conn.query(`DESCRIBE SELECT * FROM read_parquet('data.parquet')`);
+            const cols = schema.toArray().map(r => r.column_name);
+
+            const topicCol = cols.includes("topic")
+              ? "topic"
+              : cols.includes("topic_name")
+                ? "topic_name"
+                : null;
+
+            if (!topicCol) return [];
+
+            const result = await conn.query(`
+              SELECT DISTINCT ${topicCol} AS topic
+              FROM read_parquet('data.parquet')
+              ORDER BY ${topicCol}
+            `);
+
+            return result.toArray().map(r => r.topic).filter(Boolean);
+          } finally {
+            await conn.close();
+          }
+        }
+
+        async function loadIndicators(parquetUrl, topicName) {
+
+          const db = await initDuckDB();
+          const conn = await db.connect();
+
+          try {
+            // Fetch Parquet file
+            const resp = await fetch(parquetUrl);
+            const parquetData = await resp.arrayBuffer();
+            await db.registerFileBuffer("data.parquet", new Uint8Array(parquetData));
+
+            // Detect column names dynamically
+            const schema = await conn.query(`DESCRIBE SELECT * FROM read_parquet('data.parquet')`);
+            const cols = schema.toArray().map(r => r.column_name);
+
+            // Determine topic column
+            const topicCol = cols.includes("topic")
+              ? "topic"
+              : cols.includes("topic_name")
+                ? "topic_name"
+                : null;
+
+            if (!topicCol) {
+              console.warn("No topic column found in parquet");
+              return [];
+            }
+
+            // Determine indicator column
+            const indicatorCol = cols.includes("indicator")
+              ? "indicator"
+              : cols.includes("Indicator")
+                ? "Indicator"
+                : null;
+
+            if (!indicatorCol) {
+              console.warn("No indicator column found in parquet");
+              return [];
+            }
+
+            const topics = getTopicsForQuery(topicName);
+
+            const topicFilter = topics
+              .map(t => `lower(trim(${topicCol})) = '${t.toLowerCase()}'`)
+              .join(" OR ");
+
+            const result = await conn.query(`
+              SELECT DISTINCT ${indicatorCol} AS indicator
+              FROM read_parquet('data.parquet')
+              WHERE ${topicFilter}
+              ORDER BY ${indicatorCol}
+            `);
+
+            const arr = result.toArray();
+            const indicators = arr.map(r => r.indicator).filter(Boolean);
+
+            return indicators;
+
+          } finally {
+            await conn.close();
+          }
+        }
+        /* ================================
+          GENERALIZED LOOKUP
+        ================================ */
+        async function loadIndicatorLookup(url, topicName, indicatorName) {
+
+          const db = await initDuckDB();
+          const conn = await db.connect();
+
+          const resp = await fetch(url);
+          const parquetData = await resp.arrayBuffer();
+          await db.registerFileBuffer("data.parquet", new Uint8Array(parquetData));
+
+          const topics = getTopicsForQuery(topicName);
+
+          const topicFilter = topics
+            .map(t => `topic = '${t}'`)
+            .join(" OR ");
+
+          const result = await conn.query(`
+            SELECT *
+            FROM read_parquet('data.parquet')
+            WHERE (${topicFilter})
+              AND indicator = '${indicatorName}'
+          `);
+
+          const lookup = {};
+          let sum = 0;
+          let count = 0;
+          let adm0Description = "";
+
+          result.toArray().forEach(r => {
+            const value = Number(r.value);
+            const geomID = String(r.geomID);
+
+            // 1. Store by full ID (e.g., "LUX_hex5_112")
+            lookup[geomID] = value;
+
+            // 2. Store by suffix if available (e.g., "112") to handle potential mismatch
+            //    This helps if PMTiles only use the numeric part.
+            if (geomID.includes("_")) {
+              const parts = geomID.split("_");
+              const suffix = parts[parts.length - 1];
+              // Only add if it looks like a valid ID segment
+              if (suffix && suffix.length > 0) {
+                lookup[suffix] = value;
+              }
+            }
+
+            if (!isNaN(value)) {
+              sum += value;
+              count++;
+            }
+
+            // Look for adm0 in geomID
+            if (geomID.toLowerCase().includes("adm0") && r.description) {
+              adm0Description = r.description;
+            }
+          });
+
+          await conn.close();
+
+          const avg = count > 0 ? sum / count : 0;
+
+          return { lookup, avg, description: adm0Description };
+        }
+
+        async function loadTagCoverage(url, containerId) {
+          const db = await initDuckDB();
+          const conn = await db.connect();
+
+          const topicForTagCoverage = getCurrentTopic();
+
+          // Fetch parquet
+          const resp = await fetch(url);
+          const parquetData = await resp.arrayBuffer();
+          await db.registerFileBuffer("data.parquet", new Uint8Array(parquetData));
+
+          /* ================================
+            Detect available columns
+          ================================ */
+          const schema = await conn.query(`
+            DESCRIBE SELECT * FROM read_parquet('data.parquet')
+          `);
+
+          const cols = schema.toArray().map(r => r.column_name);
+          const topicCol = cols.includes("topic")
+            ? "topic"
+            : cols.includes("topic_name")
+              ? "topic_name"
+              : null;
+
+          /* ================================
+            Build query dynamically
+          ================================ */
+
+          let query = `
+            SELECT indicator, value
+            FROM read_parquet('data.parquet')
+            WHERE geomID LIKE '%adm0%'
+              AND indicator LIKE 'attribute-completeness_%'
+          `;
+
+          const topics = getTopicsForQuery(getCurrentTopic());
+
+          const topicFilter = topics
+            .map(t => `lower(trim(${topicCol})) = '${t.toLowerCase()}'`)
+            .join(" OR ");
+
+          query += ` AND (${topicFilter})`;
+
+          const result = await conn.query(query);
+
+          const lookup = {};
+          result.toArray().forEach(r => {
+            lookup[r.indicator] = Number(r.value) || 0;
+          });
+
+          await conn.close();
+
+          /* ================================
+            Build Bars
+          ================================ */
+
+          const sortedIndicators = Object.entries(lookup)
+            .sort((a, b) => b[1] - a[1]);
+
+          const container = document.getElementById(containerId);
+          container.innerHTML = "";
+
+          sortedIndicators.forEach(([indicator, val]) => {
+            const label = indicator.replace("attribute-completeness_", "");
+
+            const barItem = document.createElement("div");
+            barItem.className = "bar-item";
+
+            barItem.innerHTML = `
+              <span class="label">${label}</span>
+              <div class="bar-container">
+                <div class="bar" style="width:${val * 100}%"></div>
+              </div>
+              <span class="value">${(val * 100).toFixed(2)}%</span>
+            `;
+
+            container.appendChild(barItem);
+          });
+        }
+
+        async function loadBuildingTreemap(url, containerId) {
+          try {
+            const featureEl = document.getElementById("feature-count");
+            const totalLengthEl = document.getElementById("total-length");
+            const labelEl = document.getElementById("tile1-label");
+
+            const response = await fetch(url);
+
+            const ds = new DecompressionStream("gzip");
+            const decompressedStream = response.body.pipeThrough(ds);
+            const jsonText = await new Response(decompressedStream).text();
+
+            const data = JSON.parse(jsonText);
+
+            const labels = [];
+            const values = [];
+            const colors = [];
+            const textColors = [];
+
+            const isArea = data.total_area !== undefined;
+            const isLength = data.total_length !== undefined;
+            const unitFactor = isArea ? 1_000_000 : (isLength ? 1_000 : 1);
+            const unitSuffix = isArea ? " km²" : (isLength ? " km" : "");
+
+            data.groupByResult.forEach(item => {
+              const rawLabel = item.groupByObject;
+              const value = (item.result?.[0]?.value || 0) / unitFactor;
+
+              // Filter out zero values to keep treemap clean (except remainder)
+              if (value === 0 && rawLabel.toLowerCase() !== "remainder") return;
+
+              let label = rawLabel;
+              if (rawLabel.includes("isced:level=")) {
+                label = "Level " + rawLabel.split("=")[1];
+              } else if (rawLabel.includes("hospital:speciality=")) {
+                label = rawLabel.split("=")[1]; // e.g., "general"
+              } else if (rawLabel.includes("=")) {
+                label = rawLabel.split("=")[1];
+              }
+              labels.push(label);
+              values.push(value);
+
+              // Force remainder to grey background, else default
+              const isRemainder = rawLabel.toLowerCase() === "remainder";
+              colors.push(isRemainder ? "#888888" : undefined);
+
+              // Set text color: white for remainder, default for others
+              textColors.push(isRemainder ? "white" : undefined);
+            });
+
+            /* ================================
+              KPI UPDATES
+            ================================ */
+
+            const currentTopic = getCurrentTopic().toLowerCase();
+
+            if (featureEl && data.total !== undefined) {
+
+              // If schools topic AND operator treemap → do not overwrite
+              if (
+                currentTopic.startsWith("school") &&
+                !url.includes("school_isced")
+              ) {
+                // skip updating feature count
+              } else {
+                featureEl.textContent = Number(data.total).toLocaleString("en-US");
+              }
+
+            }
+
+            const topicSimple = currentTopic.includes("road")
+              ? "roads"
+              : currentTopic.includes("building")
+                ? "buildings"
+                : prettifyTopic(currentTopic);
+
+            if (isArea) {
+              const km2 = (data.total_area / 1_000_000).toLocaleString("en-US", {
+                maximumFractionDigits: 0
+              });
+              if (totalLengthEl) totalLengthEl.textContent = km2;
+              if (labelEl) labelEl.textContent = `km² of ${topicSimple}`;
+            } else if (isLength) {
+              const km = (data.total_length / 1000).toLocaleString("en-US", {
+                maximumFractionDigits: 0
+              });
+              if (totalLengthEl) totalLengthEl.textContent = km;
+              if (labelEl) labelEl.textContent = `km of ${topicSimple}`;
+            } else {
+              // Ensure Tile 1 is cleared if no length/area data exists for this topic
+              if (totalLengthEl) totalLengthEl.textContent = "";
+              if (labelEl) labelEl.textContent = "";
+            }
+
+            // Ensure Feature Count is cleared if not present
+            if (featureEl && data.total === undefined) {
+              featureEl.textContent = "";
+            }
+
+            /* ================================
+              TREEMAP
+            ================================ */
+
+            const trace = {
+              type: "treemap",
+              labels: labels,
+              parents: labels.map(() => ""),
+              values: values,
+
+              customdata: values,
+
+              hovertemplate:
+                "%{label}<br>%{customdata:,.0f}" +
+                `${unitSuffix} (%{percentEntry:.1%})<extra></extra>`,
+
+              texttemplate:
+                "%{label}<br>%{customdata:,.0f}" +
+                `${unitSuffix} (%{percentEntry:.1%})`,
+
+              textinfo: "label+value+percent entry",
+              marker: { colors: colors },
+              textfont: { color: textColors }
+            };
+
+            const layout = {
+              margin: { t: 40, r: 10, l: 10, b: 10 },
+              paper_bgcolor: "rgba(0,0,0,0)",
+              plot_bgcolor: "rgba(0,0,0,0)",
+              font: { family: "Archivo, sans-serif", size: 11 }
+            };
+
+            Plotly.newPlot(containerId, [trace], layout, {
+              responsive: true,
+              displayModeBar: false
+            });
+
+          } catch (err) {
+            console.error("Treemap loading failed:", err);
+            // Clear tiles on error
+            const featureEl = document.getElementById("feature-count");
+            const totalLengthEl = document.getElementById("total-length");
+            const labelEl = document.getElementById("tile1-label");
+            if (featureEl) featureEl.textContent = "";
+            if (totalLengthEl) totalLengthEl.textContent = "";
+            if (labelEl) labelEl.textContent = "";
+          }
+        }
+
+        /* ================================
+          METRIC MAP SETUP
+        ================================ */
+
+        function updateDescription(descriptionId, text) {
+          const el = document.getElementById(descriptionId);
+          if (!el) return;
+          el.textContent = text || "";
+        }
+
+        async function loadPlotlyFigure(url, containerId) {
+          try {
+            const response = await fetch(url);
+
+            // Decompress gzip
+            const ds = new DecompressionStream("gzip");
+            const decompressedStream = response.body.pipeThrough(ds);
+            const jsonText = await new Response(decompressedStream).text();
+
+            const parsed = JSON.parse(jsonText);
+
+            // Some exports wrap figure in array or {figure: …}
+            const container = Array.isArray(parsed) ? parsed[0] : parsed;
+            const fig = container.figure || container;
+
+            fig.layout = fig.layout || {};
+
+            /* ================================
+              CLEAN INVALID TICK FORMATS
+            ================================ */
+            function cleanTickFormats(layout) {
+              if (!layout) return;
+
+              Object.keys(layout).forEach(key => {
+                const axis = layout[key];
+                if (axis && typeof axis === "object" && axis.tickformat === ".") {
+                  delete axis.tickformat;
+                }
+              });
+            }
+
+            cleanTickFormats(fig.layout);
+
+            /* ================================
+              REMOVE FIXED SIZE
+            ================================ */
+            delete fig.layout.width;
+            delete fig.layout.height;
+
+            /* ================================
+              DASHBOARD STYLING
+            ================================ */
+            fig.layout.paper_bgcolor = "rgba(0,0,0,0)";
+            fig.layout.plot_bgcolor = "rgba(0,0,0,0)";
+
+            fig.layout.margin = { t: 40, r: 20, l: 40, b: 40 };
+
+            fig.layout.font = {
+              family: "Archivo, sans-serif",
+              size: 11
+            };
+
+            if (fig.layout.title) {
+              fig.layout.title.font = { size: 13 };
+            }
+
+            /* ================================
+              RENDER
+            ================================ */
+            Plotly.newPlot(containerId, fig.data, fig.layout, {
+              responsive: true,
+              displayModeBar: false
+            });
+
+          } catch (err) {
+            console.error("Plot loading failed:", err);
+          }
+        }
+
+        const maps = {}; // store MapLibre map instances by containerId
+
+        function refreshMapSource(map, sourceName, layerName, bounds) {
+          // Remove layers using this source
+          const layers = map.getStyle().layers || [];
+          layers.forEach(l => {
+            if (l.source === sourceName) {
+              if (map.getLayer(l.id)) map.removeLayer(l.id);
+            }
+          });
+
+          if (map.getSource(sourceName)) {
+            map.removeSource(sourceName);
+          }
+
+          map.addSource(sourceName, {
+            type: "vector",
+            url: `pmtiles://${pmtilesUrl}`,
+            promoteId: "id"
+          });
+
+          map.resize();
+
+          if (bounds) {
+            map.once("idle", () => {
+              map.fitBounds(
+                [[bounds.minLon, bounds.minLat], [bounds.maxLon, bounds.maxLat]],
+                { padding: 10, duration: 2500 }
+              );
+            });
+          }
+        }
+
+        async function setupMetricMap({
+          containerId,
+          sourceName,
+          topicName,
+          indicatorName,
+          bounds,
+          layerName,
+          bannerId,
+          bannerLabel,
+          descriptionId,
+          legendId,
+          plotId
+        }) {
+
+          let map = maps[containerId];
+
+          if (!map) {
+            map = new maplibregl.Map({
+              container: containerId,
+              style: "https://tiles.openfreemap.org/styles/liberty",
+              attributionControl: false
+            });
+
+            maps[containerId] = map;
+
+            // Create a shared popup for this map instance
+            map.hoverPopup = new maplibregl.Popup({
+              closeButton: false,
+              closeOnClick: false
+            });
+
+            map.on("load", () => {
+              map.addSource(sourceName, {
+                type: "vector",
+                url: `pmtiles://${pmtilesUrl}`,
+                promoteId: "id"
+              });
+            });
+          }
+
+          const addOrUpdateLayer = async () => {
+
+            const layerId = `${sourceName}-${indicatorName}`;
+
+            refreshMapSource(map, sourceName, layerName, bounds);
+
+            if (map.getLayer(layerId)) {
+              map.removeLayer(layerId);
+            }
+
+            map.addLayer({
+              id: layerId,
+              type: "fill",
+              source: sourceName,
+              "source-layer": layerName,
+              paint: {
+                "fill-color": [
+                  "step",
+                  ["coalesce", ["feature-state", "value"], -1],
+                  "#888888",
+                  0, "#F44336",
+                  0.25, "#FFEB3B",
+                  0.75, "#4CAF50"
+                ],
+                "fill-opacity": 0.6,
+                "fill-outline-color": "#555"
+              }
+            });
+
+            // Add hover handlers for this specific layer
+            map.on('mousemove', layerId, (e) => {
+              if (e.features.length > 0) {
+                const feature = e.features[0];
+                const state = map.getFeatureState({
+                  source: sourceName,
+                  sourceLayer: layerName,
+                  id: feature.id
+                });
+
+                const val = state.value;
+                if (val !== undefined) {
+                  map.getCanvas().style.cursor = 'pointer';
+                  const displayValue = (val * 100).toFixed(2) + '%';
+                  map.hoverPopup.setLngLat(e.lngLat)
+                    .setHTML(`<strong>${prettifyIndicator(indicatorName)}:</strong> ${displayValue}`)
+                    .addTo(map);
+                } else {
+                  map.getCanvas().style.cursor = '';
+                  map.hoverPopup.remove();
+                }
+              }
+            });
+
+            map.on('mouseleave', layerId, () => {
+              map.getCanvas().style.cursor = '';
+              map.hoverPopup.remove();
+            });
+
+            // SINGLE data load
+            const { lookup, avg, description } =
+              await loadIndicatorLookup(parquetUrl, topicName, indicatorName);
+
+            for (const [id, val] of Object.entries(lookup)) {
+              map.setFeatureState(
+                { source: sourceName, sourceLayer: layerName, id },
+                { value: val }
+              );
+            }
+
+            map.off('mousemove', layerId);
+            map.off('mouseleave', layerId);
+
+            updateBanner({
+              bannerId,
+              avg,
+              label: prettifyIndicator(indicatorName)
+            });
+
+            updateDescription(descriptionId, description);
+
+            //  Plot update
+            if (plotId) {
+
+              const urls = buildUrls(countryCode, topicName);
+
+              const topics = getTopicsForQuery(topicName);
+
+              let figureTopic = getFigureTopic(topicName);
+
+              const figureUrl =
+                `${urls.figureBase}/adm0__${figureTopic}__${indicatorName}.json.gz`;
+
+              requestAnimationFrame(() => {
+                loadPlotlyFigure(figureUrl, plotId);
+                updatePlotTitle(plotId, indicatorName);
+              });
+            }
+
+            //  Legend update
+            if (legendId) {
+              updateLegendTitle(legendId, indicatorName);
+            }
+          };
+
+          if (map.loaded()) addOrUpdateLayer();
+          else if (map.style) map.on("load", addOrUpdateLayer);
+          else map.on("style.load", addOrUpdateLayer);
+        }
+
+
+        function getMetricMapsForTopic(topicName) {
+          const cfg = topicConfig[topicName] || {
+            comparisonIndicator: topicName.includes("building") ? "building-comparison" : "road-comparison",
+            comparisonLabel: prettifyTopic(topicName),
+            currentnessLabel: "Currentness",
+            completenessIndicator: topicName.includes("building") ? "user-activity" : "attribute-completeness_surface",
+            completenessLabel: "Completeness",
+            completenessFigure: topicName.includes("building") ? "user-activity" : "attribute-completeness_surface"
+          };
+
+          return [
+            {
+              containerId: "road_comparison_map",
+              sourceName: "grid_source",
+              indicatorName: cfg.comparisonIndicator,
+              bannerId: "summary-banner",
+              descriptionId: "comparison-description",
+              legendId: "legend-title-1",
+              plotId: "comparison-plot"
+            },
+            {
+              containerId: "current_map",
+              sourceName: "grid_source_2",
+              indicatorName: "currentness",
+              bannerId: "currentness-banner",
+              descriptionId: "currentness-description",
+              legendId: "legend-title-2",
+              plotId: "currentness-plot"
+            },
+            {
+              containerId: "completeness_map",
+              sourceName: "grid_source_3",
+              indicatorName: cfg.completenessIndicator,
+              bannerId: "completeness-banner",
+              descriptionId: "completeness-description",
+              legendId: "legend-title-3",
+              plotId: "completeness-plot"
+            }
+          ];
+        }
+
+        function initializeAllMetricMaps(bounds, layerName) {
+          metricMaps.forEach(cfg => {
+            setupMetricMap({
+              containerId: cfg.containerId,
+              sourceName: cfg.sourceName,
+              indicatorName: cfg.indicatorName,
+              bounds,
+              layerName,
+              bannerId: cfg.bannerId,
+              bannerLabel: cfg.bannerLabel,
+              descriptionId: cfg.descriptionId
+            });
+          });
+        }
+
+        /* ================================
+          MAIN
+        ================================ */
+
+        let countryYamlData = {};
+
+        async function loadAvailableCountries() {
+          const yamlUrl = "https://hot.storage.heigit.org/heigit-hdx-public/oqapi_hdx/countries/countries.yaml";
+
+          // Load YAML
+          const respYaml = await fetch(yamlUrl);
+          const textYaml = await respYaml.text();
+          countryYamlData = jsyaml.load(textYaml);
+
+          // Exceptions mapping for prettier names
+          const countryExceptions = {
+            "cote-d-ivoire": "Côte d’Ivoire",
+            "sri-lanka": "Sri Lanka",
+            "united-arab-emirates": "United Arab Emirates",
+            "sao-tome-and-principe": "São Tomé and Príncipe",
+            "bahamas": "The Bahamas",
+            "gambia": "The Gambia",
+            "congo-brazzaville": "Congo (Brazzaville)",
+            "congo-kinshasa": "Congo (Kinshasa)"
+            // add more as needed
+          };
+
+          function prettifySlug(slug) {
+            if (!slug) return "";
+            if (countryExceptions[slug]) return countryExceptions[slug];
+            return slug
+              .split("-")
+              .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+              .join(" ");
+          }
+
+          // Fetch remote folder to see which country codes are available
+          const urlS3 = "https://hot.storage.heigit.org/heigit-hdx-public?list-type=2&delimiter=/&prefix=oqapi_hdx/downloads/";
+          const resS3 = await fetch(urlS3);
+          const textS3 = await resS3.text();
+          const xml = new DOMParser().parseFromString(textS3, "application/xml");
+
+          const prefixes = [...xml.querySelectorAll("CommonPrefixes > Prefix")]
+            .map(el => el.textContent.replace("oqapi_hdx/downloads/", "").replace("/", ""))
+            .filter(Boolean);
+
+          // Build dropdown options only for remote-available codes
+          const countries = prefixes
+            .map(code => {
+              const rawSlug = countryYamlData[code]?.slug || code;
+              return { code, name: prettifySlug(rawSlug) };
+            })
+            .sort((a, b) => a.name.localeCompare(b.name)); // sort alphabetically by name
+
+          const select = document.getElementById("country-select");
+          select.innerHTML = "";
+
+          countries.forEach(({ code, name }) => {
+            const option = document.createElement("option");
+            option.value = code;
+            option.textContent = name;
+            select.appendChild(option);
+          });
+
+          // Initialize Hash Routing
+          function getHashParams() {
+            const hash = window.location.hash.replace(/^#\/?/, "");
+            if (!hash) return { hCountry: null, hTopic: null };
+            const parts = hash.split("/");
+            return { hCountry: parts[0] || null, hTopic: parts[1] || null };
+          }
+
+          const { hCountry, hTopic } = getHashParams();
+
+          const defaultCode = (hCountry && prefixes.includes(hCountry)) ? hCountry : (prefixes.includes("RWA") ? "RWA" : prefixes[0]);
+          if (defaultCode) {
+            select.value = defaultCode;
+            if (hTopic) {
+              const topicSelect = document.getElementById("topic-select");
+              topicSelect.dataset.selected = hTopic;
+            }
+            await loadCountry(defaultCode, true);
+          }
+        }
+
+        async function loadCountry(code, updateTopics = true) {
+          countryCode = code;
+          const urls = buildUrls(code, getCurrentTopic());
+          pmtilesUrl = urls.pmtilesUrl;
+          parquetUrl = urls.parquetUrl;
+
+          if (updateTopics) {
+            const availableTopics = await loadAvailableTopics(parquetUrl);
+            const topicSelect = document.getElementById("topic-select");
+            const previousTopic = topicSelect.dataset.selected || topicSelect.value;
+
+            topicSelect.innerHTML = "";
+            availableTopics.forEach(t => {
+              const opt = document.createElement("option");
+              opt.value = t;
+              opt.textContent = prettifyTopic(t);
+              topicSelect.appendChild(opt);
+            });
+
+            if (availableTopics.includes(previousTopic)) {
+              topicSelect.value = previousTopic;
+            } else {
+              topicSelect.value = availableTopics.includes("roads-all-highways")
+                ? "roads-all-highways"
+                : availableTopics[0];
+            }
+            topicSelect.dataset.selected = topicSelect.value;
+          }
+
+          topicName = getCurrentTopic();
+          const indicators = await loadIndicators(parquetUrl, topicName);
+          updateTagCoverageVisibility(indicators);
+
+          const bounds = await getPMTilesBoundsBrowser(pmtilesUrl);
+          if (!bounds) return;
+
+          const metricMaps = getMetricMapsForTopic(topicName);
+
+          document.querySelectorAll(".indicator-selector").forEach(select => {
+            select.innerHTML = "";
+
+            indicators.forEach(ind => {
+              const opt = document.createElement("option");
+              opt.value = ind;                         // keep raw value
+              opt.textContent = prettifyIndicator(ind); // pretty label
+              select.appendChild(opt);
+            });
+
+            // default value = first indicator
+            const defaults = DEFAULT_INDICATORS[topicName];
+
+            const tileNumber = select.dataset.map === "road_comparison_map"
+              ? "tile6"
+              : select.dataset.map === "current_map"
+                ? "tile7"
+                : "tile8";
+
+            const defaultIndicator = defaults?.[tileNumber];
+
+            const previous = select.dataset.selected;
+            select.value = indicators.includes(previous)
+              ? previous
+              : indicators.includes(defaultIndicator)
+                ? defaultIndicator
+                : indicators[0];
+
+            select.dataset.selected = select.value;
+          });
+
+          for (const cfg of metricMaps) {
+            const selector = document.querySelector(
+              `.grid-selector[data-map="${cfg.containerId}"]`
+            );
+
+            const indicatorSelect = document.querySelector(
+              `.indicator-selector[data-map="${cfg.containerId}"]`
+            );
+
+            const layerName = selector ? selector.value : "square_grid";
+            const indicatorName = indicatorSelect ? indicatorSelect.value : cfg.indicatorName;
+
+            setupMetricMap({
+              ...cfg,
+              topicName,
+              indicatorName,
+              bannerLabel: prettifyIndicator(indicatorName),
+              bounds,
+              layerName,
+            });
+          }
+
+          await loadTagCoverage(parquetUrl, "tag-coverage");
+
+          // Handle School Switch Visibility
+          const schoolSwitch = document.getElementById("school-treemap-switch");
+          if (schoolSwitch) {
+            const isSchool = topicName.toLowerCase().startsWith("school");
+            const isHospital = topicName.toLowerCase().startsWith("hospital");
+            
+            if (isSchool || isHospital) {
+              schoolSwitch.style.display = "flex";
+              
+              // Update button text based on topic
+              const opBtn = schoolSwitch.querySelector('[data-subtopic="operator"]');
+              const typeBtn = schoolSwitch.querySelector('[data-subtopic="isced"]');
+              
+              if (isHospital) {
+                opBtn.textContent = "hospital:operator";
+                typeBtn.textContent = "hospital:speciality";
+              } else {
+                opBtn.textContent = "operator:type";
+                typeBtn.textContent = "isced:level";
+              }
+            } else {
+              schoolSwitch.style.display = "none";
+            }
+          }
+
+          requestAnimationFrame(() => {
+            const currentUrls = buildUrls(countryCode, topicName);
+            loadBuildingTreemap(currentUrls.treemapUrl, "tag-treemap");
+          });
+
+          const figureTopic = getFigureTopic(topicName);
+
+          const initialPlots = [
+            {
+              id: "comparison-plot",
+              indicator: document.querySelector('.indicator-selector[data-map="road_comparison_map"]')?.value
+            },
+            {
+              id: "currentness-plot",
+              indicator: "currentness"
+            },
+            {
+              id: "completeness-plot",
+              indicator: document.querySelector('.indicator-selector[data-map="completeness_map"]')?.value
+            }
+          ];
+
+          initialPlots.forEach(({ id, indicator }) => {
+            if (indicator) {
+              const url = `${urls.figureBase}/adm0__${figureTopic}__${indicator}.json.gz`;
+              requestAnimationFrame(() => loadPlotlyFigure(url, id));
+            }
+          });
+
+          updateHash(countryCode, topicName);
+        }
+
+        /* ================================
+          EVENT LISTENERS (ATTACHED ONCE)
+        ================================ */
+
+        // country change
+        document.getElementById("country-select")
+          .addEventListener("change", (e) => {
+            updateHash(e.target.value, getCurrentTopic());
+            loadCountry(e.target.value);
+          });
+
+        // topic change
+        document.getElementById("topic-select").addEventListener("change", async (e) => {
+          e.target.dataset.selected = e.target.value;
+          topicName = e.target.value;
+          updateHash(countryCode, topicName);
+          await loadCountry(countryCode, false);
+        });
+
+        // Handle hashchange event for browser back/forward buttons
+        window.addEventListener("hashchange", async () => {
+          const hash = window.location.hash.replace(/^#\/?/, "");
+          const parts = hash.split("/");
+          const hC = parts[0];
+          const hT = parts[1];
+          let changed = false;
+
+          const cSelect = document.getElementById("country-select");
+          const tSelect = document.getElementById("topic-select");
+
+          if (hC && hC !== countryCode && Array.from(cSelect.options).some(o => o.value === hC)) {
+            cSelect.value = hC;
+            if (hT) {
+              tSelect.dataset.selected = hT;
+              topicName = hT;
+            }
+            await loadCountry(hC, true);
+            changed = true;
+          } else if (!changed && hT && hT !== topicName && Array.from(tSelect.options).some(o => o.value === hT)) {
+            tSelect.value = hT;
+            topicName = hT;
+            await loadCountry(countryCode, false);
+            changed = true;
+          }
+        });
+
+        // school sub-topic switch
+        document.querySelectorAll("#school-treemap-switch .switch-btn").forEach(btn => {
+          btn.addEventListener("click", (e) => {
+
+            const subTopic = e.target.dataset.subtopic;
+            if (subTopic === currentSchoolSubTopic) return;
+
+            currentSchoolSubTopic = subTopic;
+
+            // update active button
+            document.querySelectorAll("#school-treemap-switch .switch-btn").forEach(b => {
+              b.classList.toggle("active", b === e.target);
+            });
+
+            // reload treemap
+            const currentUrls = buildUrls(countryCode, topicName);
+            loadBuildingTreemap(currentUrls.treemapUrl, "tag-treemap");
+
+          });
+        });
+
+        document.querySelectorAll(".indicator-selector").forEach(select => {
+          select.addEventListener("change", async (e) => {
+            const containerId = e.target.dataset.map;
+            const indicatorName = e.target.value;
+
+            // store selection so reload keeps it
+            e.target.dataset.selected = indicatorName;
+
+            const gridSelector = document.querySelector(
+              `.grid-selector[data-map="${containerId}"]`
+            );
+            const layerName = gridSelector ? gridSelector.value : "square_grid";
+
+            const metricMaps = getMetricMapsForTopic(getCurrentTopic());
+            const cfg = metricMaps.find(m => m.containerId === containerId);
+            if (!cfg) return;
+
+            const bounds = await getPMTilesBoundsBrowser(pmtilesUrl);
+
+            setupMetricMap({
+              ...cfg,
+              topicName: getCurrentTopic(),
+              indicatorName,
+              bannerLabel: prettifyIndicator(indicatorName),
+              bounds,
+              layerName,
+            });
+          });
+        });
+
+        // grid selectors (FIX — only once)
+        document.querySelectorAll(".grid-selector").forEach(select => {
+          select.addEventListener("change", async (e) => {
+            const containerId = e.target.dataset.map;
+            const layerName = e.target.value;
+
+            const topicName = getCurrentTopic();
+
+            const metricMaps = getMetricMapsForTopic(topicName);
+            const cfg = metricMaps.find(m => m.containerId === containerId);
+            if (!cfg) return;
+
+            // get currently selected indicator for THIS map
+            const indicatorSelect = document.querySelector(
+              `.indicator-selector[data-map="${containerId}"]`
+            );
+
+            const indicatorName = indicatorSelect
+              ? indicatorSelect.value
+              : cfg.indicatorName;
+
+            const bounds = await getPMTilesBoundsBrowser(pmtilesUrl);
+
+            setupMetricMap({
+              ...cfg,
+              topicName,
+              indicatorName,   // keep current indicator
+              bounds,
+              layerName,
+            });
+          });
+        });
+
+        loadAvailableCountries();
+
+        /* resize observer unchanged */
+        const resizeObserver = new ResizeObserver(() => {
+          Object.values(maps).forEach(map => map.resize());
+        });
+        document.querySelectorAll('.map-container')
+          .forEach(el => resizeObserver.observe(el));
+
+      </script>
+    </div>
+    <footer class="footer">
+      <div class="footer-left">
+        <a class="footer-btn" href="https://heigit.org/contact/" target="_blank">Contact</a>
+        <a class="footer-btn" href="https://heigit.org/privacy-policy/" target="_blank">Privacy Policy</a>
+        <a class="footer-btn" href="https://heigit.org/imprint/" target="_blank">Imprint</a>
+      </div>
+
+      <div class="footer-center">
+        <a href="https://dashboard.ohsome.org/en/#backend=ohsomeApi&groupBy=none&time=%2F2026-01-02T11%3A00Z%2FP1M&key=natural&value=tree&types=node&measure=count"
+          target="_blank" class="ohsome-link">
+          <img src="https://dashboard.ohsome.org/en/assets/images/ohsome_narrow.svg" alt="ohsome">
+          <span class="ohsome-text">DASHBOARD</span>
+        </a>
+      </div>
+
+      <div class="footer-right">
+        © 2026 HeiGIT gGmbH
+      </div>
+    </footer>
+</body>
+
+</html>
