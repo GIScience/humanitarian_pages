@@ -858,6 +858,11 @@
             return "hospital_" + sub;
           }
 
+          if (topicLower.startsWith("healthcare-primary")) {
+            const sub = currentSchoolSubTopic === "isced" ? "speciality" : "operator";
+            return "healthcare-primary_" + sub;
+          }
+
           const topicMain = topic.split("-")[0].toLowerCase();
           return topicMain;
         }
@@ -872,11 +877,22 @@
 
         function buildUrls(code, topic) {
           const distributionKey = getTreemapTopic(topic);
+          let countKey = distributionKey;
+
+          const topicLower = topic.toLowerCase();
+          if (topicLower.startsWith("hospital")) {
+            countKey = "hospital_count";
+          } else if (topicLower.startsWith("healthcare-primary")) {
+            countKey = "healthcare-primary_count";
+          } else if (topicLower.startsWith("school")) {
+            countKey = "school_isced";
+          }
 
           return {
             pmtilesUrl: `https://hot.storage.heigit.org/heigit-hdx-public/oqapi_hdx/downloads/${code}/${code}_boundaries.pmtiles`,
             parquetUrl: `https://hot.storage.heigit.org/heigit-hdx-public/oqapi_hdx/downloads/${code}/${code}_long.parquet`,
             treemapUrl: `https://hot.storage.heigit.org/heigit-hdx-public/oqapi_hdx/osm_stats/${code}/${code}_${distributionKey}_tag_distribution.json.gz`,
+            countUrl: `https://hot.storage.heigit.org/heigit-hdx-public/oqapi_hdx/osm_stats/${code}/${code}_${countKey}_tag_distribution.json.gz`,
             figureBase: `https://hot.storage.heigit.org/heigit-hdx-public/oqapi_hdx/figures/${code}`
           };
         }
@@ -1314,19 +1330,38 @@
           });
         }
 
-        async function loadBuildingTreemap(url, containerId) {
+        async function loadBuildingTreemap(url, countUrl, containerId) {
           try {
             const featureEl = document.getElementById("feature-count");
             const totalLengthEl = document.getElementById("total-length");
             const labelEl = document.getElementById("tile1-label");
 
-            const response = await fetch(url);
+            let data, countData;
 
-            const ds = new DecompressionStream("gzip");
-            const decompressedStream = response.body.pipeThrough(ds);
-            const jsonText = await new Response(decompressedStream).text();
-
-            const data = JSON.parse(jsonText);
+            if (url === countUrl || !countUrl) {
+              const response = await fetch(url);
+              const ds = new DecompressionStream("gzip");
+              const jsonText = await new Response(response.body.pipeThrough(ds)).text();
+              data = JSON.parse(jsonText);
+              countData = data;
+            } else {
+              const [response, countResponse] = await Promise.all([
+                fetch(url),
+                fetch(countUrl).catch(() => null)
+              ]);
+              
+              const ds = new DecompressionStream("gzip");
+              const jsonText = await new Response(response.body.pipeThrough(ds)).text();
+              data = JSON.parse(jsonText);
+              
+              if (countResponse && countResponse.ok) {
+                const countDs = new DecompressionStream("gzip");
+                const countJsonText = await new Response(countResponse.body.pipeThrough(countDs)).text();
+                countData = JSON.parse(countJsonText);
+              } else {
+                countData = data;
+              }
+            }
 
             const labels = [];
             const values = [];
@@ -1370,18 +1405,8 @@
 
             const currentTopic = getCurrentTopic().toLowerCase();
 
-            if (featureEl && data.total !== undefined) {
-
-              // If schools topic AND operator treemap → do not overwrite
-              if (
-                currentTopic.startsWith("school") &&
-                !url.includes("school_isced")
-              ) {
-                // skip updating feature count
-              } else {
-                featureEl.textContent = Number(data.total).toLocaleString("en-US");
-              }
-
+            if (featureEl && countData.total !== undefined) {
+              featureEl.textContent = Number(countData.total).toLocaleString("en-US");
             }
 
             const topicSimple = currentTopic.includes("road")
@@ -1390,14 +1415,17 @@
                 ? "buildings"
                 : prettifyTopic(currentTopic);
 
-            if (isArea) {
-              const km2 = (data.total_area / 1_000_000).toLocaleString("en-US", {
+            const countIsArea = countData.total_area !== undefined;
+            const countIsLength = countData.total_length !== undefined;
+
+            if (countIsArea) {
+              const km2 = (countData.total_area / 1_000_000).toLocaleString("en-US", {
                 maximumFractionDigits: 0
               });
               if (totalLengthEl) totalLengthEl.textContent = km2;
               if (labelEl) labelEl.textContent = `km² of ${topicSimple}`;
-            } else if (isLength) {
-              const km = (data.total_length / 1000).toLocaleString("en-US", {
+            } else if (countIsLength) {
+              const km = (countData.total_length / 1000).toLocaleString("en-US", {
                 maximumFractionDigits: 0
               });
               if (totalLengthEl) totalLengthEl.textContent = km;
@@ -1409,7 +1437,7 @@
             }
 
             // Ensure Feature Count is cleared if not present
-            if (featureEl && data.total === undefined) {
+            if (featureEl && countData.total === undefined) {
               featureEl.textContent = "";
             }
 
@@ -1963,17 +1991,18 @@
           if (schoolSwitch) {
             const isSchool = topicName.toLowerCase().startsWith("school");
             const isHospital = topicName.toLowerCase().startsWith("hospital");
+            const isHealthcarePrimary = topicName.toLowerCase().startsWith("healthcare-primary");
             
-            if (isSchool || isHospital) {
+            if (isSchool || isHospital || isHealthcarePrimary) {
               schoolSwitch.style.display = "flex";
               
               // Update button text based on topic
               const opBtn = schoolSwitch.querySelector('[data-subtopic="operator"]');
               const typeBtn = schoolSwitch.querySelector('[data-subtopic="isced"]');
               
-              if (isHospital) {
-                opBtn.textContent = "hospital:operator";
-                typeBtn.textContent = "hospital:speciality";
+              if (isHospital || isHealthcarePrimary) {
+                opBtn.textContent = "operator:type";
+                typeBtn.textContent = "healthcare:speciality";
               } else {
                 opBtn.textContent = "operator:type";
                 typeBtn.textContent = "isced:level";
@@ -1985,7 +2014,7 @@
 
           requestAnimationFrame(() => {
             const currentUrls = buildUrls(countryCode, topicName);
-            loadBuildingTreemap(currentUrls.treemapUrl, "tag-treemap");
+            loadBuildingTreemap(currentUrls.treemapUrl, currentUrls.countUrl, "tag-treemap");
           });
 
           const figureTopic = getFigureTopic(topicName);
@@ -2077,7 +2106,7 @@
 
             // reload treemap
             const currentUrls = buildUrls(countryCode, topicName);
-            loadBuildingTreemap(currentUrls.treemapUrl, "tag-treemap");
+            loadBuildingTreemap(currentUrls.treemapUrl, currentUrls.countUrl, "tag-treemap");
 
           });
         });
