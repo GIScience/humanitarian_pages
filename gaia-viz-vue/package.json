@@ -14,7 +14,8 @@
     "maplibre-gl": "^5.20.1",
     "plotly.js-dist-min": "^3.4.0",
     "pmtiles": "^4.4.0",
-    "vue": "^3.5.30"
+    "vue": "^3.5.30",
+    "vue-router": "^4.6.4"
   },
   "devDependencies": {
     "@types/js-yaml": "^4.0.9",

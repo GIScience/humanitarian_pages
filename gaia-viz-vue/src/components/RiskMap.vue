@@ -320,6 +320,19 @@ watch(() => props.availableCountries, (newVal) => {
     map.setFilter(interactLayerId, isLoaded ? ['in', ['get', 'iso_a3'], ['literal', validCountries]] : ['==', 'iso_a3', 'DOES_NOT_EXIST']);
   }
 }, { deep: true });
+
+defineExpose({
+  resetView: () => {
+    if (map) {
+      map.flyTo({
+        center: [0, 20],
+        zoom: 1.5,
+        duration: 3000,
+        essential: true
+      });
+    }
+  }
+});
 </script>
 
 <template>
