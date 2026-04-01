@@ -13,9 +13,11 @@ const emit = defineEmits<{
   (e: 'region-click', pcode: string): void;
 }>();
 
-const activeTab = ref<'ranking' | 'components' | 'demographics' | 'table'>('ranking');
-const sortKey = ref<string>('risk');
+const activeTab = ref<'ranking' | 'components' | 'demographics' | 'dimensions' | 'table'>('ranking');
+const sortKey = ref<string>('');
 const sortOrder = ref<'asc' | 'desc'>('desc');
+const currentPage = ref(1);
+const itemsPerPage = 50;
 
 // Format disaster name
 const disasterLabel = computed(() => {
@@ -27,6 +29,15 @@ const disasterSuffix = computed(() => {
     if (!props.selectedDisaster) return '';
     return props.selectedDisaster.replace('risk_', '');
 });
+
+const formatColName = (col: string) => {
+    if (col === 'cop') return 'Lack of Coping Capacity';
+    if (col === 'vul') return 'Vulnerability';
+    if (col === 'exp') return 'Exposure (All)';
+    if (col === `exp_${disasterSuffix.value}`) return `${disasterLabel.value} Exposure`;
+    
+    return col.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+};
 
 // Dynamic component columns based on what's available in the dataset
 const componentCols = computed(() => {
@@ -41,22 +52,85 @@ const componentCols = computed(() => {
     return { exp, vul, cop };
 });
 
+const hazardPrefix = computed(() => {
+    const d = disasterSuffix.value.toLowerCase();
+    if (d.includes('cyclone')) return 'cyc';
+    if (d.includes('flood')) return 'flo';
+    if (d.includes('drought')) return 'dr';
+    if (d.includes('earthquake')) return 'eq';
+    if (d.includes('tsunami')) return 'ts';
+    return d;
+});
+
+// Extract all indicator columns dynamically for the table
+const indicatorCols = computed(() => {
+    if (!props.data || props.data.length === 0) return [];
+    
+    const excluded = new Set([props.pcodeField, props.selectedDisaster]);
+    
+    const orderPriority = (k: string) => {
+       if (k === 'exp' || k === `exp_${hazardPrefix.value}`) return 1;
+       if (k === 'vul') return 2;
+       if (k === 'cop') return 3;
+       if (k.startsWith('exp_')) return 4;
+       if (k.startsWith('vul_')) return 5;
+       if (k.startsWith('cop_')) return 6;
+       return 7;
+    };
+    
+    return Object.keys(props.data[0]).filter(k => {
+        if (excluded.has(k) || k.startsWith('risk_')) return false;
+        // Hide exposure indicators that do not match the selected hazard
+        if (k.startsWith('exp_') && !k.startsWith(`exp_${hazardPrefix.value}`)) return false;
+        return true;
+    }).sort((a, b) => {
+        const diff = orderPriority(a) - orderPriority(b);
+        return diff !== 0 ? diff : a.localeCompare(b);
+    });
+});
+
+const expCols = computed(() => indicatorCols.value.filter(c => c !== 'exp' && c !== `exp_${hazardPrefix.value}` && c.startsWith('exp')));
+const vulCols = computed(() => indicatorCols.value.filter(c => c !== 'vul' && c.startsWith('vul')));
+const copCols = computed(() => indicatorCols.value.filter(c => c !== 'cop' && c.startsWith('cop')));
+
 const sortedData = computed(() => {
     if (!props.data || props.data.length === 0) return [];
     
-    let key = props.selectedDisaster;
-    if (sortKey.value !== 'risk') {
-       key = componentCols.value[sortKey.value as keyof typeof componentCols.value] || props.selectedDisaster;
-    }
+    const key = sortKey.value || props.selectedDisaster;
     
     return [...props.data].sort((a, b) => {
-        const valA = Number(a[key]) || 0;
-        const valB = Number(b[key]) || 0;
-        if (valA < valB) return sortOrder.value === 'asc' ? -1 : 1;
-        if (valA > valB) return sortOrder.value === 'asc' ? 1 : -1;
-        return 0;
+        const valA = a[key];
+        const valB = b[key];
+        
+        const numA = Number(valA);
+        const numB = Number(valB);
+        
+        if (valA !== null && valA !== undefined && valB !== null && valB !== undefined && !isNaN(numA) && !isNaN(numB) && valA !== '' && valB !== '') {
+            if (numA < numB) return sortOrder.value === 'asc' ? -1 : 1;
+            if (numA > numB) return sortOrder.value === 'asc' ? 1 : -1;
+            return 0;
+        } else {
+            const strA = String(valA || '');
+            const strB = String(valB || '');
+            if (strA < strB) return sortOrder.value === 'asc' ? -1 : 1;
+            if (strA > strB) return sortOrder.value === 'asc' ? 1 : -1;
+            return 0;
+        }
     });
 });
+
+const totalPages = computed(() => {
+    return Math.max(1, Math.ceil(sortedData.value.length / itemsPerPage));
+});
+
+const paginatedData = computed(() => {
+    const start = (currentPage.value - 1) * itemsPerPage;
+    return sortedData.value.slice(start, start + itemsPerPage);
+});
+
+watch([sortKey, sortOrder, () => props.data], () => {
+    currentPage.value = 1;
+}, { deep: true });
 
 const toggleSort = (key: string) => {
     if (sortKey.value === key) {
@@ -301,7 +375,7 @@ watch(activeTab, () => {
     <!-- Tabs Header -->
     <div class="flex gap-2 p-4 border-b border-slate-200">
         <button 
-            v-for="tab in ['ranking', 'components', 'table', 'demographics']" 
+            v-for="tab in ['ranking', 'components', 'demographics', 'table', 'dimensions']" 
             :key="tab"
             @click="activeTab = tab as any"
             class="px-3 py-1.5 rounded-md text-xs font-bold uppercase tracking-wider transition-colors"
@@ -312,7 +386,7 @@ watch(activeTab, () => {
     </div>
 
     <!-- Content Area -->
-    <div class="flex-1 overflow-y-auto p-4 custom-scrollbar">
+    <div class="flex-1 p-4 flex flex-col min-h-0" :class="activeTab !== 'table' ? 'overflow-y-auto custom-scrollbar' : ''">
         <!-- Ranking -->
         <div v-if="activeTab === 'ranking'" class="h-full min-h-[400px] flex flex-col">
             <h3 class="text-lg font-extrabold text-slate-900 mb-2 mt-2 px-2 tracking-tight">Top 15 Regions</h3>
@@ -332,48 +406,128 @@ watch(activeTab, () => {
             <div id="demographics-chart" class="w-full flex-1"></div>
         </div>
 
+        <!-- Dimensions Flowchart -->
+        <div v-else-if="activeTab === 'dimensions'" class="w-full h-full flex flex-col p-4 min-h-0 relative overflow-y-auto custom-scrollbar bg-slate-50/50">
+            <p class="text-xs text-slate-500 text-left mb-8 max-w-xl mx-auto leading-relaxed">
+                The overall risk score is calculated using three main dimensions: <strong>Exposure</strong>, <strong>Vulnerability</strong>, and <strong>Lack of Coping Capacity</strong>. Here are the underlying sub-indicators available for this region.
+            </p>
+            
+            <div class="flex-1 flex flex-col items-center justify-start min-h-max pb-12 w-full">
+                <!-- Final Risk Node -->
+                <div class="bg-slate-800 text-white font-black px-6 py-2.5 rounded-xl shadow-lg border-b-4 border-slate-900 relative z-10 text-base tracking-wide uppercase">
+                    {{ disasterLabel }} Risk
+                </div>
+                
+                <!-- Vertical Line from Risk -->
+                <div class="w-[2px] h-6 bg-slate-300"></div>
+                
+                <!-- Horizontal connecting line -->
+                <div class="w-2/3 max-w-2xl border-t-[2px] border-slate-300 relative h-6">
+                   <div class="absolute left-0 top-0 w-[2px] h-6 bg-slate-300"></div>
+                   <div class="absolute left-1/2 top-0 w-[2px] h-6 bg-slate-300 transform -translate-x-1/2"></div>
+                   <div class="absolute right-0 top-0 w-[2px] h-6 bg-slate-300"></div>
+                </div>
+                
+                <!-- 3 Columns -->
+                <div class="w-full max-w-4xl grid grid-cols-3 gap-6 px-4 relative z-10">
+                    <!-- EXPOSURE -->
+                    <div class="flex flex-col items-center">
+                        <div class="bg-[#ca2333] text-white font-bold px-4 py-2 rounded-lg shadow border-b-4 border-[#8B1824] w-full text-center text-sm mb-4 relative">
+                            Exposure
+                        </div>
+                        <div class="flex flex-col gap-2 w-full">
+                            <div v-for="col in expCols" :key="col" class="bg-white border text-center border-slate-200 px-3 py-2.5 rounded shadow-sm text-xs font-semibold text-slate-700">
+                                {{ formatColName(col) }}
+                            </div>
+                            <div v-if="expCols.length === 0" class="text-xs text-slate-400 text-center italic py-2">No sub-indicators</div>
+                        </div>
+                    </div>
+                    
+                    <!-- VULNERABILITY -->
+                    <div class="flex flex-col items-center">
+                        <div class="bg-[#E77480] text-white font-bold px-4 py-2 rounded-lg shadow border-b-4 border-[#b04a55] w-full text-center text-sm mb-4 relative">
+                            Vulnerability
+                        </div>
+                        <div class="flex flex-col gap-2 w-full">
+                            <div v-for="col in vulCols" :key="col" class="bg-white border text-center border-slate-200 px-3 py-2.5 rounded shadow-sm text-xs font-semibold text-slate-700">
+                                {{ formatColName(col) }}
+                            </div>
+                            <div v-if="vulCols.length === 0" class="text-xs text-slate-400 text-center italic py-2">No sub-indicators</div>
+                        </div>
+                    </div>
+                    
+                    <!-- COPING CAPACITY -->
+                    <div class="flex flex-col items-center">
+                        <div class="bg-[#2C3E50] text-white font-bold px-4 py-2 rounded-lg shadow border-b-4 border-[#1a252f] w-full text-center text-sm mb-4 relative z-10">
+                            Coping Capacity
+                        </div>
+                        <div class="flex flex-col gap-2 w-full relative z-10">
+                            <div v-for="col in copCols" :key="col" class="bg-white border text-center border-slate-200 px-3 py-2.5 rounded shadow-sm text-xs font-semibold text-slate-700">
+                                {{ formatColName(col) }}
+                            </div>
+                            <div v-if="copCols.length === 0" class="text-xs text-slate-400 text-center italic py-2">No sub-indicators</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Table -->
-        <div v-else-if="activeTab === 'table'" class="w-full">
-             <div class="flex justify-between items-center mb-4">
+        <div v-else-if="activeTab === 'table'" class="w-full h-full flex flex-col min-h-0 relative">
+             <div class="flex justify-between items-center mb-2 shrink-0">
                  <div class="text-sm font-bold text-slate-700">{{ sortedData.length }} Regions</div>
              </div>
              
-             <div class="overflow-x-auto border border-slate-200 rounded-lg">
-                 <table class="w-full text-left text-sm text-slate-600">
-                     <thead class="text-xs text-slate-500 uppercase bg-slate-50 border-b border-slate-200">
+             <div class="flex-1 overflow-auto border border-slate-200 rounded-lg custom-scrollbar bg-white">
+                 <table class="w-full text-left text-sm text-slate-600 relative border-collapse">
+                     <thead class="text-xs text-slate-500 uppercase sticky top-0 z-10 shadow-sm border-b border-slate-200">
                          <tr>
-                             <th class="px-4 py-3 cursor-pointer hover:bg-slate-100" @click="toggleSort('pcode')">
-                                 PCODE <span v-if="sortKey === 'pcode'">{{ sortOrder === 'asc' ? '↑' : '↓' }}</span>
+                             <th class="px-4 py-3 bg-slate-50 cursor-pointer hover:bg-slate-100 whitespace-nowrap border-b border-slate-200" @click="toggleSort(pcodeField)">
+                                 PCODE <span v-if="sortKey === pcodeField">{{ sortOrder === 'asc' ? '↑' : '↓' }}</span>
                              </th>
-                             <th class="px-4 py-3 cursor-pointer hover:bg-slate-100" @click="toggleSort('risk')">
-                                 {{ disasterLabel }} Risk <span v-if="sortKey === 'risk'">{{ sortOrder === 'asc' ? '↑' : '↓' }}</span>
+                             <th class="px-4 py-3 bg-slate-50 cursor-pointer hover:bg-slate-100 whitespace-nowrap border-b border-slate-200" @click="toggleSort(selectedDisaster)">
+                                 {{ disasterLabel }} Risk <span v-if="sortKey === selectedDisaster || sortKey === ''">{{ sortOrder === 'asc' ? '↑' : '↓' }}</span>
                              </th>
-                             <th v-if="componentCols.exp" class="px-4 py-3 cursor-pointer hover:bg-slate-100" @click="toggleSort('exp')">
-                                 Exposure <span v-if="sortKey === 'exp'">{{ sortOrder === 'asc' ? '↑' : '↓' }}</span>
-                             </th>
-                             <th v-if="componentCols.vul" class="px-4 py-3 cursor-pointer hover:bg-slate-100" @click="toggleSort('vul')">
-                                 Vulnerability <span v-if="sortKey === 'vul'">{{ sortOrder === 'asc' ? '↑' : '↓' }}</span>
-                             </th>
-                             <th v-if="componentCols.cop" class="px-4 py-3 cursor-pointer hover:bg-slate-100" @click="toggleSort('cop')">
-                                 Lack of Coping Capacity <span v-if="sortKey === 'cop'">{{ sortOrder === 'asc' ? '↑' : '↓' }}</span>
+                             <th v-for="col in indicatorCols" :key="col" class="px-4 py-3 bg-slate-50 cursor-pointer hover:bg-slate-100 whitespace-nowrap border-b border-slate-200" @click="toggleSort(col)">
+                                 {{ formatColName(col) }} <span v-if="sortKey === col">{{ sortOrder === 'asc' ? '↑' : '↓' }}</span>
                              </th>
                          </tr>
                      </thead>
                      <tbody>
-                         <tr v-for="row in sortedData.slice(0, 50)" :key="row[pcodeField]" class="border-b border-slate-100 hover:bg-slate-50"
+                         <tr v-for="row in paginatedData" :key="row[pcodeField]" class="hover:bg-slate-50"
                              @mouseenter="emit('region-hover', row[pcodeField])"
                              @mouseleave="emit('region-hover', null)"
                          >
-                             <td class="px-4 py-2 font-medium text-slate-900">{{ row[pcodeField] }}</td>
-                             <td class="px-4 py-2 font-bold">{{ Number(row[selectedDisaster])?.toFixed(3) || 'N/A' }}</td>
-                             <td v-if="componentCols.exp" class="px-4 py-2">{{ Number(row[componentCols.exp])?.toFixed(3) || '-' }}</td>
-                             <td v-if="componentCols.vul" class="px-4 py-2">{{ Number(row[componentCols.vul])?.toFixed(3) || '-' }}</td>
-                             <td v-if="componentCols.cop" class="px-4 py-2">{{ Number(row[componentCols.cop])?.toFixed(3) || '-' }}</td>
+                             <td class="px-4 py-2 font-medium text-slate-900 whitespace-nowrap border-b border-slate-100">{{ row[pcodeField] }}</td>
+                             <td class="px-4 py-2 font-bold whitespace-nowrap border-b border-slate-100">{{ row[selectedDisaster] !== undefined && row[selectedDisaster] !== null && row[selectedDisaster] !== '' && !isNaN(Number(row[selectedDisaster])) ? Number(row[selectedDisaster]).toFixed(3) : 'N/A' }}</td>
+                             <td v-for="col in indicatorCols" :key="col" class="px-4 py-2 whitespace-nowrap text-slate-600 border-b border-slate-100">
+                                 {{ row[col] !== undefined && row[col] !== null && row[col] !== '' && !isNaN(Number(row[col])) ? Number(row[col]).toFixed(3) : (row[col] || '-') }}
+                             </td>
                          </tr>
                      </tbody>
                  </table>
              </div>
-             <div v-if="sortedData.length > 50" class="text-xs text-slate-400 mt-2 text-center italic">Showing top 50 regions</div>
+             
+             <!-- Pagination Controls -->
+             <div class="flex justify-between items-center mt-3 shrink-0" v-if="totalPages > 1">
+                 <button 
+                     @click="currentPage--" 
+                     :disabled="currentPage === 1"
+                     class="px-3 py-1.5 text-xs font-bold uppercase tracking-wider bg-slate-100 text-slate-600 rounded-md disabled:opacity-40 hover:bg-slate-200 transition-colors cursor-pointer"
+                 >
+                     Previous
+                 </button>
+                 <span class="text-xs font-bold text-slate-500 tracking-wider">
+                     PAGE {{ currentPage }} OF {{ totalPages }}
+                 </span>
+                 <button 
+                     @click="currentPage++" 
+                     :disabled="currentPage === totalPages"
+                     class="px-3 py-1.5 text-xs font-bold uppercase tracking-wider bg-slate-100 text-slate-600 rounded-md disabled:opacity-40 hover:bg-slate-200 transition-colors cursor-pointer"
+                 >
+                     Next
+                 </button>
+             </div>
         </div>
     </div>
   </div>
@@ -388,10 +542,10 @@ watch(activeTab, () => {
   background: transparent;
 }
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
+  background: #8B4C4C; /* HeiGIT Red */
   border-radius: 10px;
 }
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
+  background: #8B4C4C; /* Darker HeiGIT Red */
 }
 </style>

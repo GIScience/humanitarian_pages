@@ -244,9 +244,9 @@ watch(selectedDisaster, (newVal) => {
           viewMode === 'HOME' ? 'w-0' : (showAnalysis ? 'w-full md:w-1/2' : 'w-0 pointer-events-none')
         ]"
       >
-        <div class="flex-1 overflow-y-auto p-8 h-full min-w-[320px] custom-scrollbar">
-          <div class="max-w-3xl mx-auto space-y-8">
-            <header>
+        <div class="flex-1 flex flex-col overflow-hidden p-8 h-full min-w-[320px]">
+          <div class="max-w-3xl w-full mx-auto flex flex-col h-full space-y-4">
+            <header class="shrink-0">
               <h2 class="text-3xl font-extrabold text-slate-900 tracking-tight mb-2">Analysis</h2>
               <div class="flex items-center gap-2">
                 <span class="px-2.5 py-1 rounded-md bg-slate-100 border border-slate-200 text-xs font-bold text-heigit-red uppercase tracking-wider">
@@ -256,7 +256,7 @@ watch(selectedDisaster, (newVal) => {
               </div>
             </header>
             
-            <div class="h-full min-h-[500px] border border-slate-200 rounded-xl overflow-hidden shadow-sm">
+            <div class="flex-1 min-h-0 border border-slate-200 rounded-xl overflow-hidden shadow-sm">
               <RiskStatistics 
                 v-if="lastLoadedData.length > 0 && selectedDisaster"
                 :data="lastLoadedData" 
@@ -309,10 +309,10 @@ watch(selectedDisaster, (newVal) => {
   background: #0f172a;
 }
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: #1e293b;
+  background: #ca2333; /* HeiGIT Red */
   border-radius: 10px;
 }
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: #334155;
+  background: #a81d2a;
 }
 </style>
