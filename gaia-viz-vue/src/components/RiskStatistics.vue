@@ -30,28 +30,6 @@ const disasterSuffix = computed(() => {
     return props.selectedDisaster.replace('risk_', '');
 });
 
-const formatColName = (col: string) => {
-    if (col === 'cop') return 'Lack of Coping Capacity';
-    if (col === 'vul') return 'Vulnerability';
-    if (col === 'exp') return 'Exposure (All)';
-    if (col === `exp_${disasterSuffix.value}`) return `${disasterLabel.value} Exposure`;
-    
-    return col.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
-};
-
-// Dynamic component columns based on what's available in the dataset
-const componentCols = computed(() => {
-    if (!props.data || props.data.length === 0) return { exp: '', sus: '', vul: 'vul', cop: 'cop' };
-    const cols = Object.keys(props.data[0]);
-    
-    // Look for exp_ related to the disaster
-    const exp = cols.find(c => c === `exp_${disasterSuffix.value}`) || cols.find(c => c.startsWith('exp_')) || '';
-    const vul = cols.find(c => c === 'vul') || cols.find(c => c.startsWith('vul')) || '';
-    const cop = cols.find(c => c === 'cop') || cols.find(c => c.startsWith('cop')) || '';
-    
-    return { exp, vul, cop };
-});
-
 const hazardPrefix = computed(() => {
     const d = disasterSuffix.value.toLowerCase();
     if (d.includes('cyclone')) return 'cyc';
@@ -62,6 +40,27 @@ const hazardPrefix = computed(() => {
     return d;
 });
 
+const formatColName = (col: string) => {
+    if (col === componentCols.value.cop && col !== '') return 'Lack of Coping Capacity';
+    if (col === componentCols.value.vul && col !== '') return 'Vulnerability';
+    if (col === componentCols.value.exp && col !== '') return `${disasterLabel.value} Exposure`;
+    
+    return col.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+};
+
+// Dynamic component columns based on what's available in the dataset
+const componentCols = computed(() => {
+    if (!props.data || props.data.length === 0) return { exp: '', sus: '', vul: '', cop: '' };
+    const cols = Object.keys(props.data[0]);
+    
+    // Base components precisely fetched
+    const exp = cols.find(c => c === `exp_${disasterSuffix.value}`) || cols.find(c => c === 'exp') || '';
+    const vul = cols.find(c => c === 'vul') || '';
+    const cop = cols.find(c => c === 'cop') || '';
+    
+    return { exp, vul, cop };
+});
+
 // Extract all indicator columns dynamically for the table
 const indicatorCols = computed(() => {
     if (!props.data || props.data.length === 0) return [];
@@ -69,9 +68,9 @@ const indicatorCols = computed(() => {
     const excluded = new Set([props.pcodeField, props.selectedDisaster]);
     
     const orderPriority = (k: string) => {
-       if (k === 'exp' || k === `exp_${hazardPrefix.value}`) return 1;
-       if (k === 'vul') return 2;
-       if (k === 'cop') return 3;
+       if (k === componentCols.value.exp && k !== '') return 1;
+       if (k === componentCols.value.vul && k !== '') return 2;
+       if (k === componentCols.value.cop && k !== '') return 3;
        if (k.startsWith('exp_')) return 4;
        if (k.startsWith('vul_')) return 5;
        if (k.startsWith('cop_')) return 6;
@@ -80,8 +79,13 @@ const indicatorCols = computed(() => {
     
     return Object.keys(props.data[0]).filter(k => {
         if (excluded.has(k) || k.startsWith('risk_')) return false;
-        // Hide exposure indicators that do not match the selected hazard
-        if (k.startsWith('exp_') && !k.startsWith(`exp_${hazardPrefix.value}`)) return false;
+        
+        if (k === componentCols.value.exp) return true;
+        
+        // Hide sub-indicators that do not match the short selected hazard (cyc, flo, dr, etc.)
+        if (k.startsWith('exp_') && !k.startsWith(`exp_${hazardPrefix.value}`)) {
+            return false;
+        }
         return true;
     }).sort((a, b) => {
         const diff = orderPriority(a) - orderPriority(b);
@@ -89,9 +93,9 @@ const indicatorCols = computed(() => {
     });
 });
 
-const expCols = computed(() => indicatorCols.value.filter(c => c !== 'exp' && c !== `exp_${hazardPrefix.value}` && c.startsWith('exp')));
-const vulCols = computed(() => indicatorCols.value.filter(c => c !== 'vul' && c.startsWith('vul')));
-const copCols = computed(() => indicatorCols.value.filter(c => c !== 'cop' && c.startsWith('cop')));
+const expCols = computed(() => indicatorCols.value.filter(c => c !== componentCols.value.exp && c.startsWith('exp')));
+const vulCols = computed(() => indicatorCols.value.filter(c => c !== componentCols.value.vul && c.startsWith('vul')));
+const copCols = computed(() => indicatorCols.value.filter(c => c !== componentCols.value.cop && c.startsWith('cop')));
 
 const sortedData = computed(() => {
     if (!props.data || props.data.length === 0) return [];
@@ -413,9 +417,19 @@ watch(activeTab, () => {
             </p>
             
             <div class="flex-1 flex flex-col items-center justify-start min-h-max pb-12 w-full">
-                <!-- Final Risk Node -->
-                <div class="bg-slate-800 text-white font-black px-6 py-2.5 rounded-xl shadow-lg border-b-4 border-slate-900 relative z-10 text-base tracking-wide uppercase">
-                    {{ disasterLabel }} Risk
+                <!-- Final Risk Node Row -->
+                <div class="relative flex items-center justify-center w-full max-w-4xl z-10">
+                    <!-- Final Risk Node -->
+                    <div class="bg-slate-800 text-white font-black px-6 py-2.5 rounded-xl shadow-lg border-b-4 border-slate-900 text-base tracking-wide uppercase">
+                        {{ disasterLabel }} Risk
+                    </div>
+                    
+                    <!-- Methodology Link -->
+                    <div class="absolute right-4 top-1/2 -translate-y-1/2">
+                        <a href="https://giscience.github.io/gis-training-resource-center/content/GIS_AA/en_qgis_risk_assessment_plugin.html#methodology" target="_blank" rel="noopener noreferrer" class="text-heigit-red hover:text-red-700 text-xs font-semibold underline-offset-2 hover:underline inline-flex items-center gap-1 transition-colors">
+                            Read more about the methodology<span class="text-[10px]">↗</span>
+                        </a>
+                    </div>
                 </div>
                 
                 <!-- Vertical Line from Risk -->

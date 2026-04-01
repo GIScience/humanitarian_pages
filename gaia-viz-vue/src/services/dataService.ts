@@ -8,7 +8,7 @@ export interface Country {
 export async function fetchCountries(): Promise<Country[]> {
   try {
     // 1. Fetch the pre-generated list of available countries
-    const resJson = await fetch("/data/available_countries.json");
+    const resJson = await fetch(`${import.meta.env.BASE_URL}data/available_countries.json`);
     if (!resJson.ok) throw new Error("Failed to load available_countries.json");
     const validCodes: string[] = await resJson.json();
 
