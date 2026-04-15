@@ -1,11 +1,13 @@
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 
+// Use env var for local override, otherwise default to GH Pages path
+const base = process.env.VITE_BASE_URL || '/humanitarian_pages/oqapi-country-report/'
+
 export default defineConfig({
-  // This ensures assets (JS/CSS) load from the correct subfolder
-  base: '/humanitarian_pages/oqapi-country-report/', 
+  base,
   plugins: [vue()],
   build: {
-    outDir: 'dist', // Keep it standard for the action
+    outDir: 'dist',
   }
 })
