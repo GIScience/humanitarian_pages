@@ -26,4 +26,4 @@ Each project is more or less thematically independent, providing distinct exampl
 
 7. [Hazard Risk Dashboard](https://giscience.github.io/humanitarian_pages/gaia-dashboard)
 
-8. [OQAPI Country Reports](https://giscience.github.io/humanitarian_pages/oqapi_country_reports.html)
+8. [OQAPI Country Reports](https://giscience.github.io/humanitarian_pages/oqapi-country-reports-vue)
