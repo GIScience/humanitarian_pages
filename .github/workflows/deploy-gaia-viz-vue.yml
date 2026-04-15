@@ -16,7 +16,6 @@ jobs:
         with:
           node-version: '20'
           cache: 'npm'
-          # We cache from the first project; if they share dependencies, this helps.
           cache-dependency-path: '**/package-lock.json'
 
       # 1. Build GAIA Project
@@ -35,14 +34,12 @@ jobs:
           npm run build
           cd ..
 
-      # 3. Prepare the combined staging folder (_site)
+      # 3. Prepare staging folder
       - name: Prep staging folder
         run: |
-          # Create the main staging directory
           mkdir _site
           
-          # Copy root static pages (index.html, etc.)
-          # We exclude the Vue source folders and the staging folder itself to avoid recursion
+          # Copy root static files, excluding source and hidden folders
           rsync -av \
             --exclude='gaia-viz-vue' \
             --exclude='oqapi-country-reports-vue' \
@@ -51,15 +48,15 @@ jobs:
             --exclude='.github' \
             ./ ./_site/
           
-          # Create subfolder for GAIA and copy its build
+          # Create GAIA folder (Matches base: /humanitarian_pages/gaia-dashboard/)
           mkdir -p ./_site/gaia-dashboard
           cp -r ./gaia-viz-vue/dist/* ./_site/gaia-dashboard/
           
-          # Create subfolder for OQAPI and copy its build
-          mkdir -p ./_site/oqapi-reports
-          cp -r ./oqapi-country-reports-vue/dist/* ./_site/oqapi-reports/
+          # Create OQAPI folder (Matches base: /humanitarian_pages/oqapi-country-report/)
+          # Note: We use the EXACT name from your vite.config.ts
+          mkdir -p ./_site/oqapi-country-report
+          cp -r ./oqapi-country-reports-vue/dist/* ./_site/oqapi-country-report/
 
-      # 4. Deploy to GitHub Pages
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
         with:
