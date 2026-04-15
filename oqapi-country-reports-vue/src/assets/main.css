@@ -1,0 +1,56 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --font-sans: 'Archivo', sans-serif;
+  --color-bg: #F3F3F3;
+  --color-card-bg: #fff;
+  --color-border: #E1E0E1;
+  --color-text: #2C3038;
+  --spacing: 0.5rem;
+  --border-radius: 0.5rem;
+  --font-size-text: 0.75rem;
+}
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+}
+
+@media (max-width: 768px) {
+  html,
+  body {
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+}
+
+body {
+  padding: var(--spacing);
+  font-family: var(--font-sans);
+  background: var(--color-bg);
+  color: var(--color-text);
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing);
+}
+
+#app {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+a {
+  text-decoration: none;
+  color: inherit;
+}
