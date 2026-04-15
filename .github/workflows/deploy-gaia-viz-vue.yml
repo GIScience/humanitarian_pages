@@ -1,4 +1,5 @@
 name: Deploy Hazard Risk Dashboard and other static pages
+
 on:
   push:
     branches: [main]
@@ -10,22 +11,57 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install and Build
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          # We cache from the first project; if they share dependencies, this helps.
+          cache-dependency-path: '**/package-lock.json'
+
+      # 1. Build GAIA Project
+      - name: Build GAIA Vue
         run: |
           cd gaia-viz-vue
           npm install
           npm run build
+          cd ..
 
+      # 2. Build OQAPI Project
+      - name: Build OQAPI Vue
+        run: |
+          cd oqapi-country-reports-vue
+          npm install
+          npm run build
+          cd ..
+
+      # 3. Prepare the combined staging folder (_site)
       - name: Prep staging folder
         run: |
+          # Create the main staging directory
           mkdir _site
-          rsync -av --exclude='gaia-viz-vue' --exclude='_site' --exclude='.git' --exclude='.github' ./ ./_site/
+          
+          # Copy root static pages (index.html, etc.)
+          # We exclude the Vue source folders and the staging folder itself to avoid recursion
+          rsync -av \
+            --exclude='gaia-viz-vue' \
+            --exclude='oqapi-country-reports-vue' \
+            --exclude='_site' \
+            --exclude='.git' \
+            --exclude='.github' \
+            ./ ./_site/
+          
+          # Create subfolder for GAIA and copy its build
           mkdir -p ./_site/gaia-dashboard
           cp -r ./gaia-viz-vue/dist/* ./_site/gaia-dashboard/
+          
+          # Create subfolder for OQAPI and copy its build
+          mkdir -p ./_site/oqapi-reports
+          cp -r ./oqapi-country-reports-vue/dist/* ./_site/oqapi-reports/
 
+      # 4. Deploy to GitHub Pages
       - name: Deploy to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v3
+        uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./_site
-  
