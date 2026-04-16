@@ -33,7 +33,7 @@ const prettyTopics = computed(() => {
   <header class="header">
     <div class="header-title">
       <img src="https://dashboard.ohsome.org/en/assets/images/ohsome_narrow.svg" alt="ohsome" class="title-logo">
-      <span> CountryQuality Report</span>
+      <span> Country Quality Report</span>
     </div>
 
     <div class="header-selectors">
