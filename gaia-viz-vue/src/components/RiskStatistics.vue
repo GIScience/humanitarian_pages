@@ -6,14 +6,40 @@ const props = defineProps<{
   data: any[];
   selectedDisaster: string;
   pcodeField: string;
+  indicatorWeights: Record<string, number>;
 }>();
 
 const emit = defineEmits<{
   (e: 'region-hover', pcode: string | null): void;
   (e: 'region-click', pcode: string): void;
+  (e: 'update:indicatorWeights', val: Record<string, number>): void;
 }>();
 
-const activeTab = ref<'ranking' | 'components' | 'demographics' | 'dimensions' | 'table'>('ranking');
+const localWeights = ref<Record<string, number>>({...props.indicatorWeights});
+
+watch(() => props.indicatorWeights, (newVal) => {
+    if (Object.keys(newVal).length === 0 && Object.keys(localWeights.value).length > 0) {
+        localWeights.value = {};
+    }
+}, { deep: true });
+
+function getWeight(col: string) {
+    return localWeights.value[col] ?? 1.0;
+}
+
+function setWeight(col: string, val: number) {
+    localWeights.value[col] = val;
+    emit('update:indicatorWeights', { ...localWeights.value });
+}
+
+function resetDimensionWeights(cols: string[]) {
+    const newWeights = { ...localWeights.value };
+    cols.forEach(c => delete newWeights[c]);
+    localWeights.value = newWeights;
+    emit('update:indicatorWeights', newWeights);
+}
+
+const activeTab = ref<'ranking' | 'components' | 'demographics' | 'weights' | 'table'>('ranking');
 const sortKey = ref<string>('');
 const sortOrder = ref<'asc' | 'desc'>('desc');
 const currentPage = ref(1);
@@ -93,9 +119,9 @@ const indicatorCols = computed(() => {
     });
 });
 
-const expCols = computed(() => indicatorCols.value.filter(c => c !== componentCols.value.exp && c.startsWith('exp')));
-const vulCols = computed(() => indicatorCols.value.filter(c => c !== componentCols.value.vul && c.startsWith('vul')));
-const copCols = computed(() => indicatorCols.value.filter(c => c !== componentCols.value.cop && c.startsWith('cop')));
+const expCols = computed(() => indicatorCols.value.filter(c => c !== componentCols.value.exp && c.startsWith('exp') && c !== 'exp'));
+const vulCols = computed(() => indicatorCols.value.filter(c => c !== componentCols.value.vul && c.startsWith('vul') && c !== 'vul'));
+const copCols = computed(() => indicatorCols.value.filter(c => c !== componentCols.value.cop && c.startsWith('cop') && c !== 'cop'));
 
 const sortedData = computed(() => {
     if (!props.data || props.data.length === 0) return [];
@@ -379,7 +405,7 @@ watch(activeTab, () => {
     <!-- Tabs Header -->
     <div class="flex gap-2 p-4 border-b border-slate-200">
         <button 
-            v-for="tab in ['ranking', 'components', 'demographics', 'table', 'dimensions']" 
+            v-for="tab in ['ranking', 'components', 'demographics', 'table', 'weights']" 
             :key="tab"
             @click="activeTab = tab as any"
             class="px-3 py-1.5 rounded-md text-xs font-bold uppercase tracking-wider transition-colors"
@@ -411,7 +437,7 @@ watch(activeTab, () => {
         </div>
 
         <!-- Dimensions Flowchart -->
-        <div v-else-if="activeTab === 'dimensions'" class="w-full h-full flex flex-col p-4 min-h-0 relative overflow-y-auto custom-scrollbar bg-slate-50/50">
+        <div v-else-if="activeTab === 'weights'" class="w-full h-full flex flex-col p-4 min-h-0 relative overflow-y-auto custom-scrollbar bg-slate-50/50">
             <p class="text-xs text-slate-500 text-left mb-8 max-w-xl mx-auto leading-relaxed">
                 The overall risk score is calculated using three main dimensions: <strong>Exposure</strong>, <strong>Vulnerability</strong>, and <strong>Lack of Coping Capacity</strong>. Here are the underlying sub-indicators available for this region.
             </p>
@@ -446,12 +472,20 @@ watch(activeTab, () => {
                 <div class="w-full max-w-4xl grid grid-cols-3 gap-6 px-4 relative z-10">
                     <!-- EXPOSURE -->
                     <div class="flex flex-col items-center">
-                        <div class="bg-[#ca2333] text-white font-bold px-4 py-2 rounded-lg shadow border-b-4 border-[#8B1824] w-full text-center text-sm mb-4 relative">
+                        <div class="bg-[#ca2333] text-white font-bold px-4 py-2 rounded-lg shadow border-b-4 border-[#8B1824] w-full text-center text-sm mb-2 relative">
                             Exposure
                         </div>
+                        <button v-if="expCols.length > 0" @click="resetDimensionWeights(expCols)" class="mb-4 text-[10px] uppercase font-bold text-slate-500 hover:text-slate-800 transition-colors shrink-0 px-2 py-1 bg-white hover:bg-slate-50 border border-slate-200 rounded shadow-sm flex items-center gap-1">
+                            <svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                            Reset Weights
+                        </button>
                         <div class="flex flex-col gap-2 w-full">
-                            <div v-for="col in expCols" :key="col" class="bg-white border text-center border-slate-200 px-3 py-2.5 rounded shadow-sm text-xs font-semibold text-slate-700">
-                                {{ formatColName(col) }}
+                            <div v-for="col in expCols" :key="col" class="bg-white border border-slate-200 px-3 py-2.5 rounded shadow-sm text-xs text-slate-700 flex flex-col gap-2">
+                                <div class="font-semibold text-center">{{ formatColName(col) }}</div>
+                                <div class="flex items-center gap-2">
+                                   <input type="range" class="flex-1 w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-[#ca2333]" min="0" max="5" step="0.1" :value="getWeight(col)" @input="e => setWeight(col, Number((e.target as HTMLInputElement).value))" />
+                                   <span class="text-[10px] font-bold tabular-nums min-w-[20px] text-right">{{ getWeight(col).toFixed(1) }}</span>
+                                </div>
                             </div>
                             <div v-if="expCols.length === 0" class="text-xs text-slate-400 text-center italic py-2">No sub-indicators</div>
                         </div>
@@ -459,12 +493,20 @@ watch(activeTab, () => {
                     
                     <!-- VULNERABILITY -->
                     <div class="flex flex-col items-center">
-                        <div class="bg-[#E77480] text-white font-bold px-4 py-2 rounded-lg shadow border-b-4 border-[#b04a55] w-full text-center text-sm mb-4 relative">
+                        <div class="bg-[#E77480] text-white font-bold px-4 py-2 rounded-lg shadow border-b-4 border-[#b04a55] w-full text-center text-sm mb-2 relative">
                             Vulnerability
                         </div>
+                        <button v-if="vulCols.length > 0" @click="resetDimensionWeights(vulCols)" class="mb-4 text-[10px] uppercase font-bold text-slate-500 hover:text-slate-800 transition-colors shrink-0 px-2 py-1 bg-white hover:bg-slate-50 border border-slate-200 rounded shadow-sm flex items-center gap-1">
+                            <svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                            Reset Weights
+                        </button>
                         <div class="flex flex-col gap-2 w-full">
-                            <div v-for="col in vulCols" :key="col" class="bg-white border text-center border-slate-200 px-3 py-2.5 rounded shadow-sm text-xs font-semibold text-slate-700">
-                                {{ formatColName(col) }}
+                            <div v-for="col in vulCols" :key="col" class="bg-white border border-slate-200 px-3 py-2.5 rounded shadow-sm text-xs text-slate-700 flex flex-col gap-2">
+                                <div class="font-semibold text-center">{{ formatColName(col) }}</div>
+                                <div class="flex items-center gap-2">
+                                   <input type="range" class="flex-1 w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-[#E77480]" min="0" max="5" step="0.1" :value="getWeight(col)" @input="e => setWeight(col, Number((e.target as HTMLInputElement).value))" />
+                                   <span class="text-[10px] font-bold tabular-nums min-w-[20px] text-right">{{ getWeight(col).toFixed(1) }}</span>
+                                </div>
                             </div>
                             <div v-if="vulCols.length === 0" class="text-xs text-slate-400 text-center italic py-2">No sub-indicators</div>
                         </div>
@@ -472,12 +514,20 @@ watch(activeTab, () => {
                     
                     <!-- COPING CAPACITY -->
                     <div class="flex flex-col items-center">
-                        <div class="bg-[#2C3E50] text-white font-bold px-4 py-2 rounded-lg shadow border-b-4 border-[#1a252f] w-full text-center text-sm mb-4 relative z-10">
+                        <div class="bg-[#2C3E50] text-white font-bold px-4 py-2 rounded-lg shadow border-b-4 border-[#1a252f] w-full text-center text-sm mb-2 relative z-10">
                             Coping Capacity
                         </div>
+                        <button v-if="copCols.length > 0" @click="resetDimensionWeights(copCols)" class="mb-4 text-[10px] uppercase font-bold text-slate-500 hover:text-slate-800 transition-colors shrink-0 px-2 py-1 relative z-10 bg-white hover:bg-slate-50 border border-slate-200 rounded shadow-sm flex items-center gap-1">
+                            <svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                            Reset Weights
+                        </button>
                         <div class="flex flex-col gap-2 w-full relative z-10">
-                            <div v-for="col in copCols" :key="col" class="bg-white border text-center border-slate-200 px-3 py-2.5 rounded shadow-sm text-xs font-semibold text-slate-700">
-                                {{ formatColName(col) }}
+                            <div v-for="col in copCols" :key="col" class="bg-white border border-slate-200 px-3 py-2.5 rounded shadow-sm text-xs text-slate-700 flex flex-col gap-2">
+                                <div class="font-semibold text-center">{{ formatColName(col) }}</div>
+                                <div class="flex items-center gap-2">
+                                   <input type="range" class="flex-1 w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-[#2C3E50]" min="0" max="5" step="0.1" :value="getWeight(col)" @input="e => setWeight(col, Number((e.target as HTMLInputElement).value))" />
+                                   <span class="text-[10px] font-bold tabular-nums min-w-[20px] text-right">{{ getWeight(col).toFixed(1) }}</span>
+                                </div>
                             </div>
                             <div v-if="copCols.length === 0" class="text-xs text-slate-400 text-center italic py-2">No sub-indicators</div>
                         </div>

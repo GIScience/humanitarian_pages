@@ -9,6 +9,7 @@ import RiskStatistics from '../components/RiskStatistics.vue';
 import AboutModal from '../components/AboutModal.vue';
 import { loadParquetData } from '../utils/duckdb';
 import { checkFileExists, fetchCountries, type Country } from '../services/dataService';
+import { calculateDynamicRisk } from '../utils/riskCalculation';
 import { onMounted, computed } from 'vue';
 
 const route = useRoute();
@@ -39,6 +40,9 @@ const error = ref<string | null>(null);
 const lastLoadedData = shallowRef<any[]>([]);
 const lastLoadedCountry = ref('');
 const highlightedPcode = ref<string | null>(null);
+
+const indicatorWeights = ref<Record<string, number>>({});
+const rawOriginalData = shallowRef<any[]>([]);
 
 const viewMode = ref<'HOME' | 'DASHBOARD'>('HOME');
 const showAnalysis = ref(true);
@@ -89,10 +93,18 @@ async function updateCountryData(countryCode: string) {
     }
 
     const data = await loadParquetData(parquetUrl);
+    
+    // Parse raw data cleanly so we can mutate it freely. Handled BigInts from DuckDB.
+    const rawJSON = JSON.parse(JSON.stringify(data, (key, value) =>
+        typeof value === 'bigint' ? Number(value) : value
+    ));
+    rawOriginalData.value = JSON.parse(JSON.stringify(rawJSON));
+    
     const currentLevel = level;
     pcodeField.value = `${currentLevel}_PCODE`;
-    lastLoadedData.value = data;
+    lastLoadedData.value = rawJSON;
     lastLoadedCountry.value = countryCode;
+    indicatorWeights.value = {}; // Reset weights on country load
     
     // Update disasters
     const riskCols = Object.keys(data[0] || {}).filter(c => c.startsWith("risk_"));
@@ -163,6 +175,26 @@ const syncRoute = () => {
   
   router.replace({ query }).catch(() => {});
 };
+
+function loadAndCalculateWithWeights(weights: Record<string, number>) {
+    if (!lastLoadedData.value.length || !selectedDisaster.value) return;
+    const currentLevel = pcodeField.value.split('_')[0];
+    
+    const rawJSON = JSON.parse(JSON.stringify(rawOriginalData.value));
+    const recalculated = calculateDynamicRisk(rawJSON, weights);
+    
+    lastLoadedData.value = recalculated;
+    updateRiskLayer(selectedDisaster.value, recalculated, currentLevel);
+}
+
+let calcTimeout: any;
+watch(indicatorWeights, (newWeights) => {
+    if (!lastLoadedCountry.value) return;
+    clearTimeout(calcTimeout);
+    calcTimeout = setTimeout(() => {
+        loadAndCalculateWithWeights(newWeights);
+    }, 300);
+}, { deep: true });
 
 watch(selectedCountry, (newVal) => {
   syncRoute();
@@ -261,7 +293,9 @@ watch(selectedDisaster, (newVal) => {
                 v-if="lastLoadedData.length > 0 && selectedDisaster"
                 :data="lastLoadedData" 
                 :selected-disaster="selectedDisaster" 
+                :indicator-weights="indicatorWeights"
                 :pcode-field="pcodeField" 
+                @update:indicatorWeights="indicatorWeights = $event"
                 @region-hover="highlightedPcode = $event"
               />
               <div v-else class="h-full flex flex-col items-center justify-center text-center p-12 bg-slate-50 border-dashed border-2 border-slate-200">
