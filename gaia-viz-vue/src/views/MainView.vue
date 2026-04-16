@@ -95,7 +95,7 @@ async function updateCountryData(countryCode: string) {
     const data = await loadParquetData(parquetUrl);
     
     // Parse raw data cleanly so we can mutate it freely. Handled BigInts from DuckDB.
-    const rawJSON = JSON.parse(JSON.stringify(data, (key, value) =>
+    const rawJSON = JSON.parse(JSON.stringify(data, (_, value) =>
         typeof value === 'bigint' ? Number(value) : value
     ));
     rawOriginalData.value = JSON.parse(JSON.stringify(rawJSON));
