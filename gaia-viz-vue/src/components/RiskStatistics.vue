@@ -39,6 +39,44 @@ function resetDimensionWeights(cols: string[]) {
     emit('update:indicatorWeights', newWeights);
 }
 
+function downloadWeightsCSV() {
+    let csvContent = "variable_name,category,weight,direction\n";
+
+    const processCols = (cols: string[], category: string, direction: number) => {
+        cols.forEach(col => {
+            let rawName = col;
+            if (category === 'exp') {
+                 const parts = col.split('_');
+                 if (parts.length > 2) {
+                     rawName = parts.slice(2).join('_');
+                 } else {
+                     rawName = col.replace(/^exp_/, '');
+                 }
+            } else if (category === 'vul') {
+                 rawName = col.replace(/^vul_/, '');
+            } else if (category === 'cop') {
+                 rawName = col.replace(/^cop_/, '');
+            }
+            const weight = getWeight(col);
+            csvContent += `${rawName},${category},${weight},${direction}\n`;
+        });
+    };
+
+    if (expCols.value.length > 0) processCols(expCols.value, 'exp', 1);
+    if (vulCols.value.length > 0) processCols(vulCols.value, 'vul', 1);
+    if (copCols.value.length > 0) processCols(copCols.value, 'cop', -1);
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", `weights_${props.selectedDisaster}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
 const activeTab = ref<'ranking' | 'components' | 'demographics' | 'weights' | 'table'>('ranking');
 const sortKey = ref<string>('');
 const sortOrder = ref<'asc' | 'desc'>('desc');
@@ -445,6 +483,18 @@ watch(activeTab, () => {
             <div class="flex-1 flex flex-col items-center justify-start min-h-max pb-12 w-full">
                 <!-- Final Risk Node Row -->
                 <div class="relative flex items-center justify-center w-full max-w-4xl z-10">
+                    <!-- Download Weights -->
+                    <div class="absolute left-4 top-1/2 -translate-y-1/2">
+                        <button 
+                            @click="downloadWeightsCSV" 
+                            title="Download current weights as CSV"
+                            class="shrink-0 px-3 py-1.5 bg-white hover:bg-slate-50 text-slate-700 text-[10px] font-bold uppercase tracking-widest rounded shadow-sm border border-slate-200 transition-colors flex items-center gap-1.5"
+                        >
+                            <svg class="w-3 h-3 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                            Download Weights
+                        </button>
+                    </div>
+
                     <!-- Final Risk Node -->
                     <div class="bg-slate-800 text-white font-black px-6 py-2.5 rounded-xl shadow-lg border-b-4 border-slate-900 text-base tracking-wide uppercase">
                         {{ disasterLabel }} Risk
