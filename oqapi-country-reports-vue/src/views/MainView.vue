@@ -540,8 +540,7 @@ onUnmounted(() => {
               >
                 <option value="ADM0">Admin 0</option>
                 <option value="ADM1">Admin 1</option>
-                <option value="square_grid" selected>Square Grid</option>
-                <option value="h3_hexgrid">Hexagonal Grid</option>
+                <option value="h3_hexgrid" selected>Hexagonal Grid</option>
               </select>
               <div class="legend">
                 <div>{{ prettifyIndicator(map1Indicator) }}</div>
@@ -594,8 +593,7 @@ onUnmounted(() => {
               >
                 <option value="ADM0">Admin 0</option>
                 <option value="ADM1">Admin 1</option>
-                <option value="square_grid" selected>Square Grid</option>
-                <option value="h3_hexgrid">Hexagonal Grid</option>
+                <option value="h3_hexgrid" selected>Hexagonal Grid</option>
               </select>
               <div class="legend">
                 <div>{{ prettifyIndicator(map2Indicator) }}</div>
@@ -648,8 +646,7 @@ onUnmounted(() => {
               >
                 <option value="ADM0">Admin 0</option>
                 <option value="ADM1">Admin 1</option>
-                <option value="square_grid" selected>Square Grid</option>
-                <option value="h3_hexgrid">Hexagonal Grid</option>
+                <option value="h3_hexgrid" selected>Hexagonal Grid</option>
               </select>
               <div class="legend">
                 <div>{{ prettifyIndicator(map3Indicator) }}</div>
