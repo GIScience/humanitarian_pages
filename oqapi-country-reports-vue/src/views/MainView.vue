@@ -70,9 +70,9 @@ const map1Indicator = ref('');
 const map2Indicator = ref('currentness');
 const map3Indicator = ref('');
 
-const map1Layer = ref('square_grid');
-const map2Layer = ref('square_grid');
-const map3Layer = ref('square_grid');
+const map1Layer = ref('hexagonal_grid');
+const map2Layer = ref('hexagonal_grid');
+const map3Layer = ref('hexagonal_grid');
 
 const schoolSwitchVisible = ref(false);
 const schoolSubTopic = ref('operator');
