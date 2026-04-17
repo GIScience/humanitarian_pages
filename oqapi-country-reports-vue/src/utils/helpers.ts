@@ -96,7 +96,7 @@ export function getTreemapTopic(topic: string): string {
 
 export function getFigureTopic(topic: string): string {
   const topicLower = topic.toLowerCase();
-  if (topicLower.startsWith("hospital")) return "hospital";
+  if (topicLower.startsWith("hospital")) return "hospitals";
   if (topicLower.startsWith("school")) return "school";
   return topic || "";
 }
