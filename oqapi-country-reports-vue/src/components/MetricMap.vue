@@ -13,12 +13,14 @@ const props = defineProps<{
   lookup: Record<string, number>;
   bounds: { minLon: number; minLat: number; maxLon: number; maxLat: number } | null;
   sourceName: String;
+  topicId?: Number;
 }>();
 
 const mapContainer = ref<HTMLElement | null>(null);
 let mapInstance: maplibregl.Map | null = null;
 let popupInstance: maplibregl.Popup | null = null;
 let isMapInitialized = false;
+let wasUpdatedViaTopicId = false;
 
 function initMap() {
   console.log('[MetricMap] initMap called, container:', !!mapContainer.value, 'pmtilesUrl:', !!props.pmtilesUrl, 'existing map:', !!mapInstance);
@@ -214,10 +216,31 @@ watch(
   }
 );
 
+let lastTopicId: Number = 0;
+watch(
+  () => props.topicId,
+  (newId) => {
+    if (isMapInitialized && newId && newId !== lastTopicId) {
+      lastTopicId = newId as number;
+      wasUpdatedViaTopicId = true;
+      updateMapData();
+      setTimeout(() => { wasUpdatedViaTopicId = false; }, 100);
+    }
+  }
+);
+
 watch(
   () => props.bounds,
   () => {
     if (isMapInitialized && mapInstance && props.bounds) {
+      if (wasUpdatedViaTopicId) {
+        mapInstance.fitBounds(
+          [[props.bounds.minLon, props.bounds.minLat], [props.bounds.maxLon, props.bounds.maxLat]],
+          { padding: 10, duration: 300 }
+        );
+        return;
+      }
+
       // Zoom out first
       mapInstance.easeTo({
         center: [0, 20],

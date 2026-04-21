@@ -27,11 +27,13 @@ declare const pmtiles: any;
 
 const selectedCountry = ref('');
 const selectedTopic = ref('');
+const topicId = ref(0);
 
 const countries = ref<{ value: string; label: string }[]>([]);
 const topics = ref<string[]>([]);
 const indicators = ref<string[]>([]);
 const isLoading = ref(false);
+const dataDate = ref('');
 
 const pmtilesUrl = ref('');
 const parquetUrl = ref('');
@@ -131,6 +133,7 @@ watch(selectedCountry, async (newCountry) => {
 
 watch(selectedTopic, async (newTopic) => {
   if (!newTopic || !selectedCountry.value) return;
+  topicId.value++;
   await loadCountry(selectedCountry.value, false);
 });
 
@@ -140,6 +143,16 @@ async function loadCountry(code: string, updateTopics: boolean) {
   const urls = buildUrls(code, getCurrentTopic());
   pmtilesUrl.value = urls.pmtilesUrl;
   parquetUrl.value = urls.parquetUrl;
+
+  try {
+    const resp = await fetch(urls.parquetUrl, { method: 'HEAD' });
+    const lastModified = resp.headers.get('last-modified');
+    if (lastModified) {
+      dataDate.value = new Date(lastModified).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+    }
+  } catch (e) {
+    dataDate.value = '';
+  }
 
   try {
     bounds.value = await getPMTilesBounds(urls.pmtilesUrl);
@@ -450,16 +463,20 @@ onUnmounted(() => {
     <div class="page-content flexible">
       <div class="box-row">
         <div class="grid">
-          <div class="box box-centered">
+          <div class="box box-centered tile-primary">
             <h3>{{ featureCount }}</h3>
             <h4>Features</h4>
           </div>
-          <div class="box box-centered">
+          <div class="box box-centered tile-primary">
             <h3>{{ totalLength }}</h3>
             <h4>{{ tile1Label }}</h4>
           </div>
-          <div class="box box-centered mobile-hidden"></div>
-          <div class="box mobile-hidden" style="padding:0;"></div>
+          <div class="box box-centered tile-secondary mobile-hidden"></div>
+          <div class="box box-centered tile-secondary mobile-hidden" v-if="dataDate">
+            <h3>{{ dataDate }}</h3>
+            <h4>Last updated</h4>
+          </div>
+          <div class="box box-centered tile-secondary mobile-hidden" style="padding:0;" v-else></div>
         </div>
       </div>
 
@@ -532,6 +549,7 @@ onUnmounted(() => {
                 :bounds="bounds"
                 :layerName="map1Layer"
                 sourceName="grid_source"
+                :topicId="topicId"
               />
               <select
                 class="grid-selector"
@@ -540,7 +558,7 @@ onUnmounted(() => {
               >
                 <option value="ADM0">Admin 0</option>
                 <option value="ADM1">Admin 1</option>
-                <option value="h3_hexgrid" selected>Hexagonal Grid</option>
+                <option value="h3_hexgrid">Hexagonal Grid</option>
               </select>
               <div class="legend">
                 <div>{{ prettifyIndicator(map1Indicator) }}</div>
@@ -585,6 +603,7 @@ onUnmounted(() => {
                 :bounds="bounds"
                 :layerName="map2Layer"
                 sourceName="grid_source_2"
+                :topicId="topicId"
               />
               <select
                 class="grid-selector"
@@ -593,7 +612,7 @@ onUnmounted(() => {
               >
                 <option value="ADM0">Admin 0</option>
                 <option value="ADM1">Admin 1</option>
-                <option value="h3_hexgrid" selected>Hexagonal Grid</option>
+                <option value="h3_hexgrid">Hexagonal Grid</option>
               </select>
               <div class="legend">
                 <div>{{ prettifyIndicator(map2Indicator) }}</div>
@@ -638,6 +657,7 @@ onUnmounted(() => {
                 :bounds="bounds"
                 :layerName="map3Layer"
                 sourceName="grid_source_3"
+                :topicId="topicId"
               />
               <select
                 class="grid-selector"
@@ -646,7 +666,7 @@ onUnmounted(() => {
               >
                 <option value="ADM0">Admin 0</option>
                 <option value="ADM1">Admin 1</option>
-                <option value="h3_hexgrid" selected>Hexagonal Grid</option>
+                <option value="h3_hexgrid">Hexagonal Grid</option>
               </select>
               <div class="legend">
                 <div>{{ prettifyIndicator(map3Indicator) }}</div>
@@ -662,7 +682,7 @@ onUnmounted(() => {
       </div>
     </div>
 
-    <ReportFooter />
+    <ReportFooter :parquetDate="dataDate" />
   </div>
 </template>
 
@@ -745,6 +765,22 @@ onUnmounted(() => {
   margin-bottom: 0.25rem;
   font-size: 1rem !important;
   min-height: 1.2rem;
+}
+
+.tile-secondary h3 {
+  font-size: 1.25rem !important;
+  font-weight: 600 !important;
+  color: #666 !important;
+  min-height: auto !important;
+  margin-top: 0.5rem !important;
+}
+
+.tile-secondary h4 {
+  font-size: 0.8rem !important;
+  font-weight: 400 !important;
+  color: #888 !important;
+  min-height: auto !important;
+  margin-bottom: 0.5rem !important;
 }
 
 .tile-header {
