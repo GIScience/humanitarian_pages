@@ -77,7 +77,7 @@ function downloadWeightsCSV() {
     document.body.removeChild(link);
 }
 
-const activeTab = ref<'ranking' | 'weights' | 'table'>('ranking');
+const activeTab = ref<'ranking' | 'components' | 'demographics' | 'weights' | 'table'>('ranking');
 const sortKey = ref<string>('');
 const sortOrder = ref<'asc' | 'desc'>('desc');
 const currentPage = ref(1);
@@ -209,20 +209,17 @@ const toggleSort = (key: string) => {
     }
 };
 
-const rankingChartRef = ref<HTMLElement | null>(null);
-let chartObserver: ResizeObserver | null = null;
-
 const renderRanking = async () => {
     await nextTick();
-    const el = rankingChartRef.value;
-    if (!el || !props.data.length || !props.selectedDisaster) return;
+    const graphDiv = document.getElementById('ranking-chart');
+    if (!graphDiv || !props.data.length || !props.selectedDisaster) return;
 
     // Get top 15 highest risk
     const topData = [...props.data]
         .filter(d => !isNaN(Number(d[props.selectedDisaster])))
         .sort((a, b) => Number(b[props.selectedDisaster]) - Number(a[props.selectedDisaster]))
         .slice(0, 15)
-        .reverse();
+        .reverse(); // Reverse for Plotly horizontal bar chart (bottom to top)
 
     const yValues = topData.map(d => d[props.pcodeField]);
     const xValues = topData.map(d => Number(d[props.selectedDisaster]));
@@ -263,47 +260,168 @@ const renderRanking = async () => {
     };
 
     try {
-        const el = rankingChartRef.value;
-        if (!el) return;
-        await Plotly.newPlot(el, [trace] as any, layout as any, { responsive: true, displayModeBar: false });
-        (el as any).on('plotly_hover', (data: any) => {
+        await Plotly.newPlot(graphDiv as any, [trace] as any, layout as any, { responsive: true, displayModeBar: false });
+        (graphDiv as any).on('plotly_hover', (data: any) => {
             if (data.points && data.points.length > 0) {
-                emit('region-hover', data.points[0].y);
+                emit('region-hover', data.points[0].y); // Horizontal bar, so y is the PCODE
             }
         });
-        (el as any).on('plotly_unhover', () => emit('region-hover', null));
+        (graphDiv as any).on('plotly_unhover', () => emit('region-hover', null));
     } catch (e) {
         console.error("Plotly Ranking Error:", e);
     }
 };
 
-const setupObserver = () => {
-    if (chartObserver) chartObserver.disconnect();
-    
-    const el = rankingChartRef.value;
-    if (!el) return;
-    
-    chartObserver = new ResizeObserver((entries) => {
-        for (let entry of entries) {
-            if (entry.contentRect.width > 0 && entry.contentRect.height > 0) {
-                renderRanking();
+const renderComponents = async () => {
+    await nextTick();
+    const graphDiv = document.getElementById('components-chart');
+    if (!graphDiv || !props.data.length) return;
+
+    // Top 5 regions by risk
+    const topData = [...props.data]
+        .filter(d => !isNaN(Number(d[props.selectedDisaster])))
+        .sort((a, b) => Number(b[props.selectedDisaster]) - Number(a[props.selectedDisaster]))
+        .slice(0, 5);
+
+    const pcodes = topData.map(d => d[props.pcodeField]);
+    const { exp, vul, cop } = componentCols.value;
+
+    const traces = [];
+    const colors = {
+        exp: '#ca2333', // HeiGIT Red
+        vul: '#E77480', 
+        cop: '#F4C2C7'  
+    };
+
+    if (exp) {
+        traces.push({
+            x: pcodes,
+            y: topData.map(d => Number(d[exp]) || 0),
+            name: 'Exposure',
+            type: 'bar',
+            marker: { color: colors.exp }
+        });
+    }
+    if (vul) {
+        traces.push({
+            x: pcodes,
+            y: topData.map(d => Number(d[vul]) || 0),
+            name: 'Vulnerability',
+            type: 'bar',
+            marker: { color: colors.vul }
+        });
+    }
+    if (cop) {
+        traces.push({
+            x: pcodes,
+            y: topData.map(d => Number(d[cop]) || 0),
+            name: 'Lack of Coping Capacity',
+            type: 'bar',
+            marker: { color: colors.cop }
+        });
+    }
+
+    const layout = {
+        font: { family: 'inherit', color: '#475569' },
+        paper_bgcolor: 'rgba(0,0,0,0)',
+        plot_bgcolor: 'rgba(0,0,0,0)',
+        barmode: 'group',
+        xaxis: { 
+            title: 'Region (PCODE)',
+            gridcolor: '#e2e8f0',
+            tickfont: { size: 10, color: '#475569' },
+            automargin: true
+        },
+        yaxis: { 
+            title: 'Index Value',
+            gridcolor: '#e2e8f0',
+            zerolinecolor: '#e2e8f0',
+            automargin: true,
+            range: [0, Math.max(1, ...topData.map(d => Math.max(Number(d[exp])||0, Number(d[vul])||0, Number(d[cop])||0)))]
+        },
+        margin: { t: 10, r: 10, b: 100, l: 10 },
+        legend: { orientation: 'h' }
+    };
+
+    try {
+        await Plotly.newPlot(graphDiv as any, traces as any, layout as any, { responsive: true, displayModeBar: false });
+        (graphDiv as any).on('plotly_hover', (data: any) => {
+            if (data.points && data.points.length > 0) {
+                emit('region-hover', data.points[0].x); // Vertical bar, x is PCODE
             }
-        }
-    });
-    chartObserver.observe(el);
+        });
+        (graphDiv as any).on('plotly_unhover', () => emit('region-hover', null));
+    } catch (e) {
+        console.error("Plotly Components Error:", e);
+    }
 };
 
-watch(rankingChartRef, (newVal) => {
-    if (newVal) {
-        setupObserver();
-        renderRanking();
+const renderDemographics = async () => {
+    await nextTick();
+    const graphDiv = document.getElementById('demographics-chart');
+    if (!graphDiv || !props.data.length) return;
+
+    // Aggregate demographics for the whole country
+    const cols = Object.keys(props.data[0]);
+    const demoCols = cols.filter(c => c.startsWith('vul_') && !c.includes('perc') && !c.includes('rural'));
+    
+    if (demoCols.length === 0) {
+        // Fallback if no demographics found
+        Plotly.purge(graphDiv as any);
+        return;
     }
-});
+
+    const totals: Record<string, number> = {};
+    demoCols.forEach(col => {
+        totals[col] = props.data.reduce((sum, row) => sum + (Number(row[col]) || 0), 0);
+    });
+
+    // Remove total female/pop just to not skew the chart, or keep it as specific groups
+    const selectedDemoCols = demoCols.filter(c => !c.includes('pop') || c.includes('rural_pop'));
+
+    const labels = selectedDemoCols.map(c => c.replace('vul_', '').replace(/_/g, ' ').toUpperCase());
+    const values = selectedDemoCols.map(c => totals[c]);
+
+    const trace = {
+        labels: labels,
+        values: values,
+        type: 'pie',
+        hole: 0.4,
+        textinfo: 'percent',
+        textposition: 'inside',
+        insidetextorientation: 'radial',
+        marker: {
+            colors: [
+                '#8B1824', // Shade (Dark Red)
+                '#E77480', // Tint (Soft Red/Rose)
+                '#2C3E50', // Base (Midnight Navy)
+                '#5D6D7E',  // Tint (Steel Blue)
+                '#1B2838', // Shade (Deep Night Blue)
+                '#CA2333', // Base (Your Main Red)
+            ]
+        }
+    };
+
+    const layout = {
+        font: { family: 'inherit', color: '#475569' },
+        paper_bgcolor: 'rgba(0,0,0,0)',
+        plot_bgcolor: 'rgba(0,0,0,0)',
+        margin: { t: 10, r: 10, b: 100, l: 10 },
+        showlegend: true,
+        legend: { orientation: 'h' }
+    };
+
+    try {
+        await Plotly.newPlot(graphDiv as any, [trace] as any, layout as any, { responsive: true, displayModeBar: false });
+    } catch (e) {
+        console.error("Plotly Demographics Error:", e);
+    }
+};
 
 const updateActiveChart = () => {
-    if (activeTab.value === 'ranking') {
-        setupObserver();
-    }
+    if (activeTab.value === 'ranking') setTimeout(() => renderRanking(), 100);
+    else if (activeTab.value === 'components') setTimeout(() => renderComponents(), 100);
+    else if (activeTab.value === 'demographics') setTimeout(() => renderDemographics(), 100);
 };
 
 onMounted(() => {
@@ -325,7 +443,7 @@ watch(activeTab, () => {
     <!-- Tabs Header -->
     <div class="flex gap-2 p-4 border-b border-slate-200">
         <button 
-            v-for="tab in ['ranking', 'table', 'weights']" 
+            v-for="tab in ['ranking', 'components', 'demographics', 'table', 'weights']" 
             :key="tab"
             @click="activeTab = tab as any"
             class="px-3 py-1.5 rounded-md text-xs font-bold uppercase tracking-wider transition-colors"
@@ -337,11 +455,23 @@ watch(activeTab, () => {
 
     <!-- Content Area -->
     <div class="flex-1 p-4 flex flex-col min-h-0" :class="activeTab !== 'table' ? 'overflow-y-auto custom-scrollbar' : ''">
-
         <!-- Ranking -->
         <div v-if="activeTab === 'ranking'" class="h-full min-h-[400px] flex flex-col">
             <h3 class="text-lg font-extrabold text-slate-900 mb-2 mt-2 px-2 tracking-tight">Top 15 Regions</h3>
-            <div ref="rankingChartRef" id="ranking-chart" class="w-full flex-1"></div>
+            <div id="ranking-chart" class="w-full flex-1"></div>
+        </div>
+
+        <!-- Components -->
+        <div v-else-if="activeTab === 'components'" class="h-full min-h-[400px] flex flex-col">
+            <h3 class="text-lg font-extrabold text-slate-900 mb-1 mt-2 px-2 tracking-tight">Top 5 Regions</h3>
+            <div class="mb-2 px-2 text-xs text-slate-500 font-medium">Risk breakdown of top vulnerable areas based on formula factors.</div>
+            <div id="components-chart" class="w-full flex-1"></div>
+        </div>
+
+        <!-- Demographics -->
+        <div v-else-if="activeTab === 'demographics'" class="h-full min-h-[400px] flex flex-col">
+            <h3 class="text-lg font-extrabold text-slate-900 mb-2 mt-2 px-2 tracking-tight">Vulnerable Demographics</h3>
+            <div id="demographics-chart" class="w-full flex-1"></div>
         </div>
 
         <!-- Dimensions Flowchart -->
@@ -354,7 +484,7 @@ watch(activeTab, () => {
                 <!-- Final Risk Node Row -->
                 <div class="relative flex items-center justify-center w-full max-w-4xl z-10">
                     <!-- Download Weights -->
-                    <div class="absolute left-4 top-1/2 -translate-y-1/2 hidden md:block">
+                    <div class="absolute left-4 top-1/2 -translate-y-1/2">
                         <button 
                             @click="downloadWeightsCSV" 
                             title="Download current weights as CSV"
@@ -371,7 +501,7 @@ watch(activeTab, () => {
                     </div>
                     
                     <!-- Methodology Link -->
-                    <div class="absolute right-4 top-1/2 -translate-y-1/2 hidden md:block">
+                    <div class="absolute right-4 top-1/2 -translate-y-1/2">
                         <a href="https://giscience.github.io/gis-training-resource-center/content/GIS_AA/en_qgis_risk_assessment_plugin.html#methodology" target="_blank" rel="noopener noreferrer" class="text-heigit-red hover:text-red-700 text-xs font-semibold underline-offset-2 hover:underline inline-flex items-center gap-1 transition-colors">
                             Read more about the methodology<span class="text-[10px]">↗</span>
                         </a>
@@ -531,95 +661,5 @@ watch(activeTab, () => {
 }
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
   background: #8B4C4C; /* Darker HeiGIT Red */
-}
-
-/* Mobile Responsive Styles */
-@media (max-width: 768px) {
-  .risk-statistics {
-    height: auto;
-    min-height: 100%;
-  }
-  
-  /* Horizontal scrolling tabs */
-  .flex.gap-2.p-4.border-b.border-slate-200 {
-    padding: 0.5rem;
-    gap: 0.25rem;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
-  }
-  
-  .flex.gap-2.p-4.border-b.border-slate-200::-webkit-scrollbar {
-    display: none;
-  }
-  
-  .flex.gap-2.p-4.border-b.border-slate-200 button {
-    padding: 0.4rem 0.6rem;
-    font-size: 0.65rem;
-    white-space: nowrap;
-    flex-shrink: 0;
-  }
-  
-  .flex-1.p-4.flex.flex-col.min-h-0 {
-    padding: 0.75rem;
-  }
-  
-  .h-full.min-h-\[400px\].flex.flex-col {
-    min-height: 300px;
-  }
-  
-  .text-lg.font-extrabold.text-slate-900.mb-2.mt-2.px-2.tracking-tight {
-    font-size: 1rem;
-    margin-bottom: 0.5rem;
-    margin-top: 0.5rem;
-  }
-  
-  .text-xs.text-slate-500.text-left.mb-8.max-w-xl.mx-auto.leading-relaxed {
-    font-size: 0.7rem;
-    margin-bottom: 1rem;
-  }
-  
-  /* Make the weights grid stack on mobile */
-  .w-full.max-w-4xl.grid.grid-cols-3.gap-6.px-4.relative.z-10 {
-    grid-template-columns: 1fr;
-    gap: 1rem;
-    padding: 0.5rem;
-  }
-  
-  .absolute.left-4.top-1\/2.-translate-y-1\/2,
-  .absolute.right-4.top-1\/2.-translate-y-1\/2 {
-    position: relative;
-    left: auto;
-    right: auto;
-    top: auto;
-    transform: none;
-    margin-bottom: 0.5rem;
-  }
-  
-  .bg-slate-800.text-white.font-black.px-6.py-2\.5.rounded-xl.shadow-lg.border-b-4.border-slate-900.text-base.tracking-wide.uppercase {
-    font-size: 0.875rem;
-    padding: 0.75rem 1rem;
-  }
-  
-  /* Table mobile adjustments */
-  .w-full.text-left.text-sm.text-slate-600.relative.border-collapse {
-    font-size: 0.75rem;
-  }
-  
-  .px-4.py-3.bg-slate-50.cursor-pointer.hover\:bg-slate-100.whitespace-nowrap.border-b.border-slate-200 {
-    padding: 0.5rem;
-  }
-  
-  .px-4.py-2.font-medium.text-slate-900.whitespace-nowrap.border-b.border-slate-100 {
-    padding: 0.4rem;
-  }
-  
-  /* Adjust charts container for mobile */
-  #ranking-chart,
-  #components-chart,
-  #demographics-chart {
-    min-height: 250px;
-    height: 250px;
-  }
 }
 </style>

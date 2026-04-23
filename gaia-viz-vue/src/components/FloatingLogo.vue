@@ -8,7 +8,7 @@
     <img 
       src="https://hot.storage.heigit.org/heigit-hdx-public/oqapi_hdx/logos/heigit-logo-text.svg" 
       alt="HeiGIT Logo"
-      class="h-11 w-auto opacity-90 group-hover:opacity-100 transition-opacity"
+      class="h-20 w-auto opacity-90 group-hover:opacity-100 transition-opacity"
     >
   </a>
 </template>
