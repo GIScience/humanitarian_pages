@@ -10,13 +10,12 @@ const props = defineProps<{
   pcodeField: string;
   matchArray: [string, string, number][];
   highlightedPcode?: string | null;
-  isAnalysisVisible?: boolean;
   availableCountries?: string[];
+  isAnalysisVisible?: boolean;
 }>();
 
 const emit = defineEmits<{
   (e: 'country-click', code: string): void;
-  (e: 'toggle-analysis'): void;
 }>();
 
 const mapContainer = ref<HTMLDivElement | null>(null);
@@ -39,13 +38,12 @@ onMounted(() => {
     style: styleUrl,
     center: [0, 20],
     zoom: 1.5,
-    scrollZoom: true // Standard scroll zoom
+    scrollZoom: true,
+    preserveDrawingBuffer: true,
+    trackResize: true
   });
 
-  // Add navigation controls (zoom +/-) in top right
-  map.addControl(new maplibregl.NavigationControl({
-    showCompass: false
-  }), 'top-right');
+
 
   map.on('load', () => {
     // Add World Boundaries for Click Interaction
@@ -88,13 +86,24 @@ onMounted(() => {
 
     updateLayer();
     
-    // Smooth resizing for layout transitions
-    if (mapContainer.value) {
-      const resizeObserver = new ResizeObserver(() => {
-        map?.resize();
-      });
-      resizeObserver.observe(mapContainer.value);
-    }
+      // Smooth resizing for layout transitions with performance optimization
+      if (mapContainer.value) {
+        let resizeTimeout: any;
+        const resizeObserver = new ResizeObserver(() => {
+          // Use requestAnimationFrame to sync map with browser's layout paint cycles
+          // This keeps the map content following the container animation closely
+          requestAnimationFrame(() => {
+            if (map) map.resize();
+          });
+          
+          // Trigger a final precise resize after the transition settles (400ms)
+          clearTimeout(resizeTimeout);
+          resizeTimeout = setTimeout(() => {
+            if (map) map.resize();
+          }, 400); 
+        });
+        resizeObserver.observe(mapContainer.value);
+      }
   });
 
   const popup = new maplibregl.Popup({
@@ -339,7 +348,7 @@ defineExpose({
   <div class="relative w-full h-full">
     <!-- Opacity Control -->
     <transition name="fade">
-      <div v-if="pmtilesUrl" class="absolute top-4 left-4 z-[60] bg-white/90 backdrop-blur-md px-3 py-2 rounded-lg shadow-sm border border-slate-200 flex flex-col gap-1.5">
+      <div v-if="pmtilesUrl && !isAnalysisVisible" class="absolute top-4 left-4 z-[60] bg-white/90 backdrop-blur-md px-3 py-2 rounded-lg shadow-sm border border-slate-200 flex flex-col gap-1.5">
         <label class="block text-[9px] font-bold text-slate-500 uppercase tracking-widest whitespace-nowrap">
           Opacity: <span class="text-slate-700 font-extrabold">{{ Math.round(layerOpacity * 100) }}%</span>
         </label>
@@ -355,7 +364,7 @@ defineExpose({
     </transition>
 
     <div ref="mapContainer" id="world-map"></div>
-    <RiskLegend v-if="matchArray && matchArray.length > 0" />
+    <RiskLegend v-if="matchArray && matchArray.length > 0 && !isAnalysisVisible" />
   </div>
 </template>
 
@@ -363,6 +372,23 @@ defineExpose({
 #world-map {
   width: 100%;
   height: 100%;
+  background-color: #f8fafc; /* bg-slate-50 to match dashboard */
+  will-change: transform, width, height;
+}
+
+@media (max-width: 768px) {
+  .relative.w-full.h-full {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+  
+  #world-map {
+    flex: 1;
+    height: 100%;
+    min-height: 300px; /* Increased min-height for better visibility */
+  }
 }
 
 :deep(.risk-tooltip .maplibregl-popup-content) {
@@ -372,31 +398,6 @@ defineExpose({
   box-shadow: none;
 }
 
-/* Premium Zoom Controls */
-:deep(.maplibregl-ctrl-group) {
-  border: 1px solid #e2e8f0;
-  border-radius: 12px;
-  overflow: hidden;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-  background: rgba(255, 255, 255, 0.8) !important;
-  backdrop-filter: blur(8px);
-  margin-top: 16px;
-  margin-right: 16px;
-}
 
-:deep(.maplibregl-ctrl-group button) {
-  width: 36px;
-  height: 36px;
-  background-color: transparent;
-  transition: background-color 0.2s;
-}
-
-:deep(.maplibregl-ctrl-group button:hover) {
-  background-color: #f1f5f9;
-}
-
-:deep(.maplibregl-ctrl-icon) {
-  filter: grayscale(1) brightness(0.5);
-}
 </style>
 

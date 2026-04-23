@@ -46,7 +46,9 @@ const rawOriginalData = shallowRef<any[]>([]);
 
 const viewMode = ref<'HOME' | 'DASHBOARD'>('HOME');
 const showAnalysis = ref(true);
+const showAnalysisModal = ref(false);
 const showAboutModal = ref(false);
+const isHeaderExpanded = ref(true);
 
 const countries = ref<Country[]>([]);
 const mapRef = ref<InstanceType<typeof RiskMap> | null>(null);
@@ -132,8 +134,33 @@ async function updateCountryData(countryCode: string) {
 
 function goHome() {
   selectedCountry.value = '';
+  showAnalysisModal.value = false;
   if (mapRef.value) {
     (mapRef.value as any).resetView();
+  }
+}
+
+function openAnalysisModal() {
+  showAnalysisModal.value = true;
+}
+
+function closeAnalysisModal() {
+  showAnalysisModal.value = false;
+  isHeaderExpanded.value = true;
+}
+
+function handleAnalysisToggle() {
+  // Mobile uses modal, desktop uses split-pane
+  if (window.innerWidth < 768) {
+    const opening = !showAnalysisModal.value;
+    showAnalysisModal.value = !showAnalysisModal.value;
+    isHeaderExpanded.value = !opening;
+  } else {
+    const opening = !showAnalysis.value;
+    showAnalysis.value = !showAnalysis.value;
+    isHeaderExpanded.value = !opening;
+    // Ensure modal is closed if we're switching back to desktop view or vice versa
+    showAnalysisModal.value = false;
   }
 }
 
@@ -211,29 +238,31 @@ watch(selectedDisaster, (newVal) => {
 
 <template>
   <div class="h-screen w-full overflow-hidden flex flex-col relative bg-white text-slate-900">
+    <!-- Header -->
+    <RiskHeader 
+      v-model:selectedCountry="selectedCountry"
+      v-model:selectedDisaster="selectedDisaster"
+      v-model:isExpanded="isHeaderExpanded"
+      :disasters="disasters"
+      :view-mode="viewMode"
+      :is-analysis-visible="showAnalysis"
+      @go-home="goHome"
+      @open-about="showAboutModal = true"
+      @toggle-analysis="showAnalysis = !showAnalysis"
+    />
+
     <!-- Main Layout Container -->
     <div class="flex-1 flex flex-row relative min-h-0 w-full">
       
       <!-- LEFT PANE: MAP & CONTROLS -->
       <div 
-        class="relative h-full flex flex-col transition-[width] duration-700 ease-in-out border-r border-slate-200"
+        id="map-pane"
+        class="mobile-map-pane relative h-full flex flex-col transition-all duration-[400ms] ease-in-out border-r border-slate-200"
         :class="[
           viewMode === 'HOME' ? 'w-full' : (showAnalysis ? 'w-full md:w-1/2' : 'w-full')
         ]"
       >
-        <!-- Header -->
-        <RiskHeader 
-          v-model:selectedCountry="selectedCountry"
-          v-model:selectedDisaster="selectedDisaster"
-          :disasters="disasters"
-          :view-mode="viewMode"
-          :is-analysis-visible="showAnalysis"
-          @go-home="goHome"
-          @open-about="showAboutModal = true"
-          @toggle-analysis="showAnalysis = !showAnalysis"
-        />
-        
-        <!-- Map Canvas -->
+        <!-- Map Canvas Area (Between Header and Footer) -->
         <main id="main-content" class="flex-1 relative overflow-hidden bg-slate-50">
           <RiskMap 
             ref="mapRef"
@@ -242,8 +271,10 @@ watch(selectedDisaster, (newVal) => {
             :matchArray="matchArray"
             :highlightedPcode="highlightedPcode"
             :availableCountries="countries.map(c => c.code)"
+            :isAnalysisVisible="showAnalysisModal"
             @country-click="selectedCountry = $event"
           />
+
           
           <!-- Loading Overlay -->
           <transition name="fade">
@@ -267,13 +298,29 @@ watch(selectedDisaster, (newVal) => {
           </transition>
 
           <FloatingLogo />
+
+          <!-- Unified Floating Analysis Button -->
+          <button
+            v-if="viewMode === 'DASHBOARD' && matchArray && matchArray.length > 0"
+            @click="handleAnalysisToggle"
+            class="absolute top-2 right-2 z-40 w-11 h-11 bg-heigit-red text-white rounded-full shadow-2xl flex items-center justify-center hover:bg-red-700 transition-all active:scale-95"
+            :title="(showAnalysis || showAnalysisModal) ? 'Close Analysis' : 'Open Analysis'"
+          >
+            <svg v-if="showAnalysis || showAnalysisModal" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"/><line x1="9" y1="3" x2="9" y2="18"/><line x1="15" y1="6" x2="15" y2="21"/>
+            </svg>
+            <svg v-else xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 3v18h18"/><path d="M18.7 8l-5.1 5.2-2.8-2.7L7 14.3"/>
+            </svg>
+          </button>
         </main>
       </div>
 
+      <!-- RIGHT PANE: ANALYSIS PANEL (DESKTOP) -->
       <div 
-        class="relative h-full flex flex-col bg-white overflow-hidden transition-[width] duration-700 ease-in-out"
+        class="hidden md:flex relative h-full flex-col bg-white overflow-hidden transition-[width] duration-[400ms] ease-in-out"
         :class="[
-          viewMode === 'HOME' ? 'w-0' : (showAnalysis ? 'w-full md:w-1/2' : 'w-0 pointer-events-none')
+          viewMode === 'HOME' ? 'w-0' : (showAnalysis ? 'md:w-1/2' : 'w-0 pointer-events-none')
         ]"
       >
         <div class="flex-1 flex flex-col overflow-hidden p-8 h-full min-w-[320px]">
@@ -307,6 +354,59 @@ watch(selectedDisaster, (newVal) => {
           </div>
         </div>
       </div>
+
+      <!-- Mobile Analysis Modal (Moved inside central area to be bounded by header/footer) -->
+      <transition name="slide-up">
+        <div 
+          v-if="showAnalysisModal" 
+          class="absolute inset-0 z-50 md:hidden flex flex-col bg-white"
+        >
+          <div class="flex items-center justify-between px-4 py-3 border-b border-slate-200 bg-white shrink-0">
+            <div class="flex items-center gap-2">
+              <button 
+                @click="closeAnalysisModal"
+                class="w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 hover:bg-slate-200 transition-colors"
+                title="Show Map"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"/><line x1="9" y1="3" x2="9" y2="18"/><line x1="15" y1="6" x2="15" y2="21"/>
+                </svg>
+              </button>
+              <h2 class="text-lg font-extrabold text-slate-900">Analysis</h2>
+            </div>
+            <button 
+              @click="closeAnalysisModal"
+              class="w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 hover:bg-slate-200 transition-colors"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M18 6 6 18"/><path d="m6 6 12 12"/>
+              </svg>
+            </button>
+          </div>
+          <div class="flex-1 overflow-y-auto p-4">
+            <div class="flex items-center gap-2 mb-4">
+              <span class="px-2 py-1 rounded-md bg-slate-100 border border-slate-200 text-xs font-bold text-heigit-red uppercase tracking-wider">
+                {{ selectedDisaster ? selectedDisaster.replace('risk_', '').toUpperCase() : 'NO RISK' }}
+              </span>
+              <span class="text-slate-500 text-sm font-medium">| {{ selectedCountryName || 'Distribution' }}</span>
+            </div>
+            <RiskStatistics 
+              v-if="lastLoadedData.length > 0 && selectedDisaster"
+              :data="lastLoadedData" 
+              :selected-disaster="selectedDisaster" 
+              :indicator-weights="indicatorWeights"
+              :pcode-field="pcodeField" 
+              @update:indicatorWeights="indicatorWeights = $event"
+              @region-hover="highlightedPcode = $event"
+            />
+            <div v-else class="h-full flex flex-col items-center justify-center text-center p-8 bg-slate-50 border-dashed border-2 border-slate-200 rounded-xl">
+              <div class="w-12 h-12 bg-white border border-slate-100 shadow-sm rounded-xl flex items-center justify-center mb-3 text-xl">📊</div>
+              <h3 class="text-base font-bold text-slate-900 mb-1 italic">No Data Available</h3>
+              <p class="text-sm text-slate-500">Select a country and a risk category.</p>
+            </div>
+          </div>
+        </div>
+      </transition>
     </div>
     
     <RiskFooter />
@@ -348,5 +448,50 @@ watch(selectedDisaster, (newVal) => {
 }
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
   background: #a81d2a;
+}
+
+/* Mobile Responsive Styles - simplified */
+@media (max-width: 768px) {
+  /* Root should be full viewport height and scrollable */
+  .h-screen.w-full.overflow-hidden.flex.flex-col.relative.bg-white {
+    height: 100vh !important;
+    height: 100dvh !important;
+    overflow: hidden;
+  }
+  
+  /* Stack main container vertically */
+  .flex-1.flex.flex-row.relative.min-h-0.w-full {
+    display: flex !important;
+    flex-direction: column !important;
+    flex: 1 !important;
+    min-height: 0 !important;
+    overflow: hidden;
+  }
+  
+  /* Map pane should take all available space */
+  #map-pane {
+    width: 100% !important;
+    flex: 1 !important;
+    min-height: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    height: auto !important;
+  }
+  
+  /* Main content (map canvas area) should fill available space */
+  #map-pane > main {
+    flex: 1 !important;
+    min-height: 0 !important;
+    height: auto !important;
+  }
+}
+
+/* Mobile modal slide up transition */
+.slide-up-enter-active, .slide-up-leave-active {
+  transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.4s ease;
+}
+.slide-up-enter-from, .slide-up-leave-to {
+  transform: translateY(100%);
+  opacity: 0;
 }
 </style>
