@@ -15,15 +15,13 @@ const {
   pcodeField,
   matchArray,
   isLoading,
-  error,
   lastLoadedData,
   highlightedPcode,
   indicatorWeights,
   viewMode,
   showAboutModal,
   countries,
-  selectedCountryName,
-  updateCountryData
+  selectedCountryName
 } = useRiskLogic();
 
 const mapRef = ref<InstanceType<typeof RiskMap> | null>(null);
