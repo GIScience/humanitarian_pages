@@ -7,6 +7,7 @@ const props = defineProps<{
   selectedDisaster: string;
   pcodeField: string;
   indicatorWeights: Record<string, number>;
+  isMobile?: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -443,7 +444,7 @@ watch(activeTab, () => {
     <!-- Tabs Header -->
     <div class="flex gap-2 p-4 border-b border-slate-200">
         <button 
-            v-for="tab in ['ranking', 'components', 'demographics', 'table', 'weights']" 
+            v-for="tab in (isMobile ? ['ranking', 'table', 'weights'] : ['ranking', 'components', 'demographics', 'table', 'weights'])" 
             :key="tab"
             @click="activeTab = tab as any"
             class="px-3 py-1.5 rounded-md text-xs font-bold uppercase tracking-wider transition-colors"
@@ -476,13 +477,13 @@ watch(activeTab, () => {
 
         <!-- Dimensions Flowchart -->
         <div v-else-if="activeTab === 'weights'" class="w-full h-full flex flex-col p-4 min-h-0 relative overflow-y-auto custom-scrollbar bg-slate-50/50">
-            <p class="text-xs text-slate-500 text-left mb-8 max-w-xl mx-auto leading-relaxed">
+            <p class="text-xs text-slate-500 text-left leading-relaxed" :class="isMobile ? 'mb-4' : 'mb-8 max-w-xl mx-auto'">
                 The overall risk score is calculated using three main dimensions: <strong>Exposure</strong>, <strong>Vulnerability</strong>, and <strong>Lack of Coping Capacity</strong>. Here are the underlying sub-indicators available for this region.
             </p>
             
             <div class="flex-1 flex flex-col items-center justify-start min-h-max pb-12 w-full">
-                <!-- Final Risk Node Row -->
-                <div class="relative flex items-center justify-center w-full max-w-4xl z-10">
+                <!-- Final Risk Node Row - desktop only -->
+                <div v-if="!isMobile" class="relative flex items-center justify-center w-full max-w-4xl z-10">
                     <!-- Download Weights -->
                     <div class="absolute left-4 top-1/2 -translate-y-1/2">
                         <button 
@@ -508,18 +509,18 @@ watch(activeTab, () => {
                     </div>
                 </div>
                 
-                <!-- Vertical Line from Risk -->
-                <div class="w-[2px] h-6 bg-slate-300"></div>
+                <!-- Vertical Line from Risk - desktop only -->
+                <div v-if="!isMobile" class="w-[2px] h-6 bg-slate-300"></div>
                 
-                <!-- Horizontal connecting line -->
-                <div class="w-2/3 max-w-2xl border-t-[2px] border-slate-300 relative h-6">
+                <!-- Horizontal connecting line - desktop only -->
+                <div v-if="!isMobile" class="w-2/3 max-w-2xl border-t-[2px] border-slate-300 relative h-6">
                    <div class="absolute left-0 top-0 w-[2px] h-6 bg-slate-300"></div>
                    <div class="absolute left-1/2 top-0 w-[2px] h-6 bg-slate-300 transform -translate-x-1/2"></div>
                    <div class="absolute right-0 top-0 w-[2px] h-6 bg-slate-300"></div>
                 </div>
                 
-                <!-- 3 Columns -->
-                <div class="w-full max-w-4xl grid grid-cols-3 gap-6 px-4 relative z-10">
+                <!-- 3 Columns/Dimensions - vertical on mobile, horizontal on desktop -->
+                <div class="w-full max-w-4xl relative z-10" :class="isMobile ? 'flex flex-col gap-4 px-0' : 'grid grid-cols-3 gap-6 px-4'">
                     <!-- EXPOSURE -->
                     <div class="flex flex-col items-center">
                         <div class="bg-[#ca2333] text-white font-bold px-4 py-2 rounded-lg shadow border-b-4 border-[#8B1824] w-full text-center text-sm mb-2 relative">
