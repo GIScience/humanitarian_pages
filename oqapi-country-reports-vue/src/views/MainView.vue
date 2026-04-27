@@ -471,12 +471,16 @@ onUnmounted(() => {
             <h3>{{ totalLength }}</h3>
             <h4>{{ tile1Label }}</h4>
           </div>
-          <div class="box box-centered tile-secondary mobile-hidden"></div>
           <div class="box box-centered tile-secondary mobile-hidden" v-if="dataDate">
             <h3>{{ dataDate }}</h3>
             <h4>Last updated</h4>
           </div>
           <div class="box box-centered tile-secondary mobile-hidden" style="padding:0;" v-else></div>
+          <div class="box tile-secondary mobile-hidden" style="position: relative;">
+            <a href="https://heigit.org" target="_blank" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;">
+              <img src="https://hot.storage.heigit.org/heigit-hdx-public/oqapi_hdx/logos/heigit-logo.svg" alt="HeiGIT" style="width:160px;height:auto;">
+            </a>
+          </div>
         </div>
       </div>
 
@@ -770,7 +774,7 @@ onUnmounted(() => {
 .tile-secondary h3 {
   font-size: 1.25rem !important;
   font-weight: 600 !important;
-  color: #666 !important;
+  color: #2C3038 !important;
   min-height: auto !important;
   margin-top: 0.5rem !important;
 }
@@ -781,6 +785,20 @@ onUnmounted(() => {
   color: #888 !important;
   min-height: auto !important;
   margin-bottom: 0.5rem !important;
+}
+
+.heigit-logo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+}
+
+.heigit-logo img {
+  display: block;
+  width: 100%;
+  height: auto;
+  object-fit: contain;
 }
 
 .tile-header {

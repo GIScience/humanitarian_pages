@@ -69,9 +69,6 @@ const prettyTopics = computed(() => {
     </div>
 
     <div class="header-right">
-      <a href="https://heigit.org" target="_blank" class="header-logo">
-        <img src="https://hot.storage.heigit.org/heigit-hdx-public/oqapi_hdx/logos/heigit-logo.svg" alt="HeiGIT">
-      </a>
     </div>
   </header>
 </template>
