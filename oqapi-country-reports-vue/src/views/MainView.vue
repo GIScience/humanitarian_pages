@@ -477,7 +477,7 @@ onUnmounted(() => {
           </div>
           <div class="box box-centered tile-secondary mobile-hidden" style="padding:0;" v-else></div>
           <div class="box tile-secondary mobile-hidden" style="position: relative;">
-            <a href="https://heigit.org" target="_blank" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;">
+            <a href="https://heigit.org" target="_blank" class="heigit-tile-link">
               <img src="https://hot.storage.heigit.org/heigit-hdx-public/oqapi_hdx/logos/heigit-logo.svg" alt="HeiGIT" style="width:160px;height:auto;">
             </a>
           </div>
@@ -785,6 +785,19 @@ onUnmounted(() => {
   color: #888 !important;
   min-height: auto !important;
   margin-bottom: 0.5rem !important;
+}
+
+.heigit-tile-link {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+}
+
+.heigit-tile-link:hover {
+  background: #f3f3f3;
 }
 
 .heigit-logo {
