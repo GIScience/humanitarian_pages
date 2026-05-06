@@ -53,6 +53,9 @@ const mapRef = ref<InstanceType<typeof RiskMap> | null>(null);
 
 onMounted(async () => {
   countries.value = await fetchCountries();
+  if (selectedCountry.value) {
+    await updateCountryData(selectedCountry.value);
+  }
 });
 
 const selectedCountryName = computed(() => {
