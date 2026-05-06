@@ -133,7 +133,7 @@ function formatDisaster(col: string) {
     <!-- Controls Area -->
     <transition name="collapse">
       <div v-if="isExpanded" class="px-6 pb-3 pt-0 flex flex-col md:flex-row gap-6 items-center justify-center border-t border-slate-50 mt-0 relative">
-      <div class="flex flex-col md:flex-row gap-4 w-full md:w-auto items-end pt-1">
+      <div class="flex flex-col md:flex-row gap-4 w-full md:w-full items-end pt-1">
         
         <!-- Home Button -->
         <button 
@@ -146,7 +146,7 @@ function formatDisaster(col: string) {
         </button>
 
         <!-- Country Search Dropdown -->
-        <div class="relative w-full md:w-72 text-left" ref="dropdownRef">
+        <div class="relative w-full md:max-w-72 md:flex-1 text-left" ref="dropdownRef">
           <label class="block text-xs text-slate-500 font-bold uppercase tracking-wider mb-1">Target Country</label>
           <div 
             @click="toggleDropdown"
@@ -187,7 +187,7 @@ function formatDisaster(col: string) {
 
         <!-- Hazard Select Dropdown (Disabled state if no country) -->
         <div 
-          class="relative w-full md:w-64 text-left transition-all duration-500"
+          class="relative w-full md:max-w-64 md:flex-1 text-left transition-all duration-500"
           :class="{
             'opacity-40 grayscale pointer-events-none': !selectedCountry,
             'cursor-not-allowed': !selectedCountry
@@ -225,7 +225,7 @@ function formatDisaster(col: string) {
         <button 
           v-if="viewMode === 'DASHBOARD'"
           @click="emit('toggle-analysis')"
-          class="md:absolute right-6 bottom-3 flex items-center justify-center w-[34px] h-[34px] bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg transition-colors border border-slate-200 shrink-0"
+          class="ml-auto flex items-center justify-center w-[34px] h-[34px] bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg transition-colors border border-slate-200 shrink-0"
           :title="isAnalysisVisible ? 'Hide Analysis' : 'Show Analysis'"
         >
           <span class="text-xl font-black leading-none transition-transform duration-500 pb-[2px]" :class="isAnalysisVisible ? '' : 'rotate-180'">
