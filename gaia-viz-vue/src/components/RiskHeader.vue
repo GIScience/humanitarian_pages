@@ -135,87 +135,90 @@ function formatDisaster(col: string) {
       <div v-if="isExpanded" class="px-6 pb-3 pt-0 flex flex-col md:flex-row gap-6 items-center justify-center border-t border-slate-50 mt-0 relative">
       <div class="flex flex-col md:flex-row gap-4 w-full md:w-full items-end pt-1">
         
-        <!-- Home Button -->
-        <button 
-          v-if="viewMode === 'DASHBOARD'"
-          @click="emit('go-home')" 
-          class="h-[34px] w-[34px] flex-none flex items-center justify-center bg-red-50 border border-red-200 rounded-lg hover:bg-red-100 transition-colors text-heigit-red"
-          title="Back to Home"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-        </button>
-
-        <!-- Country Search Dropdown -->
-        <div class="relative w-full md:max-w-72 md:flex-1 text-left" ref="dropdownRef">
-          <label class="block text-xs text-slate-500 font-bold uppercase tracking-wider mb-1">Target Country</label>
-          <div 
-            @click="toggleDropdown"
-            class="w-full bg-slate-50 border border-slate-200 hover:border-heigit-red rounded-lg px-4 py-1.5 text-sm cursor-pointer flex justify-between items-center text-slate-700 shadow-sm transition-all"
+        <div class="flex-1 flex flex-col md:flex-row gap-4 items-end justify-center min-w-0">
+          
+          <!-- Home Button -->
+          <button 
+            v-if="viewMode === 'DASHBOARD'"
+            @click="emit('go-home')" 
+            class="h-[34px] w-[34px] flex-none flex items-center justify-center bg-red-50 border border-red-200 rounded-lg hover:bg-red-100 transition-colors text-heigit-red"
+            title="Back to Home"
           >
-            <span class="truncate font-medium">{{ selectedCountryLabel }}</span>
-            <span class="text-slate-400 text-[10px] transform transition-transform" :class="{'rotate-180': isDropdownOpen}">▼</span>
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+          </button>
+
+          <!-- Country Search Dropdown -->
+          <div class="relative w-full md:max-w-72 md:flex-1 text-left" ref="dropdownRef">
+            <label class="block text-xs text-slate-500 font-bold uppercase tracking-wider mb-1">Target Country</label>
+            <div 
+              @click="toggleDropdown"
+              class="w-full bg-slate-50 border border-slate-200 hover:border-heigit-red rounded-lg px-4 py-1.5 text-sm cursor-pointer flex justify-between items-center text-slate-700 shadow-sm transition-all"
+            >
+              <span class="truncate font-medium">{{ selectedCountryLabel }}</span>
+              <span class="text-slate-400 text-[10px] transform transition-transform" :class="{'rotate-180': isDropdownOpen}">▼</span>
+            </div>
+
+            <!-- Dropdown Menu -->
+            <div v-if="isDropdownOpen" class="absolute top-full left-0 mt-2 w-full bg-white border border-slate-200 rounded-lg shadow-2xl max-h-[400px] flex flex-col z-[100] animate-in fade-in slide-in-from-top-2 duration-200">
+              <div class="p-3 border-b border-slate-200 sticky top-0 bg-white rounded-t-lg">
+                <input 
+                  id="country-search-input"
+                  v-model="searchQuery" 
+                  placeholder="Search countries..." 
+                  class="w-full bg-slate-50 border border-slate-200 rounded-md px-3 py-2 text-sm text-slate-900 focus:outline-none focus:border-heigit-red transition-all"
+                  @click.stop
+                />
+              </div>
+              <div class="overflow-y-auto flex-1 py-1 custom-scrollbar">
+                <div 
+                  v-for="c in filteredCountries" 
+                  :key="c.code"
+                  @click="selectCountry(c.code)"
+                  class="px-4 py-2.5 text-sm hover:bg-slate-50 cursor-pointer flex items-center justify-between transition-colors"
+                  :class="{'text-heigit-red bg-red-50 font-semibold': c.code === selectedCountry, 'text-slate-700': c.code !== selectedCountry}"
+                >
+                  {{ c.name }}
+                  <span v-if="c.code === selectedCountry" class="text-heigit-red text-xs">●</span>
+                </div>
+                <div v-if="filteredCountries.length === 0" class="p-4 text-slate-400 text-sm text-center italic">
+                  No matching countries found
+                </div>
+              </div>
+            </div>
           </div>
 
-          <!-- Dropdown Menu -->
-          <div v-if="isDropdownOpen" class="absolute top-full left-0 mt-2 w-full bg-white border border-slate-200 rounded-lg shadow-2xl max-h-[400px] flex flex-col z-[100] animate-in fade-in slide-in-from-top-2 duration-200">
-            <div class="p-3 border-b border-slate-200 sticky top-0 bg-white rounded-t-lg">
-              <input 
-                id="country-search-input"
-                v-model="searchQuery" 
-                placeholder="Search countries..." 
-                class="w-full bg-slate-50 border border-slate-200 rounded-md px-3 py-2 text-sm text-slate-900 focus:outline-none focus:border-heigit-red transition-all"
-                @click.stop
-              />
-            </div>
-            <div class="overflow-y-auto flex-1 py-1 custom-scrollbar">
-              <div 
-                v-for="c in filteredCountries" 
-                :key="c.code"
-                @click="selectCountry(c.code)"
-                class="px-4 py-2.5 text-sm hover:bg-slate-50 cursor-pointer flex items-center justify-between transition-colors"
-                :class="{'text-heigit-red bg-red-50 font-semibold': c.code === selectedCountry, 'text-slate-700': c.code !== selectedCountry}"
-              >
-                {{ c.name }}
-                <span v-if="c.code === selectedCountry" class="text-heigit-red text-xs">●</span>
-              </div>
-              <div v-if="filteredCountries.length === 0" class="p-4 text-slate-400 text-sm text-center italic">
-                No matching countries found
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Hazard Select Dropdown (Disabled state if no country) -->
-        <div 
-          class="relative w-full md:max-w-64 md:flex-1 text-left transition-all duration-500"
-          :class="{
-            'opacity-40 grayscale pointer-events-none': !selectedCountry,
-            'cursor-not-allowed': !selectedCountry
-          }"
-          ref="hazardDropdownRef"
-        >
-          <label class="block text-xs text-slate-500 font-bold uppercase tracking-wider mb-1">Hazard</label>
+          <!-- Hazard Select Dropdown (Disabled state if no country) -->
           <div 
-            @click="selectedCountry && toggleHazardDropdown()"
-            class="w-full bg-slate-50 border border-slate-200 hover:border-heigit-red rounded-lg px-4 py-1.5 text-sm cursor-pointer flex justify-between items-center text-slate-700 shadow-sm transition-all"
-            :class="{'cursor-not-allowed bg-slate-100': !selectedCountry}"
+            class="relative w-full md:max-w-64 md:flex-1 text-left transition-all duration-500"
+            :class="{
+              'opacity-40 grayscale pointer-events-none': !selectedCountry,
+              'cursor-not-allowed': !selectedCountry
+            }"
+            ref="hazardDropdownRef"
           >
-            <span class="truncate font-medium">{{ selectedDisaster ? formatDisaster(selectedDisaster) : 'Select a Hazard' }}</span>
-            <span class="text-slate-400 text-[10px] transform transition-transform" :class="{'rotate-180': isHazardDropdownOpen}">▼</span>
-          </div>
+            <label class="block text-xs text-slate-500 font-bold uppercase tracking-wider mb-1">Hazard</label>
+            <div 
+              @click="selectedCountry && toggleHazardDropdown()"
+              class="w-full bg-slate-50 border border-slate-200 hover:border-heigit-red rounded-lg px-4 py-1.5 text-sm cursor-pointer flex justify-between items-center text-slate-700 shadow-sm transition-all"
+              :class="{'cursor-not-allowed bg-slate-100': !selectedCountry}"
+            >
+              <span class="truncate font-medium">{{ selectedDisaster ? formatDisaster(selectedDisaster) : 'Select a Hazard' }}</span>
+              <span class="text-slate-400 text-[10px] transform transition-transform" :class="{'rotate-180': isHazardDropdownOpen}">▼</span>
+            </div>
 
-          <!-- Hazard Dropdown Menu -->
-          <div v-if="isHazardDropdownOpen" class="absolute top-full left-0 mt-2 w-full bg-white border border-slate-200 rounded-lg shadow-2xl z-[100] animate-in fade-in slide-in-from-top-2 duration-200">
-            <div class="py-1">
-              <div 
-                v-for="d in disasters" 
-                :key="d"
-                @click="selectHazard(d)"
-                class="px-4 py-2.5 text-sm hover:bg-slate-50 cursor-pointer flex items-center justify-between transition-colors"
-                :class="{'text-heigit-red bg-red-50 font-semibold': d === selectedDisaster, 'text-slate-700': d !== selectedDisaster}"
-              >
-                {{ formatDisaster(d) }}
-                <span v-if="d === selectedDisaster" class="text-heigit-red text-xs">●</span>
+            <!-- Hazard Dropdown Menu -->
+            <div v-if="isHazardDropdownOpen" class="absolute top-full left-0 mt-2 w-full bg-white border border-slate-200 rounded-lg shadow-2xl z-[100] animate-in fade-in slide-in-from-top-2 duration-200">
+              <div class="py-1">
+                <div 
+                  v-for="d in disasters" 
+                  :key="d"
+                  @click="selectHazard(d)"
+                  class="px-4 py-2.5 text-sm hover:bg-slate-50 cursor-pointer flex items-center justify-between transition-colors"
+                  :class="{'text-heigit-red bg-red-50 font-semibold': d === selectedDisaster, 'text-slate-700': d !== selectedDisaster}"
+                >
+                  {{ formatDisaster(d) }}
+                  <span v-if="d === selectedDisaster" class="text-heigit-red text-xs">●</span>
+                </div>
               </div>
             </div>
           </div>
