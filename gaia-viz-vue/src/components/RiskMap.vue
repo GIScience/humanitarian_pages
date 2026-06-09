@@ -238,7 +238,7 @@ async function updateLayer() {
       "source-layer": "boundary",
       paint: {
         "line-color": "#ca2333", // HeiGIT red
-        "line-width": 3,
+        "line-width": 2,
         "line-opacity": 0.9
       },
       filter: ['==', props.pcodeField, props.highlightedPcode || '']
