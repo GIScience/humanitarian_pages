@@ -34,6 +34,18 @@ export function calculateDynamicRisk(
     const getW = (col: string) => weights[col] ?? 1.0;
 
     for (const row of data) {
+        // Remove stale computed columns that may linger from original parquet data
+        delete row['cop'];
+        delete row['vul'];
+        delete row['exp_flood'];
+        delete row['sus_flood'];
+        delete row['risk_flood'];
+        delete row['exp_cyclone'];
+        delete row['sus_cyclone'];
+        delete row['risk_cyclone'];
+        delete row['exp_flo'];
+        delete row['exp_cyc'];
+
         let copSum = 0; let copW = 0;
         let vulSum = 0; let vulW = 0;
         
@@ -71,23 +83,27 @@ export function calculateDynamicRisk(
         
         let copScore = copW > 0 ? (copSum / copW) : 0;
         let vulScore = vulW > 0 ? (vulSum / vulW) : 0;
-        
+
         row['cop'] = copScore;
         row['vul'] = vulScore;
 
         let susScore = Math.sqrt(vulScore * copScore);
-        
+
         if (floodW > 0) {
             let expFloScore = floodSum / floodW;
             row['exp_flood'] = expFloScore;
-            row['sus_flood'] = susScore;
-            row['risk_flood'] = Math.sqrt(expFloScore * susScore);
+            if (copW > 0 && vulW > 0) {
+                row['sus_flood'] = susScore;
+                row['risk_flood'] = Math.sqrt(expFloScore * susScore);
+            }
         }
         if (cycloneW > 0) {
             let expCycScore = cycloneSum / cycloneW;
             row['exp_cyclone'] = expCycScore;
-            row['sus_cyclone'] = susScore;
-            row['risk_cyclone'] = Math.sqrt(expCycScore * susScore);
+            if (copW > 0 && vulW > 0) {
+                row['sus_cyclone'] = susScore;
+                row['risk_cyclone'] = Math.sqrt(expCycScore * susScore);
+            }
         }
     }
     

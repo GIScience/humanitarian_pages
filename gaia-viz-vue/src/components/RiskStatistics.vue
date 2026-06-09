@@ -33,11 +33,98 @@ function setWeight(col: string, val: number) {
     emit('update:indicatorWeights', { ...localWeights.value });
 }
 
+const disabledIndicators = ref<Set<string>>(new Set());
+const savedSliderValues = ref<Record<string, number>>({});
+
+function isSubIndicatorActive(col: string) {
+    return !disabledIndicators.value.has(col);
+}
+
+function toggleSubIndicator(col: string) {
+    if (disabledIndicators.value.has(col)) {
+        disabledIndicators.value = new Set([...disabledIndicators.value].filter(c => c !== col));
+        const saved = savedSliderValues.value[col];
+        if (saved !== undefined) {
+            localWeights.value[col] = saved;
+            delete savedSliderValues.value[col];
+        } else {
+            delete localWeights.value[col];
+        }
+    } else {
+        savedSliderValues.value[col] = getWeight(col);
+        localWeights.value[col] = 0;
+        disabledIndicators.value = new Set([...disabledIndicators.value, col]);
+    }
+    emit('update:indicatorWeights', { ...localWeights.value });
+}
+
+function isGroupActive(columns: string[]) {
+    return columns.length === 0 || columns.every(c => isSubIndicatorActive(c));
+}
+
+function toggleGroup(columns: string[]) {
+    const allActive = isGroupActive(columns);
+    for (const col of columns) {
+        if (allActive && isSubIndicatorActive(col)) {
+            toggleSubIndicator(col);
+        } else if (!allActive && !isSubIndicatorActive(col)) {
+            toggleSubIndicator(col);
+        }
+    }
+}
+
 function resetDimensionWeights(cols: string[]) {
     const newWeights = { ...localWeights.value };
     cols.forEach(c => delete newWeights[c]);
     localWeights.value = newWeights;
+    const newDisabled = new Set(disabledIndicators.value);
+    cols.forEach(c => {
+        newDisabled.delete(c);
+        delete savedSliderValues.value[c];
+    });
+    disabledIndicators.value = newDisabled;
     emit('update:indicatorWeights', newWeights);
+}
+
+const GROUP_DEFS = [
+    { key: 'RP10', label: 'RP10' },
+    { key: 'RP50', label: 'RP50' },
+    { key: 'RP100', label: 'RP100' },
+    { key: 'RP500', label: 'RP500' },
+    { key: 'education', label: 'Education' },
+    { key: 'hospitals', label: 'Hospitals' },
+    { key: 'primary_healthcare', label: 'Primary Healthcare' },
+    { key: 'rural', label: 'Rural' },
+];
+
+function categorizeColumns(cols: string[]) {
+    const grouped: Record<string, string[]> = {};
+    const rest: string[] = [];
+
+    for (const col of cols) {
+        const lower = col.toLowerCase();
+        let matched = false;
+        for (const { key } of GROUP_DEFS) {
+            if (lower.includes(key)) {
+                if (!grouped[key]) grouped[key] = [];
+                grouped[key].push(col);
+                matched = true;
+                break;
+            }
+        }
+        if (!matched) rest.push(col);
+    }
+
+    const result: { key: string; label: string; columns: string[] }[] = [];
+    for (const g of GROUP_DEFS) {
+        if (grouped[g.key]?.length) {
+            result.push({ ...g, columns: grouped[g.key] });
+        }
+    }
+    if (rest.length) {
+        result.push({ key: '__rest__', label: 'Rest', columns: rest });
+    }
+    return result;
 }
 
 function downloadWeightsCSV() {
@@ -78,7 +165,7 @@ function downloadWeightsCSV() {
     document.body.removeChild(link);
 }
 
-const activeTab = ref<'ranking' | 'components' | 'demographics' | 'weights' | 'table'>('ranking');
+const activeTab = ref<'ranking' | 'components' | 'demographics' | 'indicators' | 'weights' | 'table'>('ranking');
 const sortKey = ref<string>('');
 const sortOrder = ref<'asc' | 'desc'>('desc');
 const currentPage = ref(1);
@@ -161,6 +248,10 @@ const indicatorCols = computed(() => {
 const expCols = computed(() => indicatorCols.value.filter(c => c !== componentCols.value.exp && c.startsWith('exp') && c !== 'exp'));
 const vulCols = computed(() => indicatorCols.value.filter(c => c !== componentCols.value.vul && c.startsWith('vul') && c !== 'vul'));
 const copCols = computed(() => indicatorCols.value.filter(c => c !== componentCols.value.cop && c.startsWith('cop') && c !== 'cop'));
+
+const expGroups = computed(() => categorizeColumns(expCols.value));
+const vulGroups = computed(() => categorizeColumns(vulCols.value));
+const copGroups = computed(() => categorizeColumns(copCols.value));
 
 const sortedData = computed(() => {
     if (!props.data || props.data.length === 0) return [];
@@ -444,7 +535,7 @@ watch(activeTab, () => {
     <!-- Tabs Header -->
     <div class="flex gap-2 p-4 border-b border-slate-200">
         <button 
-            v-for="tab in (isMobile ? ['ranking', 'table', 'weights'] : ['ranking', 'components', 'demographics', 'table', 'weights'])" 
+            v-for="tab in (isMobile ? ['ranking', 'table', 'indicators', 'weights'] : ['ranking', 'components', 'demographics', 'table', 'indicators', 'weights'])" 
             :key="tab"
             @click="activeTab = tab as any"
             class="px-3 py-1.5 rounded-md text-xs font-bold uppercase tracking-wider transition-colors"
@@ -473,6 +564,104 @@ watch(activeTab, () => {
         <div v-else-if="activeTab === 'demographics'" class="h-full min-h-[400px] flex flex-col">
             <h3 class="text-lg font-extrabold text-slate-900 mb-2 mt-2 px-2 tracking-tight">Vulnerable Demographics</h3>
             <div id="demographics-chart" class="w-full flex-1"></div>
+        </div>
+
+        <!-- Indicators -->
+        <div v-else-if="activeTab === 'indicators'" class="w-full h-full flex flex-col p-4 min-h-0 overflow-y-auto custom-scrollbar">
+            <p class="text-xs text-slate-500 mb-4 leading-relaxed">
+                Toggle groups or individual sub-indicators on/off. Disabled indicators are excluded from the risk calculation.
+            </p>
+            <div class="flex flex-col gap-4">
+                <!-- Exposure -->
+                <div class="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+                    <div class="flex items-center justify-between px-4 py-3 bg-[#ca2333]/5 border-b border-slate-100">
+                        <span class="text-sm font-bold text-slate-800">Exposure</span>
+                        <span class="text-[10px] text-slate-400 font-medium">{{ expCols.filter(c => isSubIndicatorActive(c)).length }}/{{ expCols.length }} active</span>
+                    </div>
+                    <div class="p-2 flex flex-col gap-3">
+                        <div v-for="group in expGroups" :key="group.key" class="flex flex-col gap-0.5">
+                            <div class="flex items-center gap-1.5 px-2 py-1 border-b border-slate-100" :class="group.key === '__rest__' ? 'border-t border-slate-100 mt-1 pt-2' : ''">
+                                <button @click="toggleGroup(group.columns)" class="relative inline-flex items-center cursor-pointer flex-shrink-0 w-6 h-3.5 rounded-full transition-colors duration-200" :class="isGroupActive(group.columns) ? 'bg-[#ca2333]' : 'bg-slate-300'" role="switch">
+                                    <span class="inline-block w-2 h-2 bg-white rounded-full shadow-sm transform transition-transform duration-200" :class="isGroupActive(group.columns) ? 'translate-x-[14px]' : 'translate-x-[2px]'"></span>
+                                </button>
+                                <span class="text-[10px] font-bold uppercase tracking-wider text-slate-500">{{ group.label }}</span>
+                                <span class="text-[9px] text-slate-400 font-medium ml-auto">{{ group.columns.filter(c => isSubIndicatorActive(c)).length }}/{{ group.columns.length }}</span>
+                            </div>
+                            <div v-for="col in group.columns" :key="col" class="px-2 py-1.5 rounded-lg hover:bg-slate-50 transition-colors">
+                                <div class="flex items-center gap-2">
+                                    <button @click="toggleSubIndicator(col)" class="relative inline-flex items-center cursor-pointer flex-shrink-0 w-7 h-4 rounded-full transition-colors duration-200" :class="isSubIndicatorActive(col) ? 'bg-[#ca2333]' : 'bg-slate-300'" role="switch">
+                                        <span class="inline-block w-2.5 h-2.5 bg-white rounded-full shadow-sm transform transition-transform duration-200" :class="isSubIndicatorActive(col) ? 'translate-x-[16px]' : 'translate-x-[2px]'"></span>
+                                    </button>
+                                    <span class="text-xs flex-1 min-w-0 truncate" :class="isSubIndicatorActive(col) ? 'text-slate-700 font-medium' : 'text-slate-400'">{{ formatColName(col) }}</span>
+                                    <span class="text-[10px] font-bold tabular-nums min-w-[20px] text-right" :class="{'text-slate-300': !isSubIndicatorActive(col)}">{{ getWeight(col).toFixed(1) }}</span>
+                                    <input type="range" class="w-16 h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-[#ca2333]" min="0" max="5" step="0.1" :value="getWeight(col)" @input="e => setWeight(col, Number((e.target as HTMLInputElement).value))" :disabled="!isSubIndicatorActive(col)" />
+                                </div>
+                            </div>
+                        </div>
+                        <div v-if="expCols.length === 0" class="text-xs text-slate-400 italic text-center py-2">No exposure sub-indicators</div>
+                    </div>
+                </div>
+
+                <!-- Vulnerability -->
+                <div class="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+                    <div class="flex items-center justify-between px-4 py-3 bg-[#E77480]/5 border-b border-slate-100">
+                        <span class="text-sm font-bold text-slate-800">Vulnerability</span>
+                        <span class="text-[10px] text-slate-400 font-medium">{{ vulCols.filter(c => isSubIndicatorActive(c)).length }}/{{ vulCols.length }} active</span>
+                    </div>
+                    <div class="p-2 flex flex-col gap-3">
+                        <div v-for="group in vulGroups" :key="group.key" class="flex flex-col gap-0.5">
+                            <div class="flex items-center gap-1.5 px-2 py-1 border-b border-slate-100" :class="group.key === '__rest__' ? 'border-t border-slate-100 mt-1 pt-2' : ''">
+                                <button @click="toggleGroup(group.columns)" class="relative inline-flex items-center cursor-pointer flex-shrink-0 w-6 h-3.5 rounded-full transition-colors duration-200" :class="isGroupActive(group.columns) ? 'bg-[#E77480]' : 'bg-slate-300'" role="switch">
+                                    <span class="inline-block w-2 h-2 bg-white rounded-full shadow-sm transform transition-transform duration-200" :class="isGroupActive(group.columns) ? 'translate-x-[14px]' : 'translate-x-[2px]'"></span>
+                                </button>
+                                <span class="text-[10px] font-bold uppercase tracking-wider text-slate-500">{{ group.label }}</span>
+                                <span class="text-[9px] text-slate-400 font-medium ml-auto">{{ group.columns.filter(c => isSubIndicatorActive(c)).length }}/{{ group.columns.length }}</span>
+                            </div>
+                            <div v-for="col in group.columns" :key="col" class="px-2 py-1.5 rounded-lg hover:bg-slate-50 transition-colors">
+                                <div class="flex items-center gap-2">
+                                    <button @click="toggleSubIndicator(col)" class="relative inline-flex items-center cursor-pointer flex-shrink-0 w-7 h-4 rounded-full transition-colors duration-200" :class="isSubIndicatorActive(col) ? 'bg-[#E77480]' : 'bg-slate-300'" role="switch">
+                                        <span class="inline-block w-2.5 h-2.5 bg-white rounded-full shadow-sm transform transition-transform duration-200" :class="isSubIndicatorActive(col) ? 'translate-x-[16px]' : 'translate-x-[2px]'"></span>
+                                    </button>
+                                    <span class="text-xs flex-1 min-w-0 truncate" :class="isSubIndicatorActive(col) ? 'text-slate-700 font-medium' : 'text-slate-400'">{{ formatColName(col) }}</span>
+                                    <span class="text-[10px] font-bold tabular-nums min-w-[20px] text-right" :class="{'text-slate-300': !isSubIndicatorActive(col)}">{{ getWeight(col).toFixed(1) }}</span>
+                                    <input type="range" class="w-16 h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-[#E77480]" min="0" max="5" step="0.1" :value="getWeight(col)" @input="e => setWeight(col, Number((e.target as HTMLInputElement).value))" :disabled="!isSubIndicatorActive(col)" />
+                                </div>
+                            </div>
+                        </div>
+                        <div v-if="vulCols.length === 0" class="text-xs text-slate-400 italic text-center py-2">No vulnerability sub-indicators</div>
+                    </div>
+                </div>
+
+                <!-- Coping Capacity -->
+                <div class="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+                    <div class="flex items-center justify-between px-4 py-3 bg-[#2C3E50]/5 border-b border-slate-100">
+                        <span class="text-sm font-bold text-slate-800">Coping Capacity</span>
+                        <span class="text-[10px] text-slate-400 font-medium">{{ copCols.filter(c => isSubIndicatorActive(c)).length }}/{{ copCols.length }} active</span>
+                    </div>
+                    <div class="p-2 flex flex-col gap-3">
+                        <div v-for="group in copGroups" :key="group.key" class="flex flex-col gap-0.5">
+                            <div class="flex items-center gap-1.5 px-2 py-1 border-b border-slate-100" :class="group.key === '__rest__' ? 'border-t border-slate-100 mt-1 pt-2' : ''">
+                                <button @click="toggleGroup(group.columns)" class="relative inline-flex items-center cursor-pointer flex-shrink-0 w-6 h-3.5 rounded-full transition-colors duration-200" :class="isGroupActive(group.columns) ? 'bg-[#2C3E50]' : 'bg-slate-300'" role="switch">
+                                    <span class="inline-block w-2 h-2 bg-white rounded-full shadow-sm transform transition-transform duration-200" :class="isGroupActive(group.columns) ? 'translate-x-[14px]' : 'translate-x-[2px]'"></span>
+                                </button>
+                                <span class="text-[10px] font-bold uppercase tracking-wider text-slate-500">{{ group.label }}</span>
+                                <span class="text-[9px] text-slate-400 font-medium ml-auto">{{ group.columns.filter(c => isSubIndicatorActive(c)).length }}/{{ group.columns.length }}</span>
+                            </div>
+                            <div v-for="col in group.columns" :key="col" class="px-2 py-1.5 rounded-lg hover:bg-slate-50 transition-colors">
+                                <div class="flex items-center gap-2">
+                                    <button @click="toggleSubIndicator(col)" class="relative inline-flex items-center cursor-pointer flex-shrink-0 w-7 h-4 rounded-full transition-colors duration-200" :class="isSubIndicatorActive(col) ? 'bg-[#2C3E50]' : 'bg-slate-300'" role="switch">
+                                        <span class="inline-block w-2.5 h-2.5 bg-white rounded-full shadow-sm transform transition-transform duration-200" :class="isSubIndicatorActive(col) ? 'translate-x-[16px]' : 'translate-x-[2px]'"></span>
+                                    </button>
+                                    <span class="text-xs flex-1 min-w-0 truncate" :class="isSubIndicatorActive(col) ? 'text-slate-700 font-medium' : 'text-slate-400'">{{ formatColName(col) }}</span>
+                                    <span class="text-[10px] font-bold tabular-nums min-w-[20px] text-right" :class="{'text-slate-300': !isSubIndicatorActive(col)}">{{ getWeight(col).toFixed(1) }}</span>
+                                    <input type="range" class="w-16 h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-[#2C3E50]" min="0" max="5" step="0.1" :value="getWeight(col)" @input="e => setWeight(col, Number((e.target as HTMLInputElement).value))" :disabled="!isSubIndicatorActive(col)" />
+                                </div>
+                            </div>
+                        </div>
+                        <div v-if="copCols.length === 0" class="text-xs text-slate-400 italic text-center py-2">No coping capacity sub-indicators</div>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <!-- Dimensions Flowchart -->
