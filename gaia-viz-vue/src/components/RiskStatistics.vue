@@ -33,6 +33,78 @@ function setWeight(col: string, val: number) {
     emit('update:indicatorWeights', { ...localWeights.value });
 }
 
+const uploadInput = ref<HTMLInputElement | null>(null);
+
+function getRawName(col: string, category: string): string {
+    if (category === 'exp') {
+        const parts = col.split('_');
+        if (parts.length > 2) return parts.slice(2).join('_');
+        return col.replace(/^exp_/, '');
+    } else if (category === 'vul') {
+        return col.replace(/^vul_/, '');
+    } else if (category === 'cop') {
+        return col.replace(/^cop_/, '');
+    }
+    return col;
+}
+
+function uploadWeightsCSV(event: Event) {
+    const input = event.target as HTMLInputElement;
+    if (!input.files || input.files.length === 0) return;
+
+    const reader = new FileReader();
+
+    reader.onload = (e) => {
+        const text = e.target?.result as string;
+        const lines = text.split('\n').map(l => l.trim()).filter(l => l);
+        if (lines.length < 2) return;
+
+        const headers = lines[0].split(',').map(h => h.trim());
+        const nameIdx = headers.indexOf('variable_name');
+        const catIdx = headers.indexOf('category');
+        const weightIdx = headers.indexOf('weight');
+        if (nameIdx === -1 || catIdx === -1 || weightIdx === -1) return;
+
+        const weightMap: Record<string, { category: string; weight: number }> = {};
+        for (let i = 1; i < lines.length; i++) {
+            const parts = lines[i].split(',').map(p => p.trim());
+            if (parts.length <= Math.max(nameIdx, catIdx, weightIdx)) continue;
+            const rawName = parts[nameIdx];
+            const category = parts[catIdx];
+            const weight = parseFloat(parts[weightIdx]);
+            if (rawName && category && !isNaN(weight)) {
+                weightMap[rawName] = { category, weight: Math.min(5, Math.max(0, weight)) };
+            }
+        }
+
+        const newWeights = { ...localWeights.value };
+        const newDisabled = new Set(disabledIndicators.value);
+
+        const matchAndSet = (cols: string[], category: string) => {
+            cols.forEach(col => {
+                const rawName = getRawName(col, category);
+                if (weightMap[rawName] && weightMap[rawName].category === category) {
+                    newWeights[col] = weightMap[rawName].weight;
+                    newDisabled.delete(col);
+                    delete savedSliderValues.value[col];
+                }
+            });
+        };
+
+        matchAndSet(expCols.value, 'exp');
+        matchAndSet(vulCols.value, 'vul');
+        matchAndSet(copCols.value, 'cop');
+
+        localWeights.value = newWeights;
+        disabledIndicators.value = newDisabled;
+        emit('update:indicatorWeights', { ...newWeights });
+
+        input.value = '';
+    };
+
+    reader.readAsText(input.files[0]);
+}
+
 const disabledIndicators = ref<Set<string>>(new Set());
 const savedSliderValues = ref<Record<string, number>>({});
 
@@ -673,8 +745,8 @@ watch(activeTab, () => {
             <div class="flex-1 flex flex-col items-center justify-start min-h-max pb-12 w-full">
                 <!-- Final Risk Node Row - desktop only -->
                 <div v-if="!isMobile" class="relative flex items-center justify-center w-full max-w-4xl z-10">
-                    <!-- Download Weights -->
-                    <div class="absolute left-4 top-1/2 -translate-y-1/2">
+                    <!-- Download/Upload Weights -->
+                    <div class="absolute left-4 top-1/2 -translate-y-1/2 flex flex-col gap-1.5">
                         <button 
                             @click="downloadWeightsCSV" 
                             title="Download current weights as CSV"
@@ -683,6 +755,15 @@ watch(activeTab, () => {
                             <svg class="w-3 h-3 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
                             Download Weights
                         </button>
+                        <button 
+                            @click="uploadInput?.click()" 
+                            title="Upload weights from a CSV file"
+                            class="shrink-0 px-3 py-1.5 bg-white hover:bg-slate-50 text-slate-700 text-[10px] font-bold uppercase tracking-widest rounded shadow-sm border border-slate-200 transition-colors flex items-center gap-1.5"
+                        >
+                            <svg class="w-3 h-3 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L5 8m4-4v12"></path></svg>
+                            Upload Weights
+                        </button>
+                        <input ref="uploadInput" type="file" accept=".csv" @change="uploadWeightsCSV" class="hidden" />
                     </div>
 
                     <!-- Final Risk Node -->
