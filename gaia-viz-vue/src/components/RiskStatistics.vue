@@ -63,17 +63,21 @@ function uploadWeightsCSV(event: Event) {
         const nameIdx = headers.indexOf('variable_name');
         const catIdx = headers.indexOf('category');
         const weightIdx = headers.indexOf('weight');
+        const actIdx = headers.indexOf('activated');
         if (nameIdx === -1 || catIdx === -1 || weightIdx === -1) return;
 
-        const weightMap: Record<string, { category: string; weight: number }> = {};
+        const csvData: Record<string, { category: string; weight: number; activated: boolean | null }> = {};
         for (let i = 1; i < lines.length; i++) {
             const parts = lines[i].split(',').map(p => p.trim());
             if (parts.length <= Math.max(nameIdx, catIdx, weightIdx)) continue;
             const rawName = parts[nameIdx];
             const category = parts[catIdx];
             const weight = parseFloat(parts[weightIdx]);
+            const activated = actIdx !== -1 && parts.length > actIdx
+                ? parts[actIdx].toUpperCase() === 'TRUE'
+                : null;
             if (rawName && category && !isNaN(weight)) {
-                weightMap[rawName] = { category, weight: Math.min(5, Math.max(0, weight)) };
+                csvData[rawName] = { category, weight: Math.min(5, Math.max(0, weight)), activated };
             }
         }
 
@@ -83,8 +87,15 @@ function uploadWeightsCSV(event: Event) {
         const matchAndSet = (cols: string[], category: string) => {
             cols.forEach(col => {
                 const rawName = getRawName(col, category);
-                if (weightMap[rawName] && weightMap[rawName].category === category) {
-                    newWeights[col] = weightMap[rawName].weight;
+                const entry = csvData[rawName];
+                if (!entry || entry.category !== category) return;
+
+                if (entry.activated === false) {
+                    savedSliderValues.value[col] = entry.weight;
+                    newWeights[col] = 0;
+                    newDisabled.add(col);
+                } else {
+                    newWeights[col] = entry.weight;
                     newDisabled.delete(col);
                     delete savedSliderValues.value[col];
                 }
@@ -200,7 +211,7 @@ function categorizeColumns(cols: string[]) {
 }
 
 function downloadWeightsCSV() {
-    let csvContent = "variable_name,category,weight,direction\n";
+    let csvContent = "variable_name,category,weight,direction,activated\n";
 
     const processCols = (cols: string[], category: string, direction: number) => {
         cols.forEach(col => {
@@ -218,7 +229,8 @@ function downloadWeightsCSV() {
                  rawName = col.replace(/^cop_/, '');
             }
             const weight = getWeight(col);
-            csvContent += `${rawName},${category},${weight},${direction}\n`;
+            const activated = isSubIndicatorActive(col) ? 'TRUE' : 'FALSE';
+            csvContent += `${rawName},${category},${weight},${direction},${activated}\n`;
         });
     };
 
