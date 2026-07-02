@@ -33,20 +33,16 @@ jobs:
       - name: Setup Pages
         uses: actions/configure-pages@v4
 
-      # --- DEV BUILD (from HEAD) ---
+      # --- DEV BUILD: GAIA from HEAD ---
       - name: Build GAIA Vue (Dev)
         run: |
           cd gaia-viz-vue
           npm install
-          npm run build
+          npx vite build --base=/humanitarian_pages/gaia-dashboard/dev/
           cd ..
 
-      - name: Build OQAPI Vue (Dev)
-        run: |
-          cd oqapi-country-reports-vue
-          npm install
-          npm run build
-          cd ..
+      - name: Save GAIA dev build
+        run: cp -r gaia-viz-vue/dist gaia-viz-vue/dist-dev
 
       # --- Checkout latest release tag ---
       - name: Checkout latest release tag
@@ -54,7 +50,7 @@ jobs:
           LATEST_TAG=$(git describe --tags `git rev-list --tags --max-count=1`)
           git checkout $LATEST_TAG
 
-      # --- PROD BUILD (from latest tag) ---
+      # --- PROD BUILDS from latest tag ---
       - name: Build GAIA Vue (Prod)
         run: |
           cd gaia-viz-vue
@@ -62,14 +58,14 @@ jobs:
           npm run build
           cd ..
 
-      - name: Build OQAPI Vue (Prod)
+      - name: Build OQAPI Vue
         run: |
           cd oqapi-country-reports-vue
           npm install
           npm run build
           cd ..
 
-      # --- Stage everything (prod from tag is the deployed version) ---
+      # --- Stage everything ---
       - name: Prep staging folder
         run: |
           mkdir _site
@@ -82,9 +78,15 @@ jobs:
             --exclude='.github' \
             ./ ./_site/
 
+          # PROD GAIA (from latest tag) at /gaia-dashboard/
           mkdir -p ./_site/gaia-dashboard
           cp -r ./gaia-viz-vue/dist/* ./_site/gaia-dashboard/
 
+          # DEV GAIA (from HEAD) at /gaia-dashboard/dev/
+          mkdir -p ./_site/gaia-dashboard/dev
+          cp -r ./gaia-viz-vue/dist-dev/* ./_site/gaia-dashboard/dev/
+
+          # OQAPI (from latest tag)
           mkdir -p ./_site/oqapi-country-report
           cp -r ./oqapi-country-reports-vue/dist/* ./_site/oqapi-country-report/
 
