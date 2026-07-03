@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { onMounted, ref, watch } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import maplibregl from 'maplibre-gl';
 import * as pmtiles from 'pmtiles';
-import { registerMapProtocol } from '../utils/mapProtocol';
-import RiskLegend from './RiskLegend.vue';
+import MapView from '@/components/map/MapView.vue';
+import MapZoomControl from '@/components/map/MapZoomControl.vue';
+import RiskLegend from '@/components/dashboard/RiskLegend.vue';
 
 const props = defineProps<{
   pmtilesUrl: string;
@@ -30,8 +31,11 @@ const dimensionOptions: { value: 'total' | 'exposure' | 'vulnerability' | 'copin
   { value: 'coping', label: 'Coping Capacity' },
 ];
 
-const mapContainer = ref<HTMLDivElement | null>(null);
-let map: maplibregl.Map | null = null;
+const DEFAULT_CENTER: [number, number] = [0, 20];
+const DEFAULT_ZOOM = 1.5;
+
+const mapViewRef = ref<InstanceType<typeof MapView> | null>(null);
+const map = computed<maplibregl.Map | null>(() => mapViewRef.value?.map ?? null);
 
 const floodLayerId = "risk-layer";
 const interactLayerId = "world-fills";
@@ -40,75 +44,53 @@ const layerOpacity = ref(0.7);
 
 const styleUrl = "https://tiles.openfreemap.org/styles/positron"; // Light style like open-access-lens
 
+function handleMapLoad(mapInstance: maplibregl.Map) {
+  // Add World Boundaries for Click Interaction
+  mapInstance.addSource('world', {
+    type: 'geojson',
+    data: './data/world.json',
+    promoteId: 'iso_a3'
+  });
+
+  const isLoaded = props.availableCountries && props.availableCountries.length > 0;
+  const validCountries = isLoaded ? props.availableCountries : ['NONE'];
+
+  // Unavailable Countries Layer
+  mapInstance.addLayer({
+    id: 'unavailable-countries',
+    type: 'fill',
+    source: 'world',
+    paint: {
+      'fill-color': '#cbd5e1', // Slate 300
+      'fill-opacity': 0.6
+    },
+    filter: isLoaded ? ['!', ['in', ['get', 'iso_a3'], ['literal', validCountries]]] : ['==', 'iso_a3', 'DOES_NOT_EXIST']
+  });
+
+  mapInstance.addLayer({
+    id: interactLayerId,
+    type: 'fill',
+    source: 'world',
+    paint: {
+      'fill-color': '#ca2333',
+      'fill-opacity': [
+        'case',
+        ['boolean', ['feature-state', 'hover'], false],
+        0.1,
+        0
+      ]
+    },
+    filter: isLoaded ? ['in', ['get', 'iso_a3'], ['literal', validCountries]] : ['==', 'iso_a3', 'DOES_NOT_EXIST']
+  });
+
+  updateLayer();
+}
+
 onMounted(() => {
-  registerMapProtocol();
-
-  if (!mapContainer.value) return;
-
-  map = new maplibregl.Map({
-    container: mapContainer.value,
-    style: styleUrl,
-    center: [0, 20],
-    zoom: 1.5,
-    scrollZoom: true // Standard scroll zoom
-  });
-
-  // Add navigation controls (zoom +/-) in top right - only on desktop
-  if (!props.isMobile) {
-    map.addControl(new maplibregl.NavigationControl({
-      showCompass: false
-    }), 'top-right');
-  }
-
-  map.on('load', () => {
-    // Add World Boundaries for Click Interaction
-    map!.addSource('world', {
-      type: 'geojson',
-      data: './data/world.json',
-      promoteId: 'iso_a3'
-    });
-
-    const isLoaded = props.availableCountries && props.availableCountries.length > 0;
-    const validCountries = isLoaded ? props.availableCountries : ['NONE'];
-
-    // Unavailable Countries Layer
-    map!.addLayer({
-      id: 'unavailable-countries',
-      type: 'fill',
-      source: 'world',
-      paint: {
-        'fill-color': '#cbd5e1', // Slate 300
-        'fill-opacity': 0.6
-      },
-      filter: isLoaded ? ['!', ['in', ['get', 'iso_a3'], ['literal', validCountries]]] : ['==', 'iso_a3', 'DOES_NOT_EXIST']
-    });
-
-    map!.addLayer({
-      id: interactLayerId,
-      type: 'fill',
-      source: 'world',
-      paint: {
-        'fill-color': '#ca2333',
-        'fill-opacity': [
-          'case',
-          ['boolean', ['feature-state', 'hover'], false],
-          0.1,
-          0
-        ]
-      },
-      filter: isLoaded ? ['in', ['get', 'iso_a3'], ['literal', validCountries]] : ['==', 'iso_a3', 'DOES_NOT_EXIST']
-    });
-
-    updateLayer();
-    
-    // Smooth resizing for layout transitions
-    if (mapContainer.value) {
-      const resizeObserver = new ResizeObserver(() => {
-        map?.resize();
-      });
-      resizeObserver.observe(mapContainer.value);
-    }
-  });
+  // MapView creates the map instance synchronously on mount, so it's
+  // already available here (children mount before this parent hook runs).
+  const mapInstance = map.value;
+  if (!mapInstance) return;
 
   const popup = new maplibregl.Popup({
     closeButton: false,
@@ -116,14 +98,14 @@ onMounted(() => {
     className: 'risk-tooltip'
   });
 
-  map.on('mousemove', floodLayerId, (e) => {
+  mapInstance.on('mousemove', floodLayerId, (e) => {
     if (!e.features || e.features.length === 0) return;
-    map!.getCanvas().style.cursor = 'pointer';
+    mapInstance.getCanvas().style.cursor = 'pointer';
 
     const feature = e.features[0];
     const pcode = feature.properties[props.pcodeField];
     const match = props.matchArray.find(m => m[0] === pcode);
-    
+
     if (match) {
       popup.setLngLat(e.lngLat)
         .setHTML(`
@@ -140,47 +122,47 @@ onMounted(() => {
             </div>
           </div>
         `)
-        .addTo(map!);
+        .addTo(mapInstance);
     }
   });
 
-  map.on('mouseleave', floodLayerId, () => {
-    map!.getCanvas().style.cursor = '';
+  mapInstance.on('mouseleave', floodLayerId, () => {
+    mapInstance.getCanvas().style.cursor = '';
     popup.remove();
   });
 
   // Country Click & Hover Interaction
   let hoveredCountryId: string | number | null = null;
 
-  map.on('mousemove', interactLayerId, (e) => {
+  mapInstance.on('mousemove', interactLayerId, (e) => {
     if (e.features && e.features.length > 0) {
       if (hoveredCountryId !== null) {
-        map!.setFeatureState(
+        mapInstance.setFeatureState(
           { source: 'world', id: hoveredCountryId },
           { hover: false }
         );
       }
       hoveredCountryId = e.features[0].id || e.features[0].properties.iso_a3;
-      map!.setFeatureState(
+      mapInstance.setFeatureState(
         { source: 'world', id: hoveredCountryId! },
         { hover: true }
       );
-      map!.getCanvas().style.cursor = 'pointer';
+      mapInstance.getCanvas().style.cursor = 'pointer';
     }
   });
 
-  map.on('mouseleave', interactLayerId, () => {
+  mapInstance.on('mouseleave', interactLayerId, () => {
     if (hoveredCountryId !== null) {
-      map!.setFeatureState(
+      mapInstance.setFeatureState(
         { source: 'world', id: hoveredCountryId },
         { hover: false }
       );
     }
     hoveredCountryId = null;
-    map!.getCanvas().style.cursor = '';
+    mapInstance.getCanvas().style.cursor = '';
   });
 
-  map.on('click', interactLayerId, (e) => {
+  mapInstance.on('click', interactLayerId, (e) => {
     if (e.features && e.features.length > 0) {
       const isoCode = e.features[0].properties.iso_a3;
       if (isoCode) {
@@ -189,47 +171,43 @@ onMounted(() => {
     }
   });
 
-  map.on('style.load', onStyleLoad);
-  window.addEventListener('resize', () => map?.resize());
+  mapInstance.on('style.load', onStyleLoad);
+  window.addEventListener('resize', () => mapInstance.resize());
 });
 
 // Using 'bright' style for faster loading
 async function updateLayer() {
-  if (!map || !map.isStyleLoaded()) return;
+  const mapInstance = map.value;
+  if (!mapInstance || !mapInstance.isStyleLoaded()) return;
 
   // HANDLE RESET: If pmtilesUrl is empty, zoom back to world and clear layers
   if (!props.pmtilesUrl) {
-    if (map.getLayer("risk-layer-highlight")) map.removeLayer("risk-layer-highlight");
-    if (map.getLayer(floodLayerId)) map.removeLayer(floodLayerId);
-    if (map.getSource(floodLayerId)) map.removeSource(floodLayerId);
-    
-    map.flyTo({
-      center: [0, 20],
-      zoom: 1.5,
-      duration: 3000,
-      essential: true
-    });
+    if (mapInstance.getLayer("risk-layer-highlight")) mapInstance.removeLayer("risk-layer-highlight");
+    if (mapInstance.getLayer(floodLayerId)) mapInstance.removeLayer(floodLayerId);
+    if (mapInstance.getSource(floodLayerId)) mapInstance.removeSource(floodLayerId);
+
+    mapViewRef.value?.flyTo(DEFAULT_CENTER, DEFAULT_ZOOM, 3000);
     return;
   }
 
   if (!props.pcodeField) return;
 
-  const currentSource = map.getSource(floodLayerId);
+  const currentSource = mapInstance.getSource(floodLayerId);
   const sourceUrl = `pmtiles://${props.pmtilesUrl}`;
 
   // If source URL changed, we need to re-add everything
   if (!currentSource || (currentSource as any).url !== sourceUrl) {
-    if (map.getLayer("risk-layer-highlight")) map.removeLayer("risk-layer-highlight");
-    if (map.getLayer(floodLayerId)) map.removeLayer(floodLayerId);
-    if (map.getSource(floodLayerId)) map.removeSource(floodLayerId);
+    if (mapInstance.getLayer("risk-layer-highlight")) mapInstance.removeLayer("risk-layer-highlight");
+    if (mapInstance.getLayer(floodLayerId)) mapInstance.removeLayer(floodLayerId);
+    if (mapInstance.getSource(floodLayerId)) mapInstance.removeSource(floodLayerId);
 
-    map.addSource(floodLayerId, {
+    mapInstance.addSource(floodLayerId, {
       type: "vector",
       url: sourceUrl,
       promoteId: props.pcodeField
     });
 
-    map.addLayer({
+    mapInstance.addLayer({
       id: floodLayerId,
       type: "fill",
       source: floodLayerId,
@@ -241,7 +219,7 @@ async function updateLayer() {
       }
     });
 
-    map.addLayer({
+    mapInstance.addLayer({
       id: "risk-layer-highlight",
       type: "line",
       source: floodLayerId,
@@ -262,7 +240,7 @@ async function updateLayer() {
         const bounds = (metadata.antimeridian_adjusted_bounds as string).split(",").map(Number);
         if (bounds.length === 4 && bounds.every(v => !isNaN(v))) {
           const [minLon, minLat, maxLon, maxLat] = bounds;
-          map.fitBounds([[minLon, minLat], [maxLon, maxLat]], { padding: 40, duration: 2000 });
+          mapInstance.fitBounds([[minLon, minLat], [maxLon, maxLat]], { padding: 40, duration: 2000 });
         }
       }
     } catch (err) {
@@ -274,51 +252,54 @@ async function updateLayer() {
   // Extract only [pcode, color] pairs for the match expression
   const mapMatches = props.matchArray.flatMap(m => [m[0], m[1]]);
   let fillColor: any = "#AAAAAA";
-  
+
   if (mapMatches.length >= 2) {
     fillColor = ["match", ["get", props.pcodeField], ...mapMatches, "#AAAAAA"];
   }
 
-  map.setPaintProperty(floodLayerId, "fill-color", fillColor);
+  mapInstance.setPaintProperty(floodLayerId, "fill-color", fillColor);
 }
 
 const onStyleLoad = () => {
-  if (!map) return;
-  
+  const mapInstance = map.value;
+  if (!mapInstance) return;
+
   // Apply distinct colors: Red for National, Grey for Subnational
   const nationalLayers = ['boundary_2', 'boundary_disputed'];
   const subnationalLayers = ['boundary_3', 'boundary_4', 'boundary_5', 'boundary_6'];
 
   nationalLayers.forEach(layerId => {
-    if (map?.getLayer(layerId)) {
-      map.setPaintProperty(layerId, 'line-color', '#ca2333');
-      map.setPaintProperty(layerId, 'line-opacity', 0.8);
+    if (mapInstance.getLayer(layerId)) {
+      mapInstance.setPaintProperty(layerId, 'line-color', '#ca2333');
+      mapInstance.setPaintProperty(layerId, 'line-opacity', 0.8);
     }
   });
 
   subnationalLayers.forEach(layerId => {
-    if (map?.getLayer(layerId)) {
-      map.setPaintProperty(layerId, 'line-color', '#94a3b8');
-      map.setPaintProperty(layerId, 'line-opacity', 0.4);
+    if (mapInstance.getLayer(layerId)) {
+      mapInstance.setPaintProperty(layerId, 'line-color', '#94a3b8');
+      mapInstance.setPaintProperty(layerId, 'line-opacity', 0.4);
     }
   });
 
-  if (map.isStyleLoaded()) updateLayer();
+  if (mapInstance.isStyleLoaded()) updateLayer();
 };
 
 watch(() => props.highlightedPcode, (newVal) => {
-  if (map && map.getLayer("risk-layer-highlight")) {
+  const mapInstance = map.value;
+  if (mapInstance && mapInstance.getLayer("risk-layer-highlight")) {
       if (newVal) {
-          map.setFilter("risk-layer-highlight", ['==', props.pcodeField, newVal]);
+          mapInstance.setFilter("risk-layer-highlight", ['==', props.pcodeField, newVal]);
       } else {
-          map.setFilter("risk-layer-highlight", ['==', props.pcodeField, '']);
+          mapInstance.setFilter("risk-layer-highlight", ['==', props.pcodeField, '']);
       }
   }
 });
 
 watch(layerOpacity, (newVal) => {
-  if (map && map.getLayer(floodLayerId)) {
-    map.setPaintProperty(floodLayerId, "fill-opacity", Number(newVal));
+  const mapInstance = map.value;
+  if (mapInstance && mapInstance.getLayer(floodLayerId)) {
+    mapInstance.setPaintProperty(floodLayerId, "fill-opacity", Number(newVal));
   }
 });
 
@@ -326,24 +307,18 @@ watch(() => props.pmtilesUrl, updateLayer);
 watch(() => props.matchArray, updateLayer);
 
 watch(() => props.availableCountries, (newVal) => {
-  if (map && map.getLayer('unavailable-countries') && map.getLayer(interactLayerId)) {
+  const mapInstance = map.value;
+  if (mapInstance && mapInstance.getLayer('unavailable-countries') && mapInstance.getLayer(interactLayerId)) {
     const isLoaded = newVal && newVal.length > 0;
     const validCountries = isLoaded ? newVal : ['NONE'];
-    map.setFilter('unavailable-countries', isLoaded ? ['!', ['in', ['get', 'iso_a3'], ['literal', validCountries]]] : ['==', 'iso_a3', 'DOES_NOT_EXIST']);
-    map.setFilter(interactLayerId, isLoaded ? ['in', ['get', 'iso_a3'], ['literal', validCountries]] : ['==', 'iso_a3', 'DOES_NOT_EXIST']);
+    mapInstance.setFilter('unavailable-countries', isLoaded ? ['!', ['in', ['get', 'iso_a3'], ['literal', validCountries]]] : ['==', 'iso_a3', 'DOES_NOT_EXIST']);
+    mapInstance.setFilter(interactLayerId, isLoaded ? ['in', ['get', 'iso_a3'], ['literal', validCountries]] : ['==', 'iso_a3', 'DOES_NOT_EXIST']);
   }
 }, { deep: true });
 
 defineExpose({
   resetView: () => {
-    if (map) {
-      map.flyTo({
-        center: [0, 20],
-        zoom: 1.5,
-        duration: 3000,
-        essential: true
-      });
-    }
+    mapViewRef.value?.flyTo(DEFAULT_CENTER, DEFAULT_ZOOM, 3000);
   }
 });
 </script>
@@ -393,17 +368,21 @@ defineExpose({
       </div>
     </transition>
 
-    <div ref="mapContainer" id="world-map"></div>
+    <MapView
+      ref="mapViewRef"
+      :map-style="styleUrl"
+      :center="DEFAULT_CENTER"
+      :zoom="DEFAULT_ZOOM"
+      :scroll-zoom="true"
+      @load="handleMapLoad"
+    />
+    <MapZoomControl v-if="!props.isMobile" :map="map" />
+
     <RiskLegend v-if="matchArray && matchArray.length > 0" :is-mobile="props.isMobile" :title="legendTitle" />
   </div>
 </template>
 
 <style scoped>
-#world-map {
-  width: 100%;
-  height: 100%;
-}
-
 :deep(.risk-tooltip .maplibregl-popup-content) {
   padding: 0;
   background: transparent;

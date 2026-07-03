@@ -3,7 +3,7 @@ import { ref, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import PageLayout from '@/layout/PageLayout.vue';
 import DashboardControlBar from '@/components/dashboard/DashboardControlBar.vue';
-import RiskMap from '@/components/RiskMap.vue';
+import RiskMap from '@/components/dashboard/RiskMap.vue';
 import RiskStatistics from '@/components/dashboard/RiskStatistics.vue';
 import AboutModal from '@/components/dashboard/modals/AboutModal.vue';
 import UploadModal from '@/components/dashboard/modals/UploadModal.vue';

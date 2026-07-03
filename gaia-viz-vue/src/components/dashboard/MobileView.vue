@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { ref } from 'vue';
-import RiskMap from '@/components/RiskMap.vue';
+import RiskMap from '@/components/dashboard/RiskMap.vue';
 import RiskStatistics from '@/components/dashboard/RiskStatistics.vue';
 import AboutModal from '@/components/dashboard/modals/AboutModal.vue';
 import FloatingLogo from '@/components/shared/FloatingLogo.vue';
-import RiskFooter from '@/components/RiskFooter.vue';
+import RiskLegend from '@/components/dashboard/RiskLegend.vue';
 import { useRiskLogic } from '@/composables/useRiskLogic';
 
 const {

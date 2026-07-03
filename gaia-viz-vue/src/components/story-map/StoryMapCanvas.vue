@@ -1,8 +1,9 @@
 <!-- StoryMapCanvas.vue -->
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import maplibregl from 'maplibre-gl';
-import { registerMapProtocol } from '@/utils/mapProtocol';
+import MapView from '@/components/map/MapView.vue';
+import MapZoomControl from '@/components/map/MapZoomControl.vue';
 
 interface StoryMapMarker {
     lng: number;
@@ -33,19 +34,17 @@ const props = withDefaults(defineProps<{
 });
 
 const el = ref<HTMLElement | null>(null);
-const mapContainer = ref<HTMLDivElement | null>(null);
 const isVisible = ref(false);
+const mapViewRef = ref<InstanceType<typeof MapView> | null>(null);
+const map = computed(() => mapViewRef.value?.map ?? null);
 
-let map: maplibregl.Map | null = null;
 let markerInstances: maplibregl.Marker[] = [];
 let intersectionObserver: IntersectionObserver | null = null;
-let resizeObserver: ResizeObserver | null = null;
-let mapInitialized = false;
 
 function renderMarkers() {
     markerInstances.forEach((m) => m.remove());
     markerInstances = [];
-    if (!map) return;
+    if (!map.value) return;
 
     props.markers.forEach((marker) => {
         const markerEl = document.createElement('div');
@@ -55,7 +54,7 @@ function renderMarkers() {
             <span class="relative inline-flex h-2.5 w-2.5 rounded-full border-2 border-white shadow-md" style="background-color: ${marker.color || '#ca2333'}"></span>
         `;
 
-        const instance = new maplibregl.Marker({ element: markerEl }).setLngLat([marker.lng, marker.lat]).addTo(map!);
+        const instance = new maplibregl.Marker({ element: markerEl }).setLngLat([marker.lng, marker.lat]).addTo(map.value!);
 
         if (marker.label) {
             instance.setPopup(
@@ -70,15 +69,15 @@ function renderMarkers() {
 }
 
 function renderRiskLayer() {
-    if (!map || !props.pmtilesUrl || !props.pcodeField) return;
+    if (!map.value || !props.pmtilesUrl || !props.pcodeField) return;
 
     const sourceId = 'story-map-risk-source';
     const layerId = 'story-map-risk-layer';
 
-    if (map.getLayer(layerId)) map.removeLayer(layerId);
-    if (map.getSource(sourceId)) map.removeSource(sourceId);
+    if (map.value.getLayer(layerId)) map.value.removeLayer(layerId);
+    if (map.value.getSource(sourceId)) map.value.removeSource(sourceId);
 
-    map.addSource(sourceId, {
+    map.value.addSource(sourceId, {
         type: 'vector',
         url: `pmtiles://${props.pmtilesUrl}`,
         promoteId: props.pcodeField,
@@ -89,7 +88,7 @@ function renderRiskLayer() {
         ? ['match', ['get', props.pcodeField], ...flatMatches, '#AAAAAA']
         : '#AAAAAA';
 
-    map.addLayer({
+    map.value.addLayer({
         id: layerId,
         type: 'fill',
         source: sourceId,
@@ -102,40 +101,20 @@ function renderRiskLayer() {
     });
 }
 
-function initMap() {
-    if (mapInitialized || !mapContainer.value) return;
-    mapInitialized = true;
+function handleMapLoad(mapInstance: maplibregl.Map) {
+    mapInstance.addControl(new maplibregl.AttributionControl({ compact: true }));
+    renderMarkers();
+    renderRiskLayer();
+}
 
-    registerMapProtocol();
-
-    map = new maplibregl.Map({
-        container: mapContainer.value,
-        style: props.mapStyle,
-        center: props.center,
-        zoom: props.zoom,
-        interactive: props.interactive,
-        scrollZoom: false,
-        attributionControl: false,
-    });
-
-    if (props.interactive) {
-        map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-right');
-    }
-    map.addControl(new maplibregl.AttributionControl({ compact: true }));
-
-    map.on('load', () => {
-        renderMarkers();
-        renderRiskLayer();
-    });
-
-    resizeObserver = new ResizeObserver(() => map?.resize());
-    resizeObserver.observe(mapContainer.value);
+function activateMap() {
+    requestAnimationFrame(() => mapViewRef.value?.initMap());
 }
 
 onMounted(() => {
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
         isVisible.value = true;
-        requestAnimationFrame(initMap);
+        activateMap();
         return;
     }
 
@@ -144,7 +123,7 @@ onMounted(() => {
             entries.forEach((entry) => {
                 if (entry.isIntersecting) {
                     isVisible.value = true;
-                    requestAnimationFrame(initMap);
+                    activateMap();
                     intersectionObserver?.disconnect();
                 }
             });
@@ -157,21 +136,19 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
     intersectionObserver?.disconnect();
-    resizeObserver?.disconnect();
     markerInstances.forEach((m) => m.remove());
-    map?.remove();
 });
 
 watch(() => props.center, (val) => {
-    if (map && val) map.flyTo({ center: val, zoom: props.zoom, duration: 1500, essential: true });
+    if (val) mapViewRef.value?.flyTo(val, props.zoom, 1500);
 });
 
 watch(() => props.markers, () => {
-    if (map?.isStyleLoaded()) renderMarkers();
+    if (map.value?.isStyleLoaded()) renderMarkers();
 }, { deep: true });
 
 watch(() => [props.pmtilesUrl, props.matchArray], () => {
-    if (map?.isStyleLoaded()) renderRiskLayer();
+    if (map.value?.isStyleLoaded()) renderRiskLayer();
 }, { deep: true });
 </script>
 
@@ -179,7 +156,10 @@ watch(() => [props.pmtilesUrl, props.matchArray], () => {
     <figure ref="el" data-no-reveal class="my-10">
         <div class="relative overflow-hidden rounded-2xl border border-slate-200 bg-slate-100 shadow-sm transition-all duration-700 ease-out"
             :class="isVisible ? 'opacity-100 scale-100' : 'opacity-0 scale-[0.98]'" :style="{ height }">
-            <div ref="mapContainer" class="h-full w-full" />
+            <MapView v-if="isVisible" ref="mapViewRef" :map-style="mapStyle" :center="center" :zoom="zoom"
+                :interactive="interactive" :scroll-zoom="false" :attribution-control="false" :auto-init="false"
+                @load="handleMapLoad" />
+            <MapZoomControl v-if="interactive" :map="map" />
             <div v-if="!isVisible" class="absolute inset-0 flex items-center justify-center">
                 <div class="h-8 w-8 animate-spin rounded-full border-4 border-heigit-red border-t-transparent" />
             </div>
