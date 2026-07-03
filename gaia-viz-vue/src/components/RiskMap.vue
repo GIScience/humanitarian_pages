@@ -13,12 +13,22 @@ const props = defineProps<{
   isAnalysisVisible?: boolean;
   availableCountries?: string[];
   isMobile?: boolean;
+  riskViewMode?: 'total' | 'exposure' | 'vulnerability' | 'coping';
+  legendTitle?: string;
 }>();
 
 const emit = defineEmits<{
   (e: 'country-click', code: string): void;
   (e: 'toggle-analysis'): void;
+  (e: 'update:riskViewMode', value: 'total' | 'exposure' | 'vulnerability' | 'coping'): void;
 }>();
+
+const dimensionOptions: { value: 'total' | 'exposure' | 'vulnerability' | 'coping'; label: string }[] = [
+  { value: 'total', label: 'Final Risk' },
+  { value: 'exposure', label: 'Exposure' },
+  { value: 'vulnerability', label: 'Vulnerability' },
+  { value: 'coping', label: 'Coping Capacity' },
+];
 
 const mapContainer = ref<HTMLDivElement | null>(null);
 let map: maplibregl.Map | null = null;
@@ -340,28 +350,51 @@ defineExpose({
 
 <template>
   <div class="relative w-full h-full">
-    <!-- Opacity Control -->
+    <!-- Map Display Controls: Opacity + Risk Dimension -->
     <transition name="fade">
-      <div v-if="pmtilesUrl" class="absolute z-[60] bg-white/90 backdrop-blur-md rounded-lg shadow-sm border border-slate-200 flex flex-col gap-1.5"
-           :class="props.isMobile ? 'bottom-32 left-4 w-28 px-2 py-1.5' : 'top-4 left-4 w-auto px-3 py-2'">
-        <label class="block text-slate-500 font-bold uppercase tracking-widest whitespace-nowrap"
-              :class="props.isMobile ? 'text-[8px]' : 'text-[9px]'">
-          Opacity: <span class="text-slate-700 font-extrabold">{{ Math.round(layerOpacity * 100) }}%</span>
-        </label>
-        <input 
-          type="range" 
-          min="0" 
-          max="1" 
-          step="0.05" 
-          v-model.number="layerOpacity"
-          class="bg-slate-200 rounded-lg appearance-none cursor-pointer accent-heigit-red"
-          :class="props.isMobile ? 'w-full h-1' : 'w-24 h-1.5'"
-        />
+      <div v-if="pmtilesUrl" class="absolute z-[60] bg-white/90 backdrop-blur-md rounded-lg shadow-sm border border-slate-200 flex flex-col gap-2"
+           :class="props.isMobile ? 'bottom-32 left-4 w-32 px-2 py-1.5' : 'top-4 left-4 w-auto px-3 py-2'">
+        <div class="flex flex-col gap-1.5">
+          <label class="block text-slate-500 font-bold uppercase tracking-widest whitespace-nowrap"
+                :class="props.isMobile ? 'text-[8px]' : 'text-[9px]'">
+            Opacity: <span class="text-slate-700 font-extrabold">{{ Math.round(layerOpacity * 100) }}%</span>
+          </label>
+          <input
+            type="range"
+            min="0"
+            max="1"
+            step="0.05"
+            v-model.number="layerOpacity"
+            class="bg-slate-200 rounded-lg appearance-none cursor-pointer accent-heigit-red"
+            :class="props.isMobile ? 'w-full h-1' : 'w-24 h-1.5'"
+          />
+        </div>
+
+        <div v-if="riskViewMode" class="flex flex-col gap-1 pt-2 border-t border-slate-200/70">
+          <label class="block text-slate-500 font-bold uppercase tracking-widest whitespace-nowrap"
+                :class="props.isMobile ? 'text-[8px]' : 'text-[9px]'">
+            Map Layer
+          </label>
+          <div class="flex flex-col gap-1">
+            <button
+              v-for="opt in dimensionOptions"
+              :key="opt.value"
+              @click="emit('update:riskViewMode', opt.value)"
+              class="rounded text-left font-bold transition-colors whitespace-nowrap"
+              :class="[
+                props.isMobile ? 'px-1.5 py-0.5 text-[9px]' : 'px-2 py-1 text-[10px]',
+                riskViewMode === opt.value ? 'bg-heigit-red text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+              ]"
+            >
+              {{ opt.label }}
+            </button>
+          </div>
+        </div>
       </div>
     </transition>
 
     <div ref="mapContainer" id="world-map"></div>
-    <RiskLegend v-if="matchArray && matchArray.length > 0" :is-mobile="props.isMobile" />
+    <RiskLegend v-if="matchArray && matchArray.length > 0" :is-mobile="props.isMobile" :title="legendTitle" />
   </div>
 </template>
 

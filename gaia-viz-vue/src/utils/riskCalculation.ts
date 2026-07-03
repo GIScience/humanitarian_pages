@@ -1,3 +1,25 @@
+export function getDimensionColumns(data: any[], selectedDisaster: string) {
+    const disasterSuffix = selectedDisaster.replace('risk_', '');
+    const hazardPrefix = (() => {
+        const d = disasterSuffix.toLowerCase();
+        if (d.includes('cyclone')) return 'cyc';
+        if (d.includes('flood')) return 'flo';
+        if (d.includes('drought')) return 'dr';
+        if (d.includes('earthquake')) return 'eq';
+        if (d.includes('tsunami')) return 'ts';
+        return d;
+    })();
+
+    if (!data || data.length === 0) return { exp: '', vul: '', cop: '', hazardPrefix };
+
+    const cols = Object.keys(data[0]);
+    const exp = cols.find(c => c === `exp_${disasterSuffix}`) || cols.find(c => c === 'exp') || '';
+    const vul = cols.find(c => c === 'vul') || '';
+    const cop = cols.find(c => c === 'cop') || '';
+
+    return { exp, vul, cop, hazardPrefix };
+}
+
 export function calculateDynamicRisk(
     data: any[],
     weights: Record<string, number>

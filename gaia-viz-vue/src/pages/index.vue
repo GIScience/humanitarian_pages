@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue';
-import MainView from './MainView.vue';
-import MobileView from './MobileView.vue';
+import MainView from '@/components/dashboard/MainView.vue';
+import MobileView from '@/components/dashboard/MobileView.vue';
 
 const isMobile = ref(false);
 

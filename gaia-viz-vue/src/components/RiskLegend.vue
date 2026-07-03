@@ -1,7 +1,10 @@
 <script setup lang="ts">
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   isMobile?: boolean;
-}>();
+  title?: string;
+}>(), {
+  title: 'Risk Assessment:',
+});
 
 const legendItems = [
   { label: 'Very High Risk', color: '#8B4C4C' },
@@ -15,7 +18,7 @@ const legendItems = [
   <div class="absolute z-[60] bg-white/80 backdrop-blur-xl border border-slate-200 rounded-lg shadow-2xl animate-in fade-in slide-in-from-bottom-4 duration-500"
        :class="props.isMobile ? 'bottom-4 left-4 w-28 p-2' : 'bottom-6 left-6 p-3.5 rounded-2xl'">
     <h3 class="text-slate-900 font-extrabold tracking-tight uppercase opacity-60"
-        :class="props.isMobile ? 'text-[9px] mb-1' : 'text-[11px] mb-2'">Risk Assessment:</h3>
+        :class="props.isMobile ? 'text-[9px] mb-1' : 'text-[11px] mb-2'">{{ title }}</h3>
     <div :class="props.isMobile ? 'space-y-0.5' : 'space-y-1.5'">
       <div 
         v-for="item in legendItems" 

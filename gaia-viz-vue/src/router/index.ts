@@ -1,19 +1,10 @@
 import { createRouter, createWebHashHistory } from "vue-router";
+import { routes } from "vue-router/auto-routes";
 
 const router = createRouter({
   history: createWebHashHistory(import.meta.env.BASE_URL),
-  routes: [
-    {
-      path: "/",
-      name: "home",
-      component: () => import("@/views/AppSwitcher.vue"),
-    },
-    {
-      path: "/story-map/:id/:section?",
-      name: "Product",
-      component: () => import("@/views/story-map/StoryMapView.vue"),
-    },
-  ],
+  routes,
 });
+
 
 export default router;

@@ -19,6 +19,6 @@
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.vue"],
+  "include": ["src/**/*.vue", "../gaia-viz-vue/src/utils/cn.ts"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }

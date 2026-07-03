@@ -3,7 +3,7 @@ import { computed, nextTick, onBeforeUnmount, ref, shallowRef, watch } from 'vue
 import { useRoute, useRouter } from 'vue-router';
 import PageLayout from '@/layout/PageLayout.vue';
 import { useMarkdownFile } from '@/composables/useMarkdownFile';
-import type { StorySection } from './components/StoryMapNavbar.vue';
+import type { StorySection } from '@/components/story-map/StoryMapNavbar.vue';
 
 const route = useRoute();
 const router = useRouter();
@@ -161,9 +161,9 @@ watch(activeId, (id) => {
     if (route.params.section === id) return;
 
     if (id) {
-        router.replace({ name: 'Product', params: { id: route.params.id, section: id } });
+        router.replace({ name: '/story-map/[id]/[[section]]', params: { id: route.params.id, section: id } });
     } else {
-        router.replace({ name: 'Product', params: { id: route.params.id } });
+        router.replace({ name: '/story-map/[id]/[[section]]', params: { id: route.params.id } });
     }
 });
 </script>

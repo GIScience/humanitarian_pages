@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, watch, onMounted, computed, nextTick } from 'vue';
 import Plotly from 'plotly.js-dist-min';
+import { getDimensionColumns } from '@/utils/riskCalculation';
 
 const props = defineProps<{
   data: any[];
@@ -261,41 +262,22 @@ const disasterLabel = computed(() => {
   return props.selectedDisaster.replace('risk_', '').split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
 });
 
-const disasterSuffix = computed(() => {
-    if (!props.selectedDisaster) return '';
-    return props.selectedDisaster.replace('risk_', '');
-});
-
-const hazardPrefix = computed(() => {
-    const d = disasterSuffix.value.toLowerCase();
-    if (d.includes('cyclone')) return 'cyc';
-    if (d.includes('flood')) return 'flo';
-    if (d.includes('drought')) return 'dr';
-    if (d.includes('earthquake')) return 'eq';
-    if (d.includes('tsunami')) return 'ts';
-    return d;
-});
+// Dynamic component columns based on what's available in the dataset
+const componentCols = computed(() => getDimensionColumns(props.data, props.selectedDisaster));
+const hazardPrefix = computed(() => componentCols.value.hazardPrefix);
 
 const formatColName = (col: string) => {
     if (col === componentCols.value.cop && col !== '') return 'Lack of Coping Capacity';
     if (col === componentCols.value.vul && col !== '') return 'Vulnerability';
     if (col === componentCols.value.exp && col !== '') return `${disasterLabel.value} Exposure`;
-    
+    if (col.includes('_custom_')) {
+        const parts = col.split('_custom_');
+        const raw = parts[1] || col;
+        return `Custom: ${raw.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}`;
+    }
+
     return col.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
 };
-
-// Dynamic component columns based on what's available in the dataset
-const componentCols = computed(() => {
-    if (!props.data || props.data.length === 0) return { exp: '', sus: '', vul: '', cop: '' };
-    const cols = Object.keys(props.data[0]);
-    
-    // Base components precisely fetched
-    const exp = cols.find(c => c === `exp_${disasterSuffix.value}`) || cols.find(c => c === 'exp') || '';
-    const vul = cols.find(c => c === 'vul') || '';
-    const cop = cols.find(c => c === 'cop') || '';
-    
-    return { exp, vul, cop };
-});
 
 // Extract all indicator columns dynamically for the table
 const indicatorCols = computed(() => {
