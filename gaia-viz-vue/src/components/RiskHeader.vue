@@ -18,6 +18,7 @@ const emit = defineEmits<{
   (e: 'update:selectedDisaster', value: string): void;
   (e: 'go-home'): void;
   (e: 'open-about'): void;
+  (e: 'open-upload'): void;
   (e: 'toggle-analysis'): void;
 }>();
 
@@ -100,7 +101,6 @@ function formatDisaster(col: string) {
       class="px-6 relative flex flex-col items-center justify-center text-center transition-all duration-500 ease-in-out"
       :class="isExpanded ? 'py-3' : 'py-1.5'"
     >
-      <!-- Title Group -->
       <div class="flex flex-col items-center">
         <h1 
           @click="emit('go-home')"
@@ -116,10 +116,12 @@ function formatDisaster(col: string) {
         </transition>
       </div>
 
-      <!-- Right Side: Navigation & Collapse Toggle -->
       <div class="absolute right-6 top-1/2 -translate-y-1/2 flex items-center gap-3">
           <button @click="emit('open-about')" class="px-5 py-2 rounded-full bg-slate-50 border border-slate-100 text-[12px] font-bold text-slate-500 hover:text-heigit-red hover:border-heigit-red transition-all cursor-pointer">
           About
+        </button>
+          <button @click="emit('open-upload')" class="px-5 py-2 rounded-full bg-slate-50 border border-slate-100 text-[12px] font-bold text-slate-500 hover:text-heigit-red hover:border-heigit-red transition-all cursor-pointer">
+          Upload 
         </button>
         <button @click="router.push('/story-map/vulnerability')" class="px-5 py-2 rounded-full bg-slate-50 border border-slate-100 text-[12px] font-bold text-slate-500 hover:text-heigit-red hover:border-heigit-red transition-all cursor-pointer">
           See Story Map

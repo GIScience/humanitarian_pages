@@ -2,6 +2,7 @@ import { defineConfig } from "vite";
 import vue from "@vitejs/plugin-vue";
 import { fileURLToPath, URL } from "node:url";
 import Markdown from 'unplugin-vue-markdown/vite'
+import vuetify from "vite-plugin-vuetify";
 
 export default defineConfig({
   // This ensures assets (JS/CSS) load from the correct subfolder
@@ -10,6 +11,7 @@ export default defineConfig({
     vue({
       include: [/\.vue$/, /\.md$/], // treats .md files as Vue components
     }),
+    vuetify({ autoImport: true }),
     Markdown({
       markdownItOptions: {
         html: true,

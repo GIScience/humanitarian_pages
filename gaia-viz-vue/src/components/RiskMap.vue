@@ -405,4 +405,3 @@ defineExpose({
   filter: grayscale(1) brightness(0.5);
 }
 </style>
-
