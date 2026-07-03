@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue';
+import { useRouter } from 'vue-router';
 import { fetchCountries, type Country } from '../services/dataService';
+
+const router = useRouter();
 
 const props = defineProps<{
   selectedCountry: string;
@@ -115,8 +118,11 @@ function formatDisaster(col: string) {
 
       <!-- Right Side: Navigation & Collapse Toggle -->
       <div class="absolute right-6 top-1/2 -translate-y-1/2 flex items-center gap-3">
-        <button @click="emit('open-about')" class="px-5 py-2 rounded-full bg-slate-50 border border-slate-100 text-[12px] font-bold text-slate-500 hover:text-heigit-red hover:border-heigit-red transition-all cursor-pointer">
+          <button @click="emit('open-about')" class="px-5 py-2 rounded-full bg-slate-50 border border-slate-100 text-[12px] font-bold text-slate-500 hover:text-heigit-red hover:border-heigit-red transition-all cursor-pointer">
           About
+        </button>
+        <button @click="router.push('/story-map/vulnerability')" class="px-5 py-2 rounded-full bg-slate-50 border border-slate-100 text-[12px] font-bold text-slate-500 hover:text-heigit-red hover:border-heigit-red transition-all cursor-pointer">
+          See Story Map
         </button>
         <button 
           @click="isExpanded = !isExpanded"
