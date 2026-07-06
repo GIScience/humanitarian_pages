@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue';
+import { cn } from '@/utils/cn';
 import { fetchCountries, type Country } from '@/services/dataService';
 
 const props = defineProps<{
@@ -92,7 +93,9 @@ function formatDisaster(col: string) {
   <div class="w-full relative bg-white border-b border-slate-200 shadow-sm z-[100] transition-all duration-300 shrink-0">
     <button
       @click="isExpanded = !isExpanded"
-      class="absolute right-4 top-2 w-7 h-7 flex items-center justify-center rounded-full bg-slate-50 border border-slate-100 text-slate-400 hover:text-heigit-red hover:border-heigit-red transition-all z-10"
+      :class="cn('absolute right-4 top-2 w-7 h-7 flex items-center justify-center rounded-full bg-slate-50 border border-slate-100 text-slate-400 hover:text-heigit-red hover:border-heigit-red transition-all z-10',
+        isExpanded ? '' : 'top-0 w-12 border-none rounded-t-none rounded-b-md shadow-md'
+      )"
       :title="isExpanded ? 'Collapse Controls' : 'Expand Controls'"
     >
       <span class="text-xs transition-transform duration-300" :class="isExpanded ? 'rotate-180' : 'rotate-0'">

@@ -30,6 +30,13 @@ declare module 'vue-router/auto-routes' {
       Record<never, never>,
       | never
     >,
+    '/story-map/': RouteRecordInfo<
+      '/story-map/',
+      '/story-map',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
     '/story-map/[id]/[[section]]': RouteRecordInfo<
       '/story-map/[id]/[[section]]',
       '/story-map/:id/:section?',
@@ -53,6 +60,12 @@ declare module 'vue-router/auto-routes' {
     'src/pages/index.vue': {
       routes:
         | '/'
+      views:
+        | never
+    }
+    'src/pages/story-map/index.vue': {
+      routes:
+        | '/story-map/'
       views:
         | never
     }

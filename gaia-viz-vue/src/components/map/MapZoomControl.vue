@@ -19,12 +19,10 @@ let controlMap: maplibregl.Map | null = null;
 function removeControl() {
   if (control && controlMap) {
     try {
-      // Throws if the underlying map was already torn down (e.g. a sibling
-      // component unmounting the map itself in the same unmount pass) -
-      // the map's own teardown already discards this control in that case.
+
       controlMap.removeControl(control);
     } catch {
-      // no-op
+      console.warn('Failed to remove map control. It may have already been removed.');
     }
   }
   control = null;
@@ -53,4 +51,7 @@ watch(
 onBeforeUnmount(removeControl);
 </script>
 
-<template></template>
+<template>
+
+</template>
+

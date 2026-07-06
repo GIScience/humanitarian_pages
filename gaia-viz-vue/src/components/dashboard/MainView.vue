@@ -1,14 +1,15 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue';
-import { useRouter } from 'vue-router';
-import PageLayout from '@/layout/PageLayout.vue';
-import DashboardControlBar from '@/components/dashboard/DashboardControlBar.vue';
-import RiskMap from '@/components/dashboard/RiskMap.vue';
-import RiskStatistics from '@/components/dashboard/RiskStatistics.vue';
-import AboutModal from '@/components/dashboard/modals/AboutModal.vue';
-import UploadModal from '@/components/dashboard/modals/UploadModal.vue';
-import FloatingLogo from '@/components/shared/FloatingLogo.vue';
-import { useRiskLogic } from '@/composables/useRiskLogic';
+import { ref, computed } from "vue";
+import { useRouter } from "vue-router";
+import PageLayout from "@/layout/PageLayout.vue";
+import DashboardControlBar from "@/components/dashboard/DashboardControlBar.vue";
+import RiskMap from "@/components/dashboard/RiskMap.vue";
+import RiskStatistics from "@/components/dashboard/RiskStatistics.vue";
+import RiskDimensionControl from "@/components/dashboard/RiskDimensionControl.vue";
+import AboutModal from "@/components/dashboard/modals/AboutModal.vue";
+import UploadModal from "@/components/dashboard/modals/UploadModal.vue";
+import FloatingLogo from "@/components/shared/FloatingLogo.vue";
+import { useRiskLogic } from "@/composables/useRiskLogic";
 
 const router = useRouter();
 
@@ -37,14 +38,14 @@ const {
   mergeCustomIndicators,
   selectedDimension,
   goHome,
-  updateDimension
+  updateDimension,
 } = useRiskLogic();
 
 const mapRef = ref<InstanceType<typeof RiskMap> | null>(null);
 
 const existingPcodes = computed(() => {
   if (!pcodeField.value) return [];
-  return lastLoadedData.value.map(d => String(d[pcodeField.value]));
+  return lastLoadedData.value.map((d) => String(d[pcodeField.value]));
 });
 
 function handleGoHome() {
@@ -63,65 +64,103 @@ function handleUpload(payload: Parameters<typeof mergeCustomIndicators>[0]) {
   <PageLayout full-height>
     <template #header-actions>
       <div class="flex items-center gap-2">
-        <button @click="showAboutModal = true"
-          class="px-5 py-2 rounded-full bg-slate-50 border border-slate-100 text-[12px] font-bold text-slate-500 hover:text-heigit-red hover:border-heigit-red transition-all cursor-pointer">
+        <button
+          @click="showAboutModal = true"
+          class="px-5 py-2 rounded-full bg-slate-50 border border-slate-100 text-[12px] font-bold text-slate-500 hover:text-heigit-red hover:border-heigit-red transition-all cursor-pointer"
+        >
           About
         </button>
 
-        <button @click="router.push('/story-map/vulnerability')"
-          class="px-5 py-2 rounded-full bg-slate-50 border border-slate-100 text-[12px] font-bold text-slate-500 hover:text-heigit-red hover:border-heigit-red transition-all cursor-pointer">
+        <button
+          @click="router.push('/story-map/vulnerability')"
+          class="px-5 py-2 rounded-full bg-slate-50 border border-slate-100 text-[12px] font-bold text-slate-500 hover:text-heigit-red hover:border-heigit-red transition-all cursor-pointer"
+        >
           See Story Map
         </button>
       </div>
     </template>
 
-    <DashboardControlBar v-model:selectedCountry="selectedCountry" v-model:selectedDisaster="selectedDisaster"
-      :disasters="disasters" :view-mode="viewMode" :is-analysis-visible="showAnalysis" @go-home="handleGoHome"
-      @toggle-analysis="showAnalysis = !showAnalysis" />
+    <DashboardControlBar
+      v-model:selectedCountry="selectedCountry"
+      v-model:selectedDisaster="selectedDisaster"
+      :disasters="disasters"
+      :view-mode="viewMode"
+      :is-analysis-visible="showAnalysis"
+      @go-home="handleGoHome"
+      @toggle-analysis="showAnalysis = !showAnalysis"
+    />
 
     <div class="flex-1 flex flex-row relative min-h-0 w-full">
-
       <!-- LEFT PANE: MAP -->
-      <div class="relative h-full flex flex-col transition-[width] duration-700 ease-in-out border-r border-slate-200"
+      <div
+        class="relative h-full flex flex-col transition-[width] duration-700 ease-in-out border-r border-slate-200"
         :class="[
-          viewMode === 'HOME' ? 'w-full' : (showAnalysis ? 'w-full md:w-1/2' : 'w-full')
-        ]">
-        <main id="main-content" class="flex-1 relative overflow-hidden bg-slate-50">
-          <RiskDimensionControl v-if="true" 
-            @dimension="value => updateDimension(value)"
+          viewMode === 'HOME'
+            ? 'w-full'
+            : showAnalysis
+              ? 'w-full md:w-1/2'
+              : 'w-full',
+        ]"
+      >
+        <main
+          id="main-content"
+          class="flex-1 relative overflow-hidden bg-slate-50"
+        >
+          <RiskDimensionControl
+            @dimension="(value) => updateDimension(value)"
             :selectedDimension="selectedDimension"
           />
-          <RiskMap 
-            ref="mapRef" 
-            :pmtilesUrl="pmtilesUrl" 
-            :pcodeField="pcodeField" 
+          <RiskMap
+            ref="mapRef"
+            :pmtilesUrl="pmtilesUrl"
+            :pcodeField="pcodeField"
             :matchArray="matchArray"
-            :highlightedPcode="highlightedPcode" 
-            :availableCountries="countries.map(c => c.code)"
-            :risk-view-mode="riskViewMode" :legend-title="riskViewLabel" @country-click="selectedCountry = $event"
-            @update:riskViewMode="riskViewMode = $event" 
+            :highlightedPcode="highlightedPcode"
+            :availableCountries="countries.map((c) => c.code)"
+            :risk-view-mode="riskViewMode"
+            :legend-title="riskViewLabel"
+            @country-click="selectedCountry = $event"
+            @update:riskViewMode="riskViewMode = $event"
           />
 
           <!-- Loading Overlay -->
           <transition name="fade">
-            <div v-if="isLoading"
-              class="absolute inset-0 bg-white/60 backdrop-blur-sm z-40 flex items-center justify-center">
+            <div
+              v-if="isLoading"
+              class="absolute inset-0 bg-white/60 backdrop-blur-sm z-40 flex items-center justify-center"
+            >
               <div
-                class="flex flex-col items-center gap-4 px-8 py-6 bg-white border border-slate-200 rounded-2xl shadow-2xl">
-                <div class="w-12 h-12 border-4 border-heigit-red border-t-transparent rounded-full animate-spin"></div>
-                <div class="text-slate-900 font-bold tracking-widest uppercase text-xs">Analyzing Data...</div>
+                class="flex flex-col items-center gap-4 px-8 py-6 bg-white border border-slate-200 rounded-2xl shadow-2xl"
+              >
+                <div
+                  class="w-12 h-12 border-4 border-heigit-red border-t-transparent rounded-full animate-spin"
+                ></div>
+                <div
+                  class="text-slate-900 font-bold tracking-widest uppercase text-xs"
+                >
+                  Analyzing Data...
+                </div>
               </div>
             </div>
           </transition>
 
           <!-- Error Message -->
           <transition name="slide-up">
-            <div v-if="error" class="absolute bottom-8 left-1/2 -translate-x-1/2 z-50 w-max max-w-lg">
+            <div
+              v-if="error"
+              class="absolute bottom-8 left-1/2 -translate-x-1/2 z-50 w-max max-w-lg"
+            >
               <div
-                class="bg-red-50 border border-red-200 text-red-900 px-6 py-3 rounded-full shadow-2xl flex items-center gap-3 backdrop-blur-md">
+                class="bg-red-50 border border-red-200 text-red-900 px-6 py-3 rounded-full shadow-2xl flex items-center gap-3 backdrop-blur-md"
+              >
                 <span class="text-red-600">⚠️</span>
                 <span class="text-sm font-medium">{{ error }}</span>
-                <button @click="error = null" class="ml-2 hover:text-red-600 text-red-400">✕</button>
+                <button
+                  @click="error = null"
+                  class="ml-2 hover:text-red-600 text-red-400"
+                >
+                  ✕
+                </button>
               </div>
             </div>
           </transition>
@@ -132,34 +171,68 @@ function handleUpload(payload: Parameters<typeof mergeCustomIndicators>[0]) {
 
       <!-- RIGHT PANE: ANALYSIS -->
       <div
-        class="relative h-full flex flex-col bg-white overflow-hidden transition-[width] duration-700 ease-in-out w-full md:w-1/2"
+        class="relative h-full flex flex-col bg-white overflow-hidden transition-[width] duration-700 ease-in-out"
         :class="[
-          viewMode === 'HOME' ? 'w-0' : (showAnalysis ? 'w-full md:w-1/2' : 'w-0 pointer-events-none')
-        ]">
-        <div class="flex-1 flex flex-col overflow-hidden p-8 h-full min-w-[320px]">
+          viewMode === 'HOME'
+            ? 'w-0'
+            : showAnalysis
+              ? 'w-full md:w-1/2'
+              : 'w-0 pointer-events-none',
+        ]"
+      >
+        <div
+          class="flex-1 flex flex-col overflow-hidden p-8 h-full min-w-[320px]"
+        >
           <div class="max-w-3xl w-full mx-auto flex flex-col h-full space-y-4">
             <header class="shrink-0">
-              <h2 class="text-3xl font-extrabold text-slate-900 tracking-tight mb-2">Analysis</h2>
+              <h2
+                class="text-3xl font-extrabold text-slate-900 tracking-tight mb-2"
+              >
+                Analysis
+              </h2>
               <div class="flex items-center gap-2">
                 <span
-                  class="px-2.5 py-1 rounded-md bg-slate-100 border border-slate-200 text-xs font-bold text-heigit-red uppercase tracking-wider">
-                  {{ selectedDisaster ? selectedDisaster.replace('risk_', '').toUpperCase() : 'NO RISK SELECTED' }}
+                  class="px-2.5 py-1 rounded-md bg-slate-100 border border-slate-200 text-xs font-bold text-heigit-red uppercase tracking-wider"
+                >
+                  {{
+                    selectedDisaster
+                      ? selectedDisaster.replace("risk_", "").toUpperCase()
+                      : "NO RISK SELECTED"
+                  }}
                 </span>
-                <span class="text-slate-500 text-sm font-medium">| {{ selectedCountryName || 'Distribution' }}</span>
+                <span class="text-slate-500 text-sm font-medium"
+                  >| {{ selectedCountryName || "Distribution" }}</span
+                >
               </div>
             </header>
 
-            <div class="flex-1 min-h-0 border border-slate-200 rounded-xl overflow-hidden shadow-sm">
-              <RiskStatistics v-if="lastLoadedData.length > 0 && selectedDisaster" :data="lastLoadedData"
-                :selected-disaster="selectedDisaster" :indicator-weights="indicatorWeights" :pcode-field="pcodeField"
-                @update:indicatorWeights="indicatorWeights = $event" @region-hover="highlightedPcode = $event" />
-              <div v-else
-                class="h-full flex flex-col items-center justify-center text-center p-12 bg-slate-50 border-dashed border-2 border-slate-200">
+            <div
+              class="flex-1 min-h-0 border border-slate-200 rounded-xl overflow-hidden shadow-sm"
+            >
+              <RiskStatistics
+                v-if="lastLoadedData.length > 0 && selectedDisaster"
+                :data="lastLoadedData"
+                :selected-disaster="selectedDisaster"
+                :indicator-weights="indicatorWeights"
+                :pcode-field="pcodeField"
+                @update:indicatorWeights="indicatorWeights = $event"
+                @region-hover="highlightedPcode = $event"
+              />
+              <div
+                v-else
+                class="h-full flex flex-col items-center justify-center text-center p-12 bg-slate-50 border-dashed border-2 border-slate-200"
+              >
                 <div
-                  class="w-16 h-16 bg-white border border-slate-100 shadow-sm rounded-2xl flex items-center justify-center mb-4 text-2xl">
-                  📊</div>
-                <h3 class="text-lg font-bold text-slate-900 mb-2 italic">No Data Available</h3>
-                <p class="text-sm text-slate-500">Select a country and a risk category to view statistics.</p>
+                  class="w-16 h-16 bg-white border border-slate-100 shadow-sm rounded-2xl flex items-center justify-center mb-4 text-2xl"
+                >
+                  📊
+                </div>
+                <h3 class="text-lg font-bold text-slate-900 mb-2 italic">
+                  No Data Available
+                </h3>
+                <p class="text-sm text-slate-500">
+                  Select a country and a risk category to view statistics.
+                </p>
               </div>
             </div>
           </div>
@@ -168,14 +241,22 @@ function handleUpload(payload: Parameters<typeof mergeCustomIndicators>[0]) {
     </div>
 
     <AboutModal v-if="showAboutModal" @close="showAboutModal = false" />
-    <UploadModal v-if="showUploadModal" :pcode-field="pcodeField" :existing-pcodes="existingPcodes"
-      :hazard-prefix="dimensionColumns.hazardPrefix" @close="showUploadModal = false; uploadError = null"
-      @upload="handleUpload" />
+    <UploadModal
+      v-if="showUploadModal"
+      :pcode-field="pcodeField"
+      :existing-pcodes="existingPcodes"
+      :hazard-prefix="dimensionColumns.hazardPrefix"
+      @close="
+        showUploadModal = false;
+        uploadError = null;
+      "
+      @upload="handleUpload"
+    />
   </PageLayout>
 </template>
 
 <style>
-@import '@/assets/styles/main.css';
+@import "@/assets/styles/main.css";
 
 /* Custom Transitions */
 .fade-enter-active,

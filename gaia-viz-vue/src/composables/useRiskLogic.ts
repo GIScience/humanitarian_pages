@@ -55,7 +55,7 @@ export function useRiskLogic() {
   const rawOriginalData = shallowRef<any[]>([]);
 
   const viewMode = ref<"HOME" | "DASHBOARD">("HOME");
-  const showAnalysis = ref(true);
+  const showAnalysis = ref(false);
   const showAboutModal = ref(false);
   const showUploadModal = ref(false);
   const riskViewMode = ref<RiskViewMode>("total");
@@ -76,9 +76,7 @@ export function useRiskLogic() {
     );
   });
 
-  // RiskDimensionControl.vue speaks a different vocabulary than RiskViewMode
-  // (matches its own dimension-key labels) - translate between the two so
-  // both it and RiskMap's own toggle stay in sync off the same riskViewMode.
+
   const DIMENSION_KEY_TO_VIEW_MODE: Record<string, RiskViewMode> = {
     "composite-risk": "total",
     exposure: "exposure",
