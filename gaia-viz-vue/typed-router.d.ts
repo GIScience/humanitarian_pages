@@ -44,6 +44,13 @@ declare module 'vue-router/auto-routes' {
       { id: ParamValue<false>, section?: ParamValueZeroOrOne<false> },
       | never
     >,
+    '/story-map-two/[id]/[[section]]': RouteRecordInfo<
+      '/story-map-two/[id]/[[section]]',
+      '/story-map-two/:id/:section?',
+      { id: ParamValue<true>, section?: ParamValueZeroOrOne<true> },
+      { id: ParamValue<false>, section?: ParamValueZeroOrOne<false> },
+      | never
+    >,
   }
 
   /**
@@ -72,6 +79,12 @@ declare module 'vue-router/auto-routes' {
     'src/pages/story-map/[id]/[[section]].vue': {
       routes:
         | '/story-map/[id]/[[section]]'
+      views:
+        | never
+    }
+    'src/pages/story-map-two/[id]/[[section]].vue': {
+      routes:
+        | '/story-map-two/[id]/[[section]]'
       views:
         | never
     }

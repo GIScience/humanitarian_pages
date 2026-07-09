@@ -1,10 +1,13 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from "vue";
+import { computed, onBeforeUnmount, ref, watch } from "vue";
 import maplibregl from "maplibre-gl";
 import * as pmtiles from "pmtiles";
-import MapView from "@/components/map/MapView.vue";
+import Map from "@/components/map/map.vue";
 import MapZoomControl from "@/components/map/MapZoomControl.vue";
 import RiskLegend from "@/components/dashboard/RiskLegend.vue";
+import { RISK_DIMENSIONS } from "@/enums/dimensions";
+import { cn } from "@/utils/cn";
+import type { RiskViewMode } from "@/composables/useRiskLogic";
 
 const props = defineProps<{
   pmtilesUrl: string;
@@ -14,31 +17,17 @@ const props = defineProps<{
   isAnalysisVisible?: boolean;
   availableCountries?: string[];
   isMobile?: boolean;
-  riskViewMode?: "total" | "exposure" | "vulnerability" | "coping";
+  riskViewMode?: RiskViewMode;
   legendTitle?: string;
 }>();
 
 const emit = defineEmits<{
   (e: "country-click", code: string): void;
   (e: "toggle-analysis"): void;
-  (
-    e: "update:riskViewMode",
-    value: "total" | "exposure" | "vulnerability" | "coping",
-  ): void;
+  (e: "update:riskViewMode", value: RiskViewMode): void;
 }>();
 
-const dimensionOptions: {
-  value: "total" | "exposure" | "vulnerability" | "coping";
-  label: string;
-}[] = [
-  { value: "total", label: "Final Risk" },
-  { value: "exposure", label: "Exposure" },
-  { value: "vulnerability", label: "Vulnerability" },
-  { value: "coping", label: "Coping Capacity" },
-];
 
-const DEFAULT_CENTER: [number, number] = [0, 20];
-const DEFAULT_ZOOM = 1.5;
 
 const mapViewRef = ref<InstanceType<typeof MapView> | null>(null);
 const map = computed<maplibregl.Map | null>(
@@ -50,7 +39,28 @@ const interactLayerId = "world-fills";
 
 const layerOpacity = ref(0.7);
 
-const styleUrl = "https://tiles.openfreemap.org/styles/positron"; // Light style like open-access-lens
+const countryBounds = ref<maplibregl.LngLatBoundsLike | null>(null);
+
+const styleUrl = "https://tiles.openfreemap.org/styles/positron";
+
+const resizeHandler = () => {
+  map.value?.resize();
+};
+
+onBeforeUnmount(() => {
+  window.removeEventListener("resize", resizeHandler);
+});
+
+function fitToCountryBounds(duration = 1200) {
+  const mapInstance = map.value;
+  if (!mapInstance || !countryBounds.value) return;
+  mapInstance.fitBounds(countryBounds.value, { padding: 40, duration });
+}
+
+function selectDimension(value: RiskViewMode) {
+  emit("update:riskViewMode", value);
+  fitToCountryBounds();
+}
 
 function handleMapLoad(mapInstance: maplibregl.Map) {
   // Add World Boundaries for Click Interaction
@@ -97,13 +107,6 @@ function handleMapLoad(mapInstance: maplibregl.Map) {
   });
 
   updateLayer();
-}
-
-onMounted(() => {
-  // MapView creates the map instance synchronously on mount, so it's
-  // already available here (children mount before this parent hook runs).
-  const mapInstance = map.value;
-  if (!mapInstance) return;
 
   const popup = new maplibregl.Popup({
     closeButton: false,
@@ -188,15 +191,13 @@ onMounted(() => {
   });
 
   mapInstance.on("style.load", onStyleLoad);
-  window.addEventListener("resize", () => mapInstance.resize());
-});
+  window.addEventListener("resize", resizeHandler);
+}
 
-// Using 'bright' style for faster loading
 async function updateLayer() {
   const mapInstance = map.value;
   if (!mapInstance || !mapInstance.isStyleLoaded()) return;
 
-  // HANDLE RESET: If pmtilesUrl is empty, zoom back to world and clear layers
   if (!props.pmtilesUrl) {
     if (mapInstance.getLayer("risk-layer-highlight"))
       mapInstance.removeLayer("risk-layer-highlight");
@@ -205,6 +206,7 @@ async function updateLayer() {
     if (mapInstance.getSource(floodLayerId))
       mapInstance.removeSource(floodLayerId);
 
+    countryBounds.value = null;
     mapViewRef.value?.flyTo(DEFAULT_CENTER, DEFAULT_ZOOM, 3000);
     return;
   }
@@ -214,7 +216,6 @@ async function updateLayer() {
   const currentSource = mapInstance.getSource(floodLayerId);
   const sourceUrl = `pmtiles://${props.pmtilesUrl}`;
 
-  // If source URL changed, we need to re-add everything
   if (!currentSource || (currentSource as any).url !== sourceUrl) {
     if (mapInstance.getLayer("risk-layer-highlight"))
       mapInstance.removeLayer("risk-layer-highlight");
@@ -264,13 +265,11 @@ async function updateLayer() {
           .map(Number);
         if (bounds.length === 4 && bounds.every((v) => !isNaN(v))) {
           const [minLon, minLat, maxLon, maxLat] = bounds;
-          mapInstance.fitBounds(
-            [
-              [minLon, minLat],
-              [maxLon, maxLat],
-            ],
-            { padding: 40, duration: 2000 },
-          );
+          countryBounds.value = [
+            [minLon, minLat],
+            [maxLon, maxLat],
+          ];
+          fitToCountryBounds(2000);
         }
       }
     } catch (err) {
@@ -389,79 +388,90 @@ defineExpose({
 
 <template>
   <div class="relative w-full h-full">
-    <!-- Map Display Controls: Opacity + Risk Dimension -->
     <transition name="fade">
       <div
         v-if="pmtilesUrl"
-        class="absolute z-[60] bg-white/90 backdrop-blur-md rounded-lg shadow-sm border border-slate-200 flex flex-col gap-2"
+        class="absolute z-[60] bg-white/90 backdrop-blur-md rounded-lg shadow-sm flex flex-col gap-2"
         :class="
           props.isMobile
-            ? 'bottom-32 left-4 w-32 px-2 py-1.5'
-            : 'top-4 left-4 w-auto px-3 py-2'
+            ? 'bottom-32 left-4 w-40 px-2 py-1.5'
+            : 'top-4 left-4 w-60 px-3 py-2'
         "
       >
-        <div class="flex flex-col gap-1.5">
-          <label
-            class="block text-slate-500 font-bold uppercase tracking-widest whitespace-nowrap"
-            :class="props.isMobile ? 'text-[8px]' : 'text-[9px]'"
-          >
-            Opacity:
-            <span class="text-slate-700 font-extrabold"
-              >{{ Math.round(layerOpacity * 100) }}%</span
-            >
-          </label>
-          <input
-            type="range"
-            min="0"
-            max="1"
-            step="0.05"
-            v-model.number="layerOpacity"
-            class="bg-slate-200 rounded-lg appearance-none cursor-pointer accent-heigit-red"
-            :class="props.isMobile ? 'w-full h-1' : 'w-24 h-1.5'"
-          />
-        </div>
-
-        <div
-          v-if="riskViewMode"
-          class="flex flex-col gap-1 pt-2 border-t border-slate-200/70"
-        >
-          <label
-            class="block text-slate-500 font-bold uppercase tracking-widest whitespace-nowrap"
-            :class="props.isMobile ? 'text-[8px]' : 'text-[9px]'"
-          >
-            Map Layer
-          </label>
+        <div v-if="riskViewMode" class="flex flex-col gap- py-2">
           <div class="flex flex-col gap-1">
+            <label
+              class="block text-slate-500 font-bold uppercase tracking-widest whitespace-nowrap"
+              :class="props.isMobile ? 'text-[8px]' : 'text-[9px]'"
+            >
+              Layers:
+            </label>
             <button
-              v-for="opt in dimensionOptions"
-              :key="opt.value"
-              @click="emit('update:riskViewMode', opt.value)"
-              class="rounded text-left font-bold transition-colors whitespace-nowrap"
+              v-for="dimension in RISK_DIMENSIONS"
+              :key="dimension.value"
+              @click="selectDimension(dimension.value)"
+              class="rounded flex items-center justify-between text-left font-bold transition-colors whitespace-nowrap"
               :class="[
                 props.isMobile
                   ? 'px-1.5 py-0.5 text-[9px]'
-                  : 'px-2 py-1 text-[10px]',
-                riskViewMode === opt.value
+                  : 'px-2 py-2 text-xs',
+                riskViewMode === dimension.value
                   ? 'bg-heigit-red text-white'
                   : 'bg-slate-100 text-slate-600 hover:bg-slate-200',
               ]"
             >
-              {{ opt.label }}
+              <div class="flex items-center gap-2">
+                <v-icon :icon="dimension.icon" size="18" />
+                <span>{{ dimension.label }}</span>
+              </div>
+              <v-icon
+                @click.stop="emit('click:info')"
+                icon="mdi-information-slab-circle-outline"
+                size="15"
+                :class="
+                  cn(
+                    'ml-1 text-heigit-red',
+                    riskViewMode === dimension.value
+                      ? 'text-white'
+                      : 'text-heigit-red',
+                  )
+                "
+              />
             </button>
+            <v-divider class="my-2 bg-slate-200/70" />
+            <div class="flex flex-col gap-1.5">
+              <label
+                class="block text-slate-500 font-bold uppercase tracking-widest whitespace-nowrap"
+                :class="props.isMobile ? 'text-[8px]' : 'text-[9px]'"
+              >
+                Opacity:
+                <span class="text-slate-700 font-extrabold"
+                  >{{ Math.round(layerOpacity * 100) }}%</span
+                >
+              </label>
+              <input
+                type="range"
+                min="0"
+                max="1"
+                step="0.05"
+                v-model.number="layerOpacity"
+                class="bg-slate-200 rounded-lg appearance-none cursor-pointer accent-heigit-red"
+                :class="props.isMobile ? 'w-full h-1' : 'w-full h-1.5'"
+              />
+            </div>
           </div>
         </div>
       </div>
     </transition>
 
-    <MapView
+    <Map
       ref="mapViewRef"
       :map-style="styleUrl"
-      :center="DEFAULT_CENTER"
-      :zoom="DEFAULT_ZOOM"
       :scroll-zoom="true"
       @load="handleMapLoad"
+      interactive
+      zoomControls
     />
-    <MapZoomControl v-if="!props.isMobile" :map="map" />
 
     <RiskLegend
       v-if="matchArray && matchArray.length > 0"
@@ -487,8 +497,8 @@ defineExpose({
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
   background: rgba(255, 255, 255, 0.8) !important;
   backdrop-filter: blur(8px);
-  margin-top: 40px;
-  margin-right: 16px;
+  margin-top: 40px !important;
+  margin-right: 17px !important;
 }
 
 :deep(.maplibregl-ctrl-group button) {

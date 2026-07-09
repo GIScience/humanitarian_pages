@@ -10,8 +10,17 @@ import {
   calculateDynamicRisk,
   getDimensionColumns,
 } from "../utils/riskCalculation";
+import {
+  isRiskViewMode,
+  getRiskDimension,
+  type RiskViewMode,
+} from "../enums/dimensions";
 
-export type RiskViewMode = "total" | "exposure" | "vulnerability" | "coping";
+export type { RiskViewMode };
+
+function parseRiskViewMode(value: unknown): RiskViewMode | null {
+  return isRiskViewMode(value) ? value : null;
+}
 
 export type CustomIndicatorDimension = "exp" | "vul" | "cop";
 
@@ -58,7 +67,9 @@ export function useRiskLogic() {
   const showAnalysis = ref(false);
   const showAboutModal = ref(false);
   const showUploadModal = ref(false);
-  const riskViewMode = ref<RiskViewMode>("total");
+  const riskViewMode = ref<RiskViewMode>(
+    parseRiskViewMode(route.query.indicator) ?? "total",
+  );
   const uploadError = ref<string | null>(null);
 
   const countries = ref<Country[]>([]);
@@ -76,48 +87,19 @@ export function useRiskLogic() {
     );
   });
 
-
-  const DIMENSION_KEY_TO_VIEW_MODE: Record<string, RiskViewMode> = {
-    "composite-risk": "total",
-    exposure: "exposure",
-    vulnerability: "vulnerability",
-    capacity: "coping",
-  };
-  const VIEW_MODE_TO_DIMENSION_KEY: Record<RiskViewMode, string> = {
-    total: "composite-risk",
-    exposure: "exposure",
-    vulnerability: "vulnerability",
-    coping: "capacity",
-  };
-
-  const selectedDimension = computed(
-    () => VIEW_MODE_TO_DIMENSION_KEY[riskViewMode.value],
-  );
-
-  const updateDimension = (dimension: string) => {
-    riskViewMode.value = DIMENSION_KEY_TO_VIEW_MODE[dimension] ?? "total";
-  };
-
   const dimensionColumns = computed(() =>
     getDimensionColumns(lastLoadedData.value, selectedDisaster.value),
   );
 
-  const activeValueColumn = computed(() => {
-    if (riskViewMode.value === "total") return selectedDisaster.value;
-    if (riskViewMode.value === "exposure") return dimensionColumns.value.exp;
-    if (riskViewMode.value === "vulnerability")
-      return dimensionColumns.value.vul;
-    return dimensionColumns.value.cop;
-  });
+  const activeValueColumn = computed(() =>
+    getRiskDimension(riskViewMode.value).resolveColumn({
+      disaster: selectedDisaster.value,
+      dimensionColumns: dimensionColumns.value,
+    }),
+  );
 
   const riskViewLabel = computed(
-    () =>
-      ({
-        total: "Risk Assessment:",
-        exposure: "Exposure:",
-        vulnerability: "Vulnerability:",
-        coping: "Coping Capacity:",
-      })[riskViewMode.value],
+    () => getRiskDimension(riskViewMode.value).legendLabel,
   );
 
   function updateRiskLayer(riskColumn: string, data: any[], level: string) {
@@ -178,6 +160,8 @@ export function useRiskLogic() {
 
     if (countryCode === lastLoadedCountry.value) return;
 
+    const isSwitchingCountry = !!lastLoadedCountry.value;
+
     isLoading.value = true;
     error.value = null;
     viewMode.value = "DASHBOARD";
@@ -198,19 +182,27 @@ export function useRiskLogic() {
 
       const data = await loadParquetData(parquetUrl);
 
+
       const rawJSON = JSON.parse(
         JSON.stringify(data, (_, value) =>
           typeof value === "bigint" ? Number(value) : value,
         ),
       );
+      
+      console.log("Raw JSON data loaded:", rawJSON);
+      
       rawOriginalData.value = JSON.parse(JSON.stringify(rawJSON));
+
+      console.log(rawOriginalData.value);
 
       const currentLevel = level;
       pcodeField.value = `${currentLevel}_PCODE`;
       lastLoadedData.value = rawJSON;
       lastLoadedCountry.value = countryCode;
       indicatorWeights.value = {};
-      riskViewMode.value = "total";
+      if (isSwitchingCountry) {
+        riskViewMode.value = "total";
+      }
 
       const riskCols = Object.keys(data[0] || {}).filter((c) =>
         c.startsWith("risk_"),
@@ -249,7 +241,8 @@ export function useRiskLogic() {
     if (selectedCountry.value) query.country = selectedCountry.value;
     if (selectedCountry.value && selectedDisaster.value)
       query.disaster = selectedDisaster.value;
-
+    if(selectedCountry.value && selectedDisaster.value && riskViewMode.value) 
+      query.indicator = riskViewMode.value;
     router.replace({ query }).catch(() => {});
   };
 
@@ -415,6 +408,7 @@ export function useRiskLogic() {
   });
 
   watch(riskViewMode, () => {
+    syncRoute();
     refreshMapLayer();
   });
 
@@ -424,11 +418,15 @@ export function useRiskLogic() {
     (newQuery) => {
       const qCountry = (newQuery.country as string) || "";
       const qDisaster = (newQuery.disaster as string) || "";
+      const qIndicator = parseRiskViewMode(newQuery.indicator);
       if (qCountry !== selectedCountry.value) {
         selectedCountry.value = qCountry;
       }
       if (qDisaster !== selectedDisaster.value) {
         selectedDisaster.value = qDisaster;
+      }
+      if (qIndicator && qIndicator !== riskViewMode.value) {
+        riskViewMode.value = qIndicator;
       }
     },
   );
@@ -460,10 +458,8 @@ export function useRiskLogic() {
     riskViewLabel,
     dimensionColumns,
     selectedCountryName,
-    selectedDimension,
 
     // Actions
-    updateDimension,
     updateCountryData,
     updateRiskLayer,
     loadAndCalculateWithWeights,

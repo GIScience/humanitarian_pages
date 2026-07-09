@@ -5,10 +5,10 @@ import PageLayout from "@/layout/PageLayout.vue";
 import DashboardControlBar from "@/components/dashboard/DashboardControlBar.vue";
 import RiskMap from "@/components/dashboard/RiskMap.vue";
 import RiskStatistics from "@/components/dashboard/RiskStatistics.vue";
-import RiskDimensionControl from "@/components/dashboard/RiskDimensionControl.vue";
 import AboutModal from "@/components/dashboard/modals/AboutModal.vue";
 import UploadModal from "@/components/dashboard/modals/UploadModal.vue";
-import FloatingLogo from "@/components/shared/FloatingLogo.vue";
+import MetadataModal from "@/components/dashboard/modals/MetadataModal.vue";
+import FloatingLogo from "@/components/FloatingLogo.vue";
 import { useRiskLogic } from "@/composables/useRiskLogic";
 
 const router = useRouter();
@@ -36,12 +36,11 @@ const {
   countries,
   selectedCountryName,
   mergeCustomIndicators,
-  selectedDimension,
   goHome,
-  updateDimension,
 } = useRiskLogic();
 
 const mapRef = ref<InstanceType<typeof RiskMap> | null>(null);
+const showMetadataModal = ref(false);
 
 const existingPcodes = computed(() => {
   if (!pcodeField.value) return [];
@@ -106,10 +105,6 @@ function handleUpload(payload: Parameters<typeof mergeCustomIndicators>[0]) {
           id="main-content"
           class="flex-1 relative overflow-hidden bg-slate-50"
         >
-          <RiskDimensionControl
-            @dimension="(value) => updateDimension(value)"
-            :selectedDimension="selectedDimension"
-          />
           <RiskMap
             ref="mapRef"
             :pmtilesUrl="pmtilesUrl"
@@ -251,6 +246,10 @@ function handleUpload(payload: Parameters<typeof mergeCustomIndicators>[0]) {
         uploadError = null;
       "
       @upload="handleUpload"
+    />
+    <MetadataModal
+      v-if="showMetadataModal"
+      @toggle="showMetadataModal = false"
     />
   </PageLayout>
 </template>

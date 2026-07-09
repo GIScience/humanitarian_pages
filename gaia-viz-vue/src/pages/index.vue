@@ -1,25 +1,13 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue';
-import MainView from '@/components/dashboard/MainView.vue';
-import MobileView from '@/components/dashboard/MobileView.vue';
+import { ref, onMounted, onUnmounted } from "vue";
+import MainView from "@/components/dashboard/MainView.vue";
+import MobileView from "@/components/dashboard/MobileView.vue";
+import useScreenSize from "@/composables/use-screen-size";
 
-const isMobile = ref(false);
-
-const checkViewport = () => {
-  isMobile.value = window.innerWidth < 768; // Standard md breakpoint
-};
-
-onMounted(() => {
-  checkViewport();
-  window.addEventListener('resize', checkViewport);
-});
-
-onUnmounted(() => {
-  window.removeEventListener('resize', checkViewport);
-});
+const { isSmallViewport } = useScreenSize();
 </script>
 
 <template>
-  <MobileView v-if="isMobile" />
+  <MobileView v-if="isSmallViewport" />
   <MainView v-else />
 </template>

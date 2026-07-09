@@ -10,15 +10,15 @@ const openLink = (url: string) => window.open(url, '_blank', 'noopener,noreferre
 
 
 <template>
-  <v-dialog :model-value="true" max-width="56rem" @update:model-value="$emit('close')">
-    <v-sheet rounded="2xl" class="overflow-hidden">
+  <v-dialog :model-value="true" max-width="54rem" @update:model-value="$emit('close')">
+    <v-sheet rounded="2xl" class="overflow-hidden flex flex-col max-h-[90vh]">
       <div>
         <div class="flex items-center justify-between px-8 py-5 bg-white z-10 shrink-0">
           <div>
             <h2 class="text-2xl font-extrabold text-slate-900 tracking-tight">{{ header.title }}</h2>
             <p class="text-sm text-slate-500 font-bold uppercase tracking-widest mt-1">{{ header.subtitle }}</p>
           </div>
-          <v-btn icon="mdi-close" class="hover:bg-heigit-red-light" variant="text" density="comfortable" @click="$emit('close')" />
+          <v-btn icon="mdi-close" class="hover:bg-heigit-red-light hover:text-heigit-red cursor-pointer" variant="text" density="comfortable" @click="$emit('close')" />
         </div>
       </div>
       <v-divider />
