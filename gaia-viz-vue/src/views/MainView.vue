@@ -214,6 +214,13 @@ watch(selectedDisaster, (newVal) => {
 
 <template>
   <div class="h-screen w-full overflow-hidden flex flex-col relative bg-white text-slate-900">
+    <!-- Maintenance Banner -->
+    <div class="bg-amber-50 border-b border-amber-300 px-4 py-3 text-center text-sm text-amber-900 flex items-center justify-center gap-2 shrink-0">
+      <span class="text-lg">⚠️</span>
+      <span>
+        <strong>Service Temporarily Unavailable:</strong> The dashboard is currently unable to load data due to a CORS-related issue with the data source. We are working on a fix.
+      </span>
+    </div>
     <!-- Main Layout Container -->
     <div class="flex-1 flex flex-row relative min-h-0 w-full">
       
