@@ -4,6 +4,7 @@ import { loadCSVData } from "@/utils/duckdb";
 import {
   sanitizeIndicatorName,
   type CustomIndicatorDimension,
+  type UploadMode,
 } from "@/composables/useRiskLogic";
 import {
   BASE_DIMENSION_PREFIXES,
@@ -25,7 +26,6 @@ const props = defineProps<{
   pcodeField: string;
   existingPcodes: string[];
   hazardPrefix: string;
-  /** Dimension keys already known to the app (e.g. "exp", "vul", "cop", plus any previously detected custom ones). */
   knownDimensions?: string[];
 }>();
 
@@ -37,9 +37,33 @@ const emit = defineEmits<{
       pcodeColumn: string;
       rows: Record<string, any>[];
       assignments: Record<string, CustomIndicatorDimension | "skip">;
+      mode: UploadMode;
     },
   ): void;
 }>();
+
+const UPLOAD_MODE_OPTIONS: {
+  value: UploadMode;
+  icon: string;
+  title: string;
+  description: string;
+}[] = [
+  {
+    value: "append",
+    icon: "mdi-plus-box-outline",
+    title: "Append custom sub-indicator",
+    description:
+      "Keep the current data and add your own column(s) as extra sub-indicators alongside it.",
+  },
+  {
+    value: "replace",
+    icon: "mdi-swap-horizontal",
+    title: "Replace entire indicator data",
+    description:
+      "Your file becomes the full indicator set. Risk is calculated from whichever dimensions you assign columns to - dimensions you skip are left out of the calculation.",
+  },
+  
+];
 
 const BASE_DIMENSION_OPTIONS = BASE_DIMENSION_PREFIXES.map(
   ({ prefix, label }) => ({
@@ -80,6 +104,7 @@ const dimensionOptions = computed(() => {
 type Step = "select" | "configure";
 
 const step = ref<Step>("select");
+const uploadMode = ref<UploadMode>("append");
 const selectedFile = ref<File | null>(null);
 const isDragging = ref(false);
 const isParsing = ref(false);
@@ -121,6 +146,17 @@ const missingRequiredDimensions = computed(() => {
 
 const hasAllRequiredDimensions = computed(
   () => missingRequiredDimensions.value.length === 0,
+);
+
+const hasAtLeastOneAssignment = computed(() =>
+  Object.values(assignments.value).some((v) => v !== "skip"),
+);
+
+// Neither mode requires covering every base dimension - risk is calculated from whichever
+// dimensions actually have assigned columns. At least one assigned column is still required so
+// there's something to upload.
+const canUpload = computed(
+  () => matchIsSufficient.value && hasAtLeastOneAssignment.value,
 );
 
 function detectPcodeColumn(columns: string[]): string | null {
@@ -218,16 +254,12 @@ function backToSelect() {
 }
 
 function handleUpload() {
-  if (
-    !pcodeColumn.value ||
-    !matchIsSufficient.value ||
-    !hasAllRequiredDimensions.value
-  )
-    return;
+  if (!pcodeColumn.value || !canUpload.value) return;
   emit("upload", {
     pcodeColumn: pcodeColumn.value,
     rows: parsedRows.value,
     assignments: assignments.value,
+    mode: uploadMode.value,
   });
   emit("close");
 }
@@ -296,6 +328,32 @@ function handleClearFile() {
       <v-card-text class="px-6 py-6">
         <transition v-if="step === 'select'" name="fade" mode="out-in">
           <div class="flex flex-col gap-5">
+            <div class="mode-options">
+              <button
+                v-for="opt in UPLOAD_MODE_OPTIONS"
+                :key="opt.value"
+                type="button"
+                class="mode-option"
+                :class="{ 'mode-option--active': uploadMode === opt.value }"
+                @click="uploadMode = opt.value"
+              >
+                <v-icon
+                  :icon="opt.icon"
+                  size="20"
+                  class="mr-2 mt-1"
+                  :color="uploadMode === opt.value ? 'heigit-red' : undefined"
+                />
+                <div class="text-left">
+                  <div class="text-body-2 font-weight-semibold">
+                    {{ opt.title }}
+                  </div>
+                  <div class="text-caption text-medium-emphasis">
+                    {{ opt.description }}
+                  </div>
+                </div>
+              </button>
+            </div>
+
             <v-alert
               v-if="parseError"
               type="error"
@@ -365,11 +423,13 @@ function handleClearFile() {
             :type="matchIsSufficient ? 'success' : 'error'"
             variant="tonal"
             density="compact"
-            class="mb-4"
+            class="mb-4 rounded-md p-3 gap-2 shadow-sm"
           >
             <span v-if="matchIsSufficient">
               {{ matchCount }}/{{ parsedRows.length }} PCODEs matched this
-              country's boundaries (using column "{{ pcodeColumn }}").
+              {{ selectedCountry }}'s boundaries (using column "{{
+                pcodeColumn
+              }}").
             </span>
             <span v-else>
               Only {{ matchCount }}/{{ parsedRows.length }} PCODEs matched
@@ -379,19 +439,40 @@ function handleClearFile() {
           </v-alert>
 
           <v-alert
-            v-if="matchIsSufficient && !hasAllRequiredDimensions"
+            v-if="matchIsSufficient && !hasAtLeastOneAssignment"
             type="warning"
             variant="tonal"
             density="compact"
-            class="mb-4"
+            class="mb-4 rounded-md p-3 gap-2 shadow-sm"
           >
-            Assign at least one column to each required dimension - missing:
-            {{ missingRequiredDimensions.map((d) => d.label).join(", ") }}.
+            Assign at least one column to a dimension before uploading.
+          </v-alert>
+
+          <v-alert
+            v-else-if="
+              matchIsSufficient &&
+              uploadMode === 'replace' &&
+              !hasAllRequiredDimensions
+            "
+            type="info"
+            variant="tonal"
+            density="compact"
+            class="mb-4 rounded-md p-3 gap-2 shadow-sm"
+          >
+            No column assigned to: {{
+              missingRequiredDimensions.map((d) => d.label).join(", ")
+            }}. Risk will be calculated from the dimension(s) you did assign.
           </v-alert>
 
           <p class="text-caption text-medium-emphasis mb-3">
-            Assign each column to a risk dimension so it can be weighted in the
-            model. Columns left as "Skip" are ignored.
+            <template v-if="uploadMode === 'replace'">
+              Assign each column to a risk dimension so it can be weighted in
+              the model. Columns left as "Skip" are ignored.
+            </template>
+            <template v-else>
+              Assign the column(s) you want to add as custom sub-indicators to a
+              dimension. Columns left as "Skip" are ignored.
+            </template>
           </p>
 
           <div
@@ -441,7 +522,7 @@ function handleClearFile() {
         <v-btn
           v-if="step === 'configure'"
           color="primary"
-          :disabled="!matchIsSufficient || !hasAllRequiredDimensions"
+          :disabled="!canUpload"
           @click="handleUpload"
         >
           Upload
@@ -468,6 +549,31 @@ function handleClearFile() {
 }
 
 .upload-dropzone--active {
+  border-color: #ca2333;
+  background-color: #fdf2f3;
+}
+
+.mode-options {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.mode-option {
+  display: flex;
+  align-items: flex-start;
+  text-align: left;
+  padding: 0.75rem 1rem;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 12px;
+  background: #fff;
+  cursor: pointer;
+  transition:
+    border-color 0.2s ease,
+    background-color 0.2s ease;
+}
+
+.mode-option--active {
   border-color: #ca2333;
   background-color: #fdf2f3;
 }

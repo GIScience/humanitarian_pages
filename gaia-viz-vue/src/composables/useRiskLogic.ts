@@ -10,7 +10,6 @@ import {
 } from "../utils/riskCalculation";
 import {
   DimensionPrefix,
-  DIMENSION_PREFIX_VALUES,
   isRiskViewMode,
   type RiskViewMode,
 } from "../enums/dimensions";
@@ -21,15 +20,46 @@ export type { RiskViewMode };
 // A dimension key ("exp" | "vul" | "cop") custom prefix detected from column names), or "skip".
 export type CustomIndicatorDimension = string;
 
+
+export type UploadMode = "replace" | "append";
+
 export interface CustomUploadPayload {
   pcodeColumn: string;
   rows: Record<string, any>[];
   assignments: Record<string, CustomIndicatorDimension | "skip">;
+  mode?: UploadMode;
 }
 
 const CUSTOM_UPLOAD_MATCH_THRESHOLD = 0.9;
 const customUploadStorageKey = (countryCode: string) =>
   `gaia-custom-upload:${countryCode}`;
+
+// Stored as an array so "append" uploads can stack on top of one another across reloads.
+// A "replace" upload starts the array over, since it wipes everything that came before it.
+// Older saves are a single payload object rather than an array - normalize on read.
+function readStoredUploads(countryCode: string): CustomUploadPayload[] {
+  try {
+    const saved = localStorage.getItem(customUploadStorageKey(countryCode));
+    if (!saved) return [];
+    const parsed = JSON.parse(saved);
+    return Array.isArray(parsed) ? parsed : [parsed];
+  } catch {
+    return [];
+  }
+}
+
+function persistCustomUpload(countryCode: string, payload: CustomUploadPayload) {
+  try {
+    const priorUploads =
+      payload.mode === "replace" ? [] : readStoredUploads(countryCode);
+    localStorage.setItem(
+      customUploadStorageKey(countryCode),
+      JSON.stringify([...priorUploads, payload]),
+    );
+  } catch (err) {
+    console.warn("Could not persist custom upload to localStorage", err);
+  }
+}
 
 export function sanitizeIndicatorName(name: string) {
   const cleaned = name
@@ -266,6 +296,7 @@ export function useRiskLogic() {
     options: { persist?: boolean } = {},
   ): { success: boolean; error?: string } {
     uploadError.value = null;
+    const mode: UploadMode = payload.mode ?? "replace";
 
     if (!lastLoadedData.value.length || !pcodeField.value) {
       const message = "Select a country before uploading custom data.";
@@ -306,27 +337,18 @@ export function useRiskLogic() {
       return { success: false, error: message };
     }
 
-    // The upload replaces every dimension's sub-indicators wholesale, so it must supply data for
-    // every required dimension (exp/vul/cop, or any future addition to dimensions.ts) - otherwise
-    // an untouched dimension would end up with zero indicators and the risk score could never be
-    // computed. UploadModal.vue already blocks this in the UI; this is the same check as a
-    // server-side safety net for reapplied/saved payloads.
-    const assignedDimensions = new Set(columnAssignments.map(([, dim]) => dim));
-    const missingDimensions = DIMENSION_PREFIX_VALUES.filter(
-      (dim) => !assignedDimensions.has(dim),
-    );
-    if (missingDimensions.length > 0) {
-      const message = `Assign at least one column to each required dimension. Missing: ${missingDimensions.join(", ")}.`;
-      uploadError.value = message;
-      return { success: false, error: message };
-    }
+    // A "replace" upload no longer has to cover every base dimension (exp/vul/cop) - risk is
+    // computed as the geometric mean of whichever dimensions actually have assigned columns (see
+    // calculateDynamicRisk's presentDims). A dimension left with zero indicators simply drops out
+    // of that calculation instead of blocking the upload.
 
     const { hazardPrefix } = store.dimensionColumns;
 
-    // The uploaded CSV becomes the entire indicator set, not a patch on top of the existing one -
-    // strip every current sub-indicator (default parquet columns and any earlier custom upload)
-    // so only what this file provides remains. Non-indicator columns (pcode, admin name, the
-    // disaster's risk_/ranking_ columns) are left untouched.
+    // "replace": the uploaded CSV becomes the entire indicator set, not a patch on top of the
+    // existing one - strip every current sub-indicator (default parquet columns and any earlier
+    // custom upload) so only what this file provides remains. Non-indicator columns (pcode,
+    // admin name, the disaster's risk_/ranking_ columns) are left untouched either way.
+    // "append": keep every existing column and only add the newly assigned ones alongside it.
     const customDimensionPrefixes = discoverCustomDimensionPrefixes(
       rawOriginalData.value,
     );
@@ -336,15 +358,18 @@ export function useRiskLogic() {
       col.startsWith("cop_") ||
       customDimensionPrefixes.some((p) => col.startsWith(`${p}_`));
 
-    const strippedRawData = rawOriginalData.value.map(
-      (row: Record<string, any>) => {
-        const clone: Record<string, any> = {};
-        for (const [key, value] of Object.entries(row)) {
-          if (!isIndicatorColumn(key)) clone[key] = value;
-        }
-        return clone;
-      },
-    );
+    const strippedRawData =
+      mode === "replace"
+        ? rawOriginalData.value.map((row: Record<string, any>) => {
+            const clone: Record<string, any> = {};
+            for (const [key, value] of Object.entries(row)) {
+              if (!isIndicatorColumn(key)) clone[key] = value;
+            }
+            return clone;
+          })
+        : rawOriginalData.value.map((row: Record<string, any>) => ({
+            ...row,
+          }));
 
     const usedNames = new Set(Object.keys(strippedRawData[0] || {}));
     const columnNameMap = new Map<string, string>();
@@ -365,9 +390,9 @@ export function useRiskLogic() {
     }
     rawOriginalData.value = strippedRawData;
 
-    // Weights reset to exactly the uploaded columns - tuning for indicators that no longer exist
-    // is meaningless once the upload has replaced them.
-    const newWeights: Record<string, number> = {};
+
+    const newWeights: Record<string, number> =
+      mode === "append" ? { ...indicatorWeights.value } : {};
     for (const newColumn of columnNameMap.values()) {
       newWeights[newColumn] = 1.0;
     }
@@ -375,31 +400,23 @@ export function useRiskLogic() {
     loadAndCalculateWithWeights(newWeights);
 
     if (options.persist !== false && lastLoadedCountry.value) {
-      try {
-        localStorage.setItem(
-          customUploadStorageKey(lastLoadedCountry.value),
-          JSON.stringify(payload),
-        );
-      } catch (err) {
-        console.warn("Could not persist custom upload to localStorage", err);
-      }
+      persistCustomUpload(lastLoadedCountry.value, { ...payload, mode });
     }
 
     return { success: true };
   }
 
   function reapplySavedCustomUpload(countryCode: string) {
-    try {
-      const saved = localStorage.getItem(customUploadStorageKey(countryCode));
-      if (!saved) return;
-      const payload = JSON.parse(saved) as CustomUploadPayload;
+    const uploads = readStoredUploads(countryCode);
+    if (!uploads.length) return;
+    let appliedAny = false;
+    for (const payload of uploads) {
       const result = mergeCustomIndicators(payload, { persist: false });
-      if (result.success) {
-        pendingCustomDataCountry.value = countryCode;
-        showCustomDataInfo.value = true;
-      }
-    } catch (err) {
-      console.warn("Could not reapply saved custom upload", err);
+      if (result.success) appliedAny = true;
+    }
+    if (appliedAny) {
+      pendingCustomDataCountry.value = countryCode;
+      showCustomDataInfo.value = true;
     }
   }
 

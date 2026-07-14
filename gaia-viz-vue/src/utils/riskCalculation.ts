@@ -167,25 +167,30 @@ export function calculateDynamicRisk(
             }
         }
 
+        // A dimension with no assigned columns (dimW <= 0) is dropped from the susceptibility
+        // score rather than treated as 0 - a custom upload isn't required to cover every base
+        // dimension, so susceptibility is the geometric mean of whichever dimensions actually
+        // have data for this row.
         const dimScore: Record<string, number> = {};
-        let allDimsPresent = susceptibilityDims.length > 0;
+        const presentDims: string[] = [];
         for (const dim of susceptibilityDims) {
             const w = dimW[dim] ?? 0;
-            dimScore[dim] = w > 0 ? (dimSum[dim] ?? 0) / w : 0;
+            if (w <= 0) continue;
+            dimScore[dim] = (dimSum[dim] ?? 0) / w;
             row[dim] = dimScore[dim];
-            if (w <= 0) allDimsPresent = false;
+            presentDims.push(dim);
         }
 
         let susScore = 0;
-        if (allDimsPresent) {
-            const product = susceptibilityDims.reduce((acc, dim) => acc * dimScore[dim], 1);
-            susScore = Math.pow(product, 1 / susceptibilityDims.length);
+        if (presentDims.length > 0) {
+            const product = presentDims.reduce((acc, dim) => acc * dimScore[dim], 1);
+            susScore = Math.pow(product, 1 / presentDims.length);
         }
 
         if (floodW > 0) {
             let expFloScore = floodSum / floodW;
             row['exp_flood'] = expFloScore;
-            if (allDimsPresent) {
+            if (presentDims.length > 0) {
                 row['sus_flood'] = susScore;
                 row['risk_flood'] = Math.sqrt(expFloScore * susScore);
             }
@@ -193,7 +198,7 @@ export function calculateDynamicRisk(
         if (cycloneW > 0) {
             let expCycScore = cycloneSum / cycloneW;
             row['exp_cyclone'] = expCycScore;
-            if (allDimsPresent) {
+            if (presentDims.length > 0) {
                 row['sus_cyclone'] = susScore;
                 row['risk_cyclone'] = Math.sqrt(expCycScore * susScore);
             }
