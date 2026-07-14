@@ -426,11 +426,13 @@ defineExpose({
     <transition name="fade">
       <div
         v-if="pmtilesUrl"
-        class="absolute z-[60] bg-white/90 backdrop-blur-md rounded-lg shadow-sm flex flex-col gap-2"
         :class="
-          props.isMobile
-            ? 'bottom-32 left-4 w-40 px-2 py-1.5'
-            : 'top-8 left-4 w-60 px-3 py-2 rounded-2xl'
+          cn(
+            'absolute z-[60] left-4 flex flex-col gap-2 rounded-lg bg-white/90 shadow-sm backdrop-blur-md',
+            props.isMobile
+              ? ' bottom-36 w-45 px-2 py-1.5'
+              : 'top-8 w-60 rounded-2xl px-3 py-2',
+          )
         "
       >
         <div v-if="riskViewMode" class="flex flex-col">
@@ -440,19 +442,25 @@ defineExpose({
               @click="isLayersCollapsed = !isLayersCollapsed"
             >
               <label
-                class="block text-slate-500 font-bold uppercase tracking-widest whitespace-nowrap"
-                :class="props.isMobile ? 'text-[8px]' : 'text-[11px]'"
+                :class="
+                  cn(
+                    'block font-bold uppercase tracking-widest whitespace-nowrap text-slate-500',
+                    props.isMobile ? 'text-[8px]' : 'text-[11px]',
+                  )
+                "
               >
                 Layers:
               </label>
               <div class="flex items-center gap-1">
                 <span
                   v-if="isViewingCustomData"
-                  class="rounded-full bg-heigit-red/10 text-heigit-red font-extrabold uppercase tracking-wider whitespace-nowrap"
                   :class="
-                    props.isMobile
-                      ? 'px-1.5 py-0.5 text-[7px]'
-                      : 'px-2 py-0.5 text-[8px]'
+                    cn(
+                      'rounded-full bg-heigit-red/10 font-extrabold uppercase tracking-wider whitespace-nowrap text-heigit-red',
+                      props.isMobile
+                        ? 'px-1.5 py-0.5 text-[7px]'
+                        : 'px-2 py-0.5 text-[8px]',
+                    )
                   "
                   title="This layer is built from your uploaded custom data"
                 >
@@ -460,7 +468,7 @@ defineExpose({
                 </span>
                 <button
                   type="button"
-                  class="text-slate-500 hover:text-heigit-red transition-colors"
+                  class="text-slate-500 transition-colors hover:text-heigit-red"
                   :title="
                     isLayersCollapsed ? 'Expand layers' : 'Minimize layers'
                   "
@@ -474,20 +482,23 @@ defineExpose({
                 </button>
               </div>
             </button>
+
             <div v-if="!isLayersCollapsed" class="flex flex-col gap-2">
               <button
                 v-for="dimension in dimensions"
                 :key="dimension.value"
                 @click="selectDimension(dimension.value)"
-                class="rounded flex items-center justify-between text-left font-bold transition-colors whitespace-nowrap"
-                :class="[
-                  props.isMobile
-                    ? 'px-1.5 py-0.5 text-[9px]'
-                    : 'px-2 py-2 text-xs',
-                  riskViewMode === dimension.value
-                    ? 'bg-heigit-red text-white'
-                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200',
-                ]"
+                :class="
+                  cn(
+                    'flex items-center justify-between rounded text-left font-bold transition-colors whitespace-nowrap',
+                    props.isMobile
+                      ? 'px-1.5 py-0.5 text-[9px]'
+                      : 'px-2 py-2 text-xs',
+                    riskViewMode === dimension.value
+                      ? 'bg-heigit-red text-white'
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200',
+                  )
+                "
               >
                 <div class="flex items-center gap-2">
                   <v-icon :icon="dimension.icon" size="18" />
@@ -500,23 +511,27 @@ defineExpose({
                   :class="
                     cn(
                       'ml-1 text-heigit-red',
-                      riskViewMode === dimension.value
-                        ? 'text-white'
-                        : 'text-heigit-red',
+                      riskViewMode === dimension.value && 'text-white',
                     )
                   "
                 />
               </button>
+
               <v-divider class="my-2 bg-slate-200/70" />
+
               <div class="flex flex-col gap-1.5">
                 <label
-                  class="block text-slate-500 font-bold uppercase tracking-widest whitespace-nowrap"
-                  :class="props.isMobile ? 'text-[8px]' : 'text-[9px]'"
+                  :class="
+                    cn(
+                      'block font-bold uppercase tracking-widest whitespace-nowrap text-slate-500',
+                      props.isMobile ? 'text-[8px]' : 'text-[9px]',
+                    )
+                  "
                 >
                   Opacity:
-                  <span class="text-slate-700 font-extrabold"
-                    >{{ Math.round(layerOpacity * 100) }}%</span
-                  >
+                  <span class="font-extrabold text-slate-700">
+                    {{ Math.round(layerOpacity * 100) }}%
+                  </span>
                 </label>
                 <input
                   type="range"
@@ -524,8 +539,12 @@ defineExpose({
                   max="1"
                   step="0.05"
                   v-model.number="layerOpacity"
-                  class="bg-slate-200 rounded-lg appearance-none cursor-pointer accent-heigit-red"
-                  :class="props.isMobile ? 'w-full h-1' : 'w-full h-1.5'"
+                  :class="
+                    cn(
+                      'w-full cursor-pointer appearance-none rounded-lg bg-slate-200 accent-heigit-red',
+                      props.isMobile ? 'h-1' : 'h-1.5',
+                    )
+                  "
                 />
               </div>
             </div>

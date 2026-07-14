@@ -81,6 +81,7 @@ function handleUpload(payload: Parameters<typeof mergeCustomIndicators>[0]) {
 
         <button
           @click="router.push('/story-map/flood-exposure')"
+          disabled
           class="px-5 py-2 rounded-full bg-slate-50 border border-slate-100 text-[12px] font-bold text-slate-500 hover:text-heigit-red hover:border-heigit-red transition-all cursor-pointer"
         >
           See Story Map

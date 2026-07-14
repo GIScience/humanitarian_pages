@@ -20,7 +20,9 @@ const {
   viewMode,
   showAboutModal,
   countries,
-  selectedCountryName
+  selectedCountryName,
+  riskViewMode,
+  riskViewLabel
 } = useRiskLogic();
 
 const mapRef = ref<InstanceType<typeof RiskMap> | null>(null);
@@ -73,7 +75,10 @@ function selectDisaster(disaster: string) {
         :availableCountries="countries.map(c => c.code)"
         :showZoomControls="false"
         :is-mobile="true"
+        :risk-view-mode="riskViewMode"
+        :legend-title="riskViewLabel"
         @country-click="selectedCountry = $event"
+        @update:riskViewMode="riskViewMode = $event"
       />
       
       <!-- Selection Controls Overlay -->
@@ -191,8 +196,6 @@ function selectDisaster(disaster: string) {
         </div>
       </div>
     </transition>
-
-    <RiskFooter :is-mobile="true" />
 
     <transition name="fade">
       <AboutModal v-if="showAboutModal" @close="showAboutModal = false" />
