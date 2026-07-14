@@ -12,6 +12,7 @@ import TableTab from "@/components/dashboard/statistics/TableTab.vue";
 const props = defineProps<{
   data: any[];
   selectedDisaster: string;
+  selectedCountry: string;
   pcodeField: string;
   indicatorWeights: Record<string, number>;
   isMobile?: boolean;

@@ -178,7 +178,8 @@ function selectDisaster(disaster: string) {
                <RiskStatistics 
                   v-if="lastLoadedData.length > 0 && selectedDisaster"
                   :data="lastLoadedData" 
-                  :selected-disaster="selectedDisaster" 
+                  :selected-disaster="selectedDisaster"
+                  :selected-country="selectedCountry" 
                   :indicator-weights="indicatorWeights"
                   :pcode-field="pcodeField" 
                   :is-mobile="true"

@@ -269,7 +269,8 @@ function handleDownloadTemplate() {
     [],
     selectedCountryPcodeFieldMap.value,
     "ADM2_PCODE",
-    `${selectedCountry.value ?? "country"}_custom_Indicator_template.csv`,
+    `custom_Indicator_template`,
+    selectedCountry.value
   );
 }
 

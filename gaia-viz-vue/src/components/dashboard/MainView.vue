@@ -217,6 +217,7 @@ function handleUpload(payload: Parameters<typeof mergeCustomIndicators>[0]) {
                 v-if="lastLoadedData.length > 0 && selectedDisaster"
                 :data="lastLoadedData"
                 :selected-disaster="selectedDisaster"
+                :selected-country="selectedCountry"
                 :indicator-weights="indicatorWeights"
                 :pcode-field="pcodeField"
                 @update:indicatorWeights="indicatorWeights = $event"

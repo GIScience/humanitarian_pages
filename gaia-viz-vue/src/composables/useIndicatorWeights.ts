@@ -1,9 +1,11 @@
 import { ref, watch, type ComputedRef } from "vue";
 import type { DimensionGroup } from "@/composables/useIndicatorColumns";
+import { generateFilename } from "@/utils/filenameGenerator";
 
 interface IndicatorWeightsProps {
   indicatorWeights: Record<string, number>;
   selectedDisaster: string;
+  selectedCountry: string;
 }
 
 interface IndicatorWeightsEmit {
@@ -18,7 +20,6 @@ function getRawName(col: string, category: string): string {
   }
   return col.replace(new RegExp(`^${category}_`), "");
 }
-
 
 export function useIndicatorWeights(
   props: IndicatorWeightsProps,
@@ -79,7 +80,9 @@ export function useIndicatorWeights(
   }
 
   function isGroupActive(columns: string[]) {
-    return columns.length === 0 || columns.every((c) => isSubIndicatorActive(c));
+    return (
+      columns.length === 0 || columns.every((c) => isSubIndicatorActive(c))
+    );
   }
 
   function toggleGroup(columns: string[]) {
@@ -109,7 +112,11 @@ export function useIndicatorWeights(
   function downloadWeightsCSV() {
     let csvContent = "variable_name,category,weight,direction,activated\n";
 
-    const processCols = (cols: string[], category: string, direction: number) => {
+    const processCols = (
+      cols: string[],
+      category: string,
+      direction: number,
+    ) => {
       cols.forEach((col) => {
         const rawName = getRawName(col, category);
         const weight = getWeight(col);
@@ -118,7 +125,6 @@ export function useIndicatorWeights(
       });
     };
 
-  
     indicatorDimensionGroups.value.forEach((dim) => {
       if (dim.cols.length > 0)
         processCols(dim.cols, dim.key, dim.key === "cop" ? -1 : 1);
@@ -128,7 +134,10 @@ export function useIndicatorWeights(
     const link = document.createElement("a");
     const url = URL.createObjectURL(blob);
     link.setAttribute("href", url);
-    link.setAttribute("download", `weights_${props.selectedDisaster}.csv`);
+    link.setAttribute(
+      "download",
+      `${generateFilename(`Weights_${props.selectedDisaster}`, props.selectedCountry, "csv")}`,
+    );
     link.style.visibility = "hidden";
     document.body.appendChild(link);
     link.click();
