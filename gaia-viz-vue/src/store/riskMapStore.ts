@@ -4,9 +4,7 @@ import {
   getRiskDimension,
   type RiskDimensionConfig,
 } from "@/enums/dimensions";
-import {
-  getDimensionColumns
-} from "@/utils/riskCalculation";
+import { getDimensionColumns } from "@/utils/riskCalculation";
 import type { Country } from "@/services/dataService";
 
 export const useRiskMapStore = defineStore("riskMap", {
@@ -147,6 +145,7 @@ export const useRiskMapStore = defineStore("riskMap", {
       this.uploadError = null;
       this.showCustomDataInfo = false;
       this.pendingCustomDataCountry = null;
+      this.showAnalysis = true;
     },
 
     // Reset the store to its initial state when returning to the home view

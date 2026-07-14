@@ -116,6 +116,25 @@ function handleMapLoad(mapInstance: maplibregl.Map) {
       : ["==", "iso_a3", "DOES_NOT_EXIST"],
   });
 
+  mapInstance.addLayer({
+    id: interactLayerId + "-outline",
+    type: "line",
+    source: "world",
+    paint: {
+      "line-color": "#ca2333",
+      "line-width": 1,
+      "line-opacity": [
+        "case",
+        ["boolean", ["feature-state", "hover"], false],
+        4, // hover  -> full
+        0.2, // default -> visible but subdued
+      ],
+    },
+    filter: isLoaded
+      ? ["in", ["get", "iso_a3"], ["literal", validCountries]]
+      : ["==", "iso_a3", "DOES_NOT_EXIST"],
+  });
+
   updateLayer();
 
   const popup = new maplibregl.Popup({

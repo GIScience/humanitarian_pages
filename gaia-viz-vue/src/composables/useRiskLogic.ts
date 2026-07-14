@@ -438,6 +438,7 @@ export function useRiskLogic() {
   watch(selectedCountry, (newVal) => {
     syncRoute();
     updateCountryData(newVal);
+    
   });
 
   watch(selectedDisaster, (newVal) => {
