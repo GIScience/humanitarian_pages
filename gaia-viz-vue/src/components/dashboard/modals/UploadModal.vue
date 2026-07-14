@@ -67,8 +67,6 @@ function isReservedColumn(column: string): boolean {
   return RESERVED_UPLOAD_COLUMN_NAMES.has(column.trim().toLowerCase());
 }
 
-// Only dimensions the dashboard already recognizes (the base exp/vul/cop prefixes, plus any custom
-// prefix already detected in the loaded dataset) can be selected - uploads never create new ones.
 const dimensionOptions = computed(() => {
   const extra = (props.knownDimensions ?? [])
     .filter(
@@ -114,14 +112,6 @@ const assignableColumns = computed(() =>
   parsedColumns.value.filter((c) => c !== pcodeColumn.value),
 );
 
-const hasAnyAssignment = computed(() =>
-  Object.values(assignments.value).some((v) => v !== "skip"),
-);
-
-// A custom upload replaces every dimension's sub-indicators wholesale, so it must cover all of
-// them - otherwise a dimension the CSV left untouched would end up with zero indicators and the
-// risk score (and Ranking tab) could never be computed. Sourced from BASE_DIMENSION_OPTIONS so a
-// new dimension added to dimensions.ts is automatically required here too.
 const missingRequiredDimensions = computed(() => {
   const assignedDims = new Set(
     Object.values(assignments.value).filter((v) => v !== "skip"),
@@ -173,9 +163,6 @@ async function parseFile(file: File) {
       return;
     }
 
-    // "ranking..." columns are reserved for the read-only Ranking tab, and bare dimension /
-    // dimension+hazard names are reserved for computed composite scores - neither can ever be
-    // uploaded as custom data.
     const selectableColumns = columns.filter(
       (c) => !isRankingColumn(c) && !isReservedColumn(c),
     );

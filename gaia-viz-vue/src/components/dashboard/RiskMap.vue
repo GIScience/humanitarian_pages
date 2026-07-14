@@ -4,7 +4,6 @@ import maplibregl from "maplibre-gl";
 import * as pmtiles from "pmtiles";
 import { storeToRefs } from "pinia";
 import Map from "@/components/map/map.vue";
-import MapZoomControl from "@/components/map/MapZoomControl.vue";
 import RiskLegend from "@/components/dashboard/RiskLegend.vue";
 import { useRiskMapStore } from "@/store/riskMapStore";
 import { cn } from "@/utils/cn";
@@ -28,15 +27,18 @@ const emit = defineEmits<{
   (e: "country-click", code: string): void;
   (e: "toggle-analysis"): void;
   (e: "update:riskViewMode", value: RiskViewMode): void;
+  (e: "click:info"): void;
 }>();
 
+const DEFAULT_CENTER: [number, number] = [0, 20];
+const DEFAULT_ZOOM = 1.5;
 
 const activeDimension = computed(() =>
   dimensions.value.find((d) => d.value === props.riskViewMode),
 );
 const isViewingCustomData = computed(() => !!activeDimension.value?.isCustom);
 
-const mapViewRef = ref<InstanceType<typeof MapView> | null>(null);
+const mapViewRef = ref<InstanceType<typeof Map> | null>(null);
 const map = computed<maplibregl.Map | null>(
   () => mapViewRef.value?.map ?? null,
 );

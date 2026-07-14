@@ -8,7 +8,7 @@ import {
 } from "@geomatico/maplibre-cog-protocol";
 import { useRasterMapLayer } from "@/composables/use-raster-map-layer";
 import { toRgba } from "@/utils/geo/color-ramp";
-import type { RgbaColor, CategoryStyle } from "@/utils/geo/color-ramp";
+import type { CategoryStyle, RgbaColor } from "@/utils/geo/color-ramp";
 
 const props = withDefaults(
   defineProps<{

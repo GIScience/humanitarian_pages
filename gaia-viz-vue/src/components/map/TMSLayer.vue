@@ -13,7 +13,6 @@ const props = withDefaults(
     scheme?: "tms" | "xyz";
     tileSize?: number;
     minZoom?: number;
-    ddd;
     maxZoom?: number;
     bounds?: [number, number, number, number];
     attribution?: string;

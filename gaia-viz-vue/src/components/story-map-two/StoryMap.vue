@@ -3,7 +3,6 @@ import { computed } from "vue";
 import type { StoryMapConfig } from "@/types/story-map";
 import { useScrollSpy } from "@/composables/useScrollSpy";
 import StoryMapNavbar from "./StoryMapNavbar.vue";
-import StoryEquation from "./StoryEquation.vue";
 import StorySection from "./StorySection.vue";
 import StoryCallouts from "./StoryCallouts.vue";
 import Icon from "./Icon.vue";

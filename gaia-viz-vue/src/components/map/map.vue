@@ -3,7 +3,6 @@ import { watch } from "vue";
 import type maplibregl from "maplibre-gl";
 import useMapInstance from "@/composables/use-map-instance";
 import MapZoomControl from "@/components/map/zoom-control.vue";
-import BaseMapControl from "@/components/map/basemap-control.vue";
 import "maplibre-gl/dist/maplibre-gl.css";
 
 const props = withDefaults(

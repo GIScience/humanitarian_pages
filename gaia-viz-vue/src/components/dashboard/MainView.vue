@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from "vue";
+import { reactive, ref } from "vue";
 import { useRouter } from "vue-router";
 import PageLayout from "@/layout/PageLayout.vue";
 import DashboardControlBar from "@/components/dashboard/DashboardControlBar.vue";
@@ -10,6 +10,7 @@ import UploadModal from "@/components/dashboard/modals/UploadModal.vue";
 import MetadataModal from "@/components/dashboard/modals/MetadataModal.vue";
 import FloatingLogo from "@/components/FloatingLogo.vue";
 import { useRiskLogic } from "@/composables/useRiskLogic";
+import { useIndicatorColumns } from "@/composables/useIndicatorColumns";
 import CustomDataInfo from "@/components/dashboard/modals/CustomDataInfo.vue";
 
 const router = useRouter();
@@ -38,12 +39,19 @@ const {
   countries,
   selectedCountryName,
   existingPcodes,
-  customDimensionKeys,
   mergeCustomIndicators,
   keepCustomData,
   discardCustomData,
   goHome,
 } = useRiskLogic();
+
+const { customDimensionKeys } = useIndicatorColumns(
+  reactive({
+    data: lastLoadedData,
+    selectedDisaster,
+    pcodeField,
+  }),
+);
 
 const mapRef = ref<InstanceType<typeof RiskMap> | null>(null);
 const showMetadataModal = ref(false);

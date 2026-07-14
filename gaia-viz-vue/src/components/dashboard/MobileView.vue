@@ -4,7 +4,6 @@ import RiskMap from '@/components/dashboard/RiskMap.vue';
 import RiskStatistics from '@/components/dashboard/RiskStatistics.vue';
 import AboutModal from '@/components/dashboard/modals/AboutModal.vue';
 import FloatingLogo from '@/components/FloatingLogo.vue';
-import RiskLegend from '@/components/dashboard/RiskLegend.vue';
 import { useRiskLogic } from '@/composables/useRiskLogic';
 
 const {

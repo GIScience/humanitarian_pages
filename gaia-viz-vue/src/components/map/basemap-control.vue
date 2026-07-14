@@ -1,22 +1,18 @@
 <script setup lang="ts">
-import { ref, watch, onBeforeUnmount } from "vue";
+import { ref } from "vue";
 import type maplibregl from "maplibre-gl";
 
 export interface BasemapOption {
   id: string;
   label: string;
-  /** MapLibre style URL or Style Specification object */
   style: string | maplibregl.StyleSpecification;
 }
 
 const props = withDefaults(
   defineProps<{
     map: maplibregl.Map | null;
-    /** Standard MapLibre control positions */
     position?: "top-left" | "top-right" | "bottom-left" | "bottom-right";
-    /** Array of basemaps available for selection */
     options?: BasemapOption[];
-    /** Default selected style ID */
     defaultStyleId?: string;
   }>(),
   {

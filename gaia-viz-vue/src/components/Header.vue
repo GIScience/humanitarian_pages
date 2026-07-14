@@ -15,7 +15,6 @@ withDefaults(
   },
 );
 
-const navLinks = [{ name: "HeiGIT", href: "https://heigit.org" }];
 </script>
 
 <template>

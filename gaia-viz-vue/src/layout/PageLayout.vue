@@ -3,7 +3,6 @@ import { watchEffect } from "vue";
 import Header from "@/components/Header.vue";
 import Footer from "@/components/Footer.vue";
 
-const SITE_NAME = "";
 const DEFAULT_DESCRIPTION =
   "Visualizing risk potential of natural hazards using open humanitarian data.";
 

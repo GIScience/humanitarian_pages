@@ -1,21 +1,18 @@
 <script setup lang="ts">
-import type { MapConfig, Legend, layerConfigType } from "@/types/story-map";
+import type { Legend, layerConfigType } from "@/types/story-map";
 import StoryMapCanvas from "@/components/story-map/StoryMapCanvas.vue";
-import StoryLegend from "./StoryLegend.vue";
-import StoryResults from "./StoryResults.vue";
-import Icon from "./Icon.vue";
 
 defineProps<{ layer?: layerConfigType; legend?: Legend }>();
 </script>
 
 <template>
   <div class="relative min-h-[16rem] bg-[#f3f4f2]">
-    <slot :layer-id="layer.layerId">
+    <slot :layer-id="layer?.layerId">
       <div
         class="absolute inset-0 flex items-center justify-center text-xs text-gray-300"
-        :data-layer-id="layer.layerId"
+        :data-layer-id="layer?.layerId"
       >
-        Map layer: {{ layer.layerId }}
+        Map layer: {{ layer?.layerId }}
       </div>
     </slot>
 

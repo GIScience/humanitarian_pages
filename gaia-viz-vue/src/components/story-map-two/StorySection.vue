@@ -4,16 +4,12 @@ import type { Section } from "@/types/story-map";
 import { useReveal } from "@/composables/useReveal";
 import StoryControl from "./StoryControl.vue";
 import StoryMapPanel from "./StoryMapPanel.vue";
-import StoryLegend from "./StoryLegend.vue";
 import Icon from "./Icon.vue";
 import type { layerConfigType } from "@/types/story-map";
 
 const props = defineProps<{ section: Section }>();
 const el = ref<HTMLElement | null>(null);
 const { revealed } = useReveal(el);
-
-const legend = computed(() => props.section.legend ?? props.section.map.legend);
-const legendInColumn = computed(() => Boolean(props.section.legend));
 
 const defaultLayerConfig = computed(() =>
   props.section.control?.type === "segmented"

@@ -3,8 +3,6 @@ defineEmits<{
   (e: "toggle"): void;
 }>();
 
-const openLink = (url: string) =>
-  window.open(url, "_blank", "noopener,noreferrer");
 </script>
 
 <template>

@@ -2,7 +2,6 @@
 import { onBeforeUnmount, onMounted, ref } from "vue";
 import Map from "@/components/map/map.vue";
 import COGLayer from "@/components/map/COGLayer.vue";
-import TMSLayer from "@/components/map/TMSLayer.vue";
 const props = withDefaults(
   defineProps<{
     center?: [number, number];

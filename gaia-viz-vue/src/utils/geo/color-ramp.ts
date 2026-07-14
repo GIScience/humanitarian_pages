@@ -1,9 +1,7 @@
-type RgbaColor = [number, number, number, number];
+export type RgbaColor = [number, number, number, number];
 
-/** A category can be given as a hex string, an RGBA tuple, or a { color, label } object. */
-type CategoryStyle = string | RgbaColor | { color: string; label?: string };
+export type CategoryStyle = string | RgbaColor | { color: string; label?: string };
 
-// A handful of sequential Brewer/Carto-style ramps, enough to color single-band rasters.
 export const COLOR_SCHEMES: Record<string, string[]> = {
   Blues: ["#f7fbff", "#c6dbef", "#6baed6", "#2171b5", "#08306b"],
   Reds: ["#fff5f0", "#fcbba1", "#fb6a4a", "#cb181d", "#67000d"],
@@ -34,41 +32,3 @@ export function toRgba(style: CategoryStyle): RgbaColor {
   if (Array.isArray(style)) return style;
   return hexToRgba(style.color);
 }
-
-// export const createColorRamp = ({
-//   colorScheme,
-//   min,
-//   max,
-//   continuous = false,
-//   reverse = false,
-// }: {
-//   colorScheme?: string;
-//   min: number;
-//   max: number;
-//   continuous?: boolean;
-//   reverse?: boolean;
-// }) => {
-//   const hexColors = (colorScheme && COLOR_SCHEMES[colorScheme]) || COLOR_SCHEMES.Blues;
-//   const stops = (reverse ? [...hexColors].reverse() : hexColors).map(hexToRgb);
-//   const span = max - min || 1;
-//   const n = stops.length;
-
-//   return (value: number): Rgb => {
-//     const t = Math.min(1, Math.max(0, (value - min) / span));
-
-//     if (!continuous) {
-//       return stops[Math.min(n - 1, Math.floor(t * n))];
-//     }
-
-//     const scaled = t * (n - 1);
-//     const i = Math.min(n - 2, Math.floor(scaled));
-//     const localT = scaled - i;
-//     const [r0, g0, b0] = stops[i];
-//     const [r1, g1, b1] = stops[i + 1];
-//     return [
-//       Math.round(r0 + (r1 - r0) * localT),
-//       Math.round(g0 + (g1 - g0) * localT),
-//       Math.round(b0 + (b1 - b0) * localT),
-//     ];
-//   };
-// };
