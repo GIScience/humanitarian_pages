@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import { ref } from 'vue';
-import RiskMap from '../components/RiskMap.vue';
-import RiskStatistics from '../components/RiskStatistics.vue';
-import AboutModal from '../components/AboutModal.vue';
-import FloatingLogo from '../components/FloatingLogo.vue';
-import RiskFooter from '../components/RiskFooter.vue';
-import { useRiskLogic } from '../composables/useRiskLogic';
+import RiskMap from '@/components/dashboard/RiskMap.vue';
+import RiskStatistics from '@/components/dashboard/RiskStatistics.vue';
+import AboutModal from '@/components/dashboard/modals/AboutModal.vue';
+import FloatingLogo from '@/components/FloatingLogo.vue';
+import RiskLegend from '@/components/dashboard/RiskLegend.vue';
+import { useRiskLogic } from '@/composables/useRiskLogic';
 
 const {
   selectedCountry,

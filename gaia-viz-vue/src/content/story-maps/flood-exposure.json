@@ -1,0 +1,410 @@
+{
+  "meta": {
+    "id": "flood-exposure-story-map",
+    "type": "story-map",
+    "version": 1,
+    "locale": "en",
+    "updatedAt": "2026-07-07",
+    "notes": "Text fields support inline markdown. **bold** should be styled with the brand accent (the blue highlights in the design). All colors and example figures are illustrative placeholders."
+  },
+  "storyMap": {
+    "sidebar": {
+      "icon": "flood",
+      "title": "Flood Exposure Story Map",
+      "subtitle": "Understand how flood exposure indicators are produced and what they mean.",
+      "steps": [
+        {
+          "number": 1,
+          "sectionRef": "sec-scenario",
+          "title": "Choose a flood scenario",
+          "body": "We use modelled flood inundation from the JRC Global Flood Awareness System (GloFAS).\n\nA **50-year return period flood** has a 1% chance of being exceeded in any given year."
+        },
+        {
+          "number": 2,
+          "sectionRef": "sec-depth",
+          "title": "Apply the flood-depth threshold",
+          "body": "We only count areas where modelled flood depth is above a defined threshold.\n\nIn this example: above **30 cm**."
+        },
+        {
+          "number": 3,
+          "sectionRef": "sec-overlay",
+          "title": "Overlay population or facilities",
+          "body": "The flood layer is overlaid with population or facility datasets to identify what is located in the flooded area."
+        },
+        {
+          "number": 4,
+          "sectionRef": "sec-group",
+          "title": "Focus on a population group",
+          "body": "We can calculate exposure for specific groups.\n\nIn this example: **children under 5 years**."
+        },
+        {
+          "number": 5,
+          "sectionRef": "sec-aggregate",
+          "title": "Aggregate to administrative areas",
+          "body": "Results are aggregated to ADM2 (district) level to allow comparison between areas and support planning and decision-making."
+        }
+      ],
+      "aside": {
+        "variant": "info",
+        "icon": "info",
+        "title": "About this story map",
+        "body": "This page explains the concept behind flood exposure indicators. Numbers are examples for illustration only."
+      }
+    },
+    "header": {
+      "title": "What does \u201cchildren under 5 exposed to a 50-year flood event above 30 cm\u201d mean?",
+      "description": "It estimates how many children under 5 are living in areas that could be flooded with more than 30 cm of water during a flood that has a 1% chance of being exceeded in any given year.",
+      "equation": {
+        "terms": [
+          {
+            "kind": "operand",
+            "image": "/floods.jpg",
+            "alt": "Flood hazard illustration",
+            "label": "Flood hazard",
+            "sublabel": "(50-year event)"
+          },
+          {
+            "kind": "operator",
+            "symbol": "+"
+          },
+          {
+            "kind": "operand",
+            "image": "/floods.jpg",
+            "alt": "Population illustration",
+            "label": "Population",
+            "sublabel": "(children under 5)"
+          },
+          {
+            "kind": "operator",
+            "symbol": "="
+          },
+          {
+            "kind": "result",
+            "image": "/img/story/exposed.svg",
+            "alt": "Exposed population illustration",
+            "label": "Exposed population",
+            "sublabel": null
+          }
+        ]
+      }
+    },
+    "sections": [
+      {
+        "id": "sec-scenario",
+        "number": 1,
+        "title": "Flood scenario (return period)",
+        "hasInfoIcon": true,
+        "control": {
+          "type": "segmented",
+          "id": "return-period",
+          "options": [
+            {
+              "value": "10",
+              "label": "10-year",
+              "selected": true,
+              "layerConfig": {
+                "type": "raster",
+                "layerId": "flood-extent",
+                "colorScheme": "BrewerBlues9",
+                "mode": "ramp",
+                "sourceUrl": "https://hot.storage.heigit.org/heigit-hdx-public/risk_assessment_inputs/storymaps_data/MMR_flooded_RP10_cog_3857.tif"
+              }
+            },
+            {
+              "value": "50",
+              "label": "50-year",
+              "layerConfig": {
+                "type": "cog",
+                "layerId": "flood-extent",
+                "colorScheme": "BrewerBlues9",
+                "mode": "ramp",
+                "sourceUrl": "https://hot.storage.heigit.org/heigit-hdx-public/risk_assessment_inputs/storymaps_data/MMR_flooded_RP50_cog_3857.tif"
+              }
+            },
+            {
+              "value": "100",
+              "label": "100-year",
+              "layerConfig": {
+                "type": "raster",
+                "layerId": "flood-extent",
+                "colorScheme": "BrewerBlues9",
+                "mode": "ramp",
+                "sourceUrl": "https://hot.storage.heigit.org/heigit-hdx-public/risk_assessment_inputs/storymaps_data/MMR_flooded_RP100_cog_3857.tif"
+              }
+            },
+            {
+              "value": "500",
+              "label": "500-year",
+              "layerConfig": {
+                "type": "raster",
+                "layerId": "flood-extent",
+                "colorScheme": "BrewerBlues9",
+                "mode": "ramp",
+                "sourceUrl": "https://hot.storage.heigit.org/heigit-hdx-public/risk_assessment_inputs/storymaps_data/MMR_flooded_RP500_cog_3857.tif"
+              }
+            }
+          ]
+        },
+        "note": {
+          "variant": "info",
+          "icon": "info",
+          "body": "A 50-year flood is larger than a 10-year flood, but smaller than 100- or 500-year floods."
+        },
+        "map": {
+          "controls": [
+            "home",
+            "zoom-in",
+            "zoom-out"
+          ]
+        }
+      },
+      {
+        "id": "sec-depth",
+        "number": 2,
+        "title": "Flood-depth threshold",
+        "hasInfoIcon": true,
+        "control": {
+          "type": "slider",
+          "id": "depth-threshold",
+          "label": "Show areas with depth above:",
+          "unit": "cm",
+          "min": 0,
+          "max": 200,
+          "value": 30,
+          "ticks": [
+            {
+              "value": 0,
+              "label": "0 cm"
+            },
+            {
+              "value": 30,
+              "label": "30 cm",
+              "selected": true
+            },
+            {
+              "value": 50,
+              "label": "50 cm"
+            },
+            {
+              "value": 100,
+              "label": "100 cm"
+            },
+            {
+              "value": 200,
+              "label": "200 cm"
+            }
+          ]
+        },
+        "note": {
+          "variant": "info",
+          "icon": "info",
+          "body": "Only grid cells with flood depth above 30 cm are considered in this indicator."
+        },
+        "map": {
+          "layerId": "flood-depth-50yr",
+          "legend": {
+            "title": "Flood depth (m)",
+            "type": "categorical",
+            "items": [
+              {
+                "color": "#eff3ff",
+                "label": "0 \u2013 0.3 (excluded)",
+                "excluded": true
+              },
+              {
+                "color": "#bdd7e7",
+                "label": "0.3 \u2013 0.5"
+              },
+              {
+                "color": "#6baed6",
+                "label": "0.5 \u2013 1.0"
+              },
+              {
+                "color": "#3182bd",
+                "label": "1.0 \u2013 2.0"
+              },
+              {
+                "color": "#08519c",
+                "label": "> 2.0"
+              }
+            ]
+          },
+          "controls": [
+            "home",
+            "zoom-in",
+            "zoom-out"
+          ]
+        }
+      },
+      {
+        "id": "sec-overlay",
+        "number": 3,
+        "title": "Overlay population or facilities",
+        "hasInfoIcon": true,
+        "control": {
+          "type": "segmented",
+          "id": "overlay-type",
+          "options": [
+            {
+              "value": "population",
+              "label": "Population",
+              "selected": true
+            },
+            {
+              "value": "facilities",
+              "label": "Facilities"
+            }
+          ]
+        },
+        "dataset": {
+          "icon": "grid",
+          "title": "Population grid (100m)",
+          "source": "WorldPop (2020)"
+        },
+        "map": {
+          "layerId": "population-grid-100m",
+          "controls": [
+            "home",
+            "zoom-in",
+            "zoom-out"
+          ]
+        }
+      },
+      {
+        "id": "sec-group",
+        "number": 4,
+        "title": "Focus on a population group",
+        "hasInfoIcon": true,
+        "control": {
+          "type": "segmented",
+          "variant": "cards",
+          "id": "population-group",
+          "options": [
+            {
+              "value": "total",
+              "label": "Total population",
+              "icon": "user"
+            },
+            {
+              "value": "women",
+              "label": "Women",
+              "icon": "user"
+            },
+            {
+              "value": "children-under-5",
+              "label": "Children under 5",
+              "icon": "baby",
+              "selected": true
+            },
+            {
+              "value": "elderly",
+              "label": "Elderly (65+)",
+              "icon": "user-round"
+            }
+          ]
+        },
+        "note": {
+          "variant": "info",
+          "icon": "info",
+          "body": "Only the selected population group is counted in the exposed area."
+        },
+        "map": {
+          "layerId": "exposed-children-under5-points",
+          "controls": [
+            "home",
+            "zoom-in",
+            "zoom-out"
+          ]
+        }
+      },
+      {
+        "id": "sec-aggregate",
+        "number": 5,
+        "title": "Aggregate to administrative areas",
+        "hasInfoIcon": true,
+        "legend": {
+          "title": "Exposed children under 5 (50-year event, >30 cm)",
+          "type": "graduated",
+          "items": [
+            {
+              "color": "#ffffb2",
+              "label": "0 \u2013 500"
+            },
+            {
+              "color": "#fecc5c",
+              "label": "501 \u2013 2,000"
+            },
+            {
+              "color": "#fd8d3c",
+              "label": "2,001 \u2013 5,000"
+            },
+            {
+              "color": "#f03b20",
+              "label": "5,001 \u2013 10,000"
+            },
+            {
+              "color": "#bd0026",
+              "label": "> 10,000"
+            }
+          ]
+        },
+        "map": {
+          "layerId": "adm2-exposure-choropleth",
+          "controls": [
+            "home",
+            "zoom-in",
+            "zoom-out"
+          ],
+          "results": {
+            "title": "Example results (ADM2)",
+            "unit": "children under 5 exposed",
+            "rows": [
+              {
+                "name": "District A",
+                "value": 4200
+              },
+              {
+                "name": "District B",
+                "value": 1100
+              },
+              {
+                "name": "District C",
+                "value": 8700
+              },
+              {
+                "name": "District D",
+                "value": 320
+              }
+            ],
+            "link": {
+              "label": "View full table",
+              "href": "/data/adm2-exposure",
+              "external": true
+            }
+          }
+        }
+      }
+    ]
+  },
+  "footer": {
+    "callouts": [
+      {
+        "variant": "positive",
+        "icon": "check-circle",
+        "title": "What this indicator tells us",
+        "body": "It estimates how many children under 5 are living in areas that could experience more than 30 cm of flood water during a flood with a 1% annual chance (50-year return period), based on modelled flood data and population estimates."
+      },
+      {
+        "variant": "warning",
+        "icon": "alert-triangle",
+        "title": "What this indicator does not tell us",
+        "items": [
+          "It does not predict when or if the flood will actually occur.",
+          "It does not account for building quality, protection measures, or elevation of buildings.",
+          "It does not reflect local drainage, informal protection structures, or early warning.",
+          "It shows potential exposure, not actual impacts or damages."
+        ]
+      }
+    ]
+  }
+}

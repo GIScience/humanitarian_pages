@@ -1,0 +1,67 @@
+{
+  "header": {
+    "title": "Hazard Risk Dashboard",
+    "subtitle": "Visualizing risk potential of natural hazards"
+  },
+  "introHtml": "The <strong>Hazard Risk Dashboard</strong> delivers insights into the spatial distribution of risk from various natural hazards. Developed by <strong>HeiGIT</strong>, this tool helps visualize regions that are highly exposed or vulnerable combined with a lack of coping capacity, empowering decision-makers to identify areas requiring proactive humanitarian or disaster relief interventions.",
+  "methodology": {
+    "title": "Methodology",
+    "description": "Access the underlying GAIA pipeline and training center.",
+    "buttonText": "View Documentation",
+    "link": "https://giscience.github.io/gis-training-resource-center/content/GIS_AA/en_gaia_indicators_processing.html"
+  },
+  "method": {
+    "title": "Method",
+    "paragraphs": [
+      "Our analysis pipeline leverages the power of open-source datasets and tools to quantify risk across regions. Using hazard datasets overlaid with OpenStreetMap and population data, we calculate aggregate risk scores.",
+      "The unit of analysis corresponds to sub-national administrative boundaries (e.g., ADM1 or ADM2). By computing exposure, vulnerability and coping capacity metrics, we generate a composite index of risk which is visualized across the dashboard's statistics and map components."
+    ],
+    "points": [
+      {
+        "title": "Hazard Exposure",
+        "description": "Identifying regions prone to specific disaster types."
+      },
+      {
+        "title": "Vulnerability",
+        "description": "Representing the sensitivity of a population to external shocks."
+      },
+      {
+        "title": "Coping Capacity",
+        "description": "Measuring the ability of a population to access essential services."
+      }
+    ]
+  },
+  "limitationsTitle": "Limitations & Constraints",
+  "limitations": [
+    {
+      "title": "Data Completeness",
+      "description": "In regions with unmapped critical infrastructure or outdated population models, the risk may be inaccurately captured."
+    },
+    {
+      "title": "Aggregation Granularity",
+      "description": "Presenting results at ADM1 or ADM2 level can obscure very localized variations in risk."
+    },
+    {
+      "title": "Static Snapshots",
+      "description": "Hazards are dynamic, and static layers may not perfectly reflect ongoing or rapidly changing disaster events."
+    },
+    {
+      "title": "Lack of Local Knowledge",
+      "description": "The model does not account for local knowledge and practices."
+    }
+  ],
+  "resources": {
+    "title": "Further Resources",
+    "items": [
+      {
+        "title": "QGIS Plugin",
+        "description": "Learn how to calculate your own risk assessment using our plugin.",
+        "link": "https://giscience.github.io/gis-training-resource-center/content/GIS_AA/en_qgis_risk_assessment_plugin.html"
+      }
+    ]
+  },
+  "contact": {
+    "message": "Have a use-case? Contact us at",
+    "email": "communications@heigit.org"
+  }
+}

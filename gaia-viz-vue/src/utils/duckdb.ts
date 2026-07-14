@@ -26,6 +26,26 @@ export async function initDuckDB() {
   return dbPromise;
 }
 
+export async function loadCSVData(file: File) {
+  try {
+    const database = await initDuckDB();
+    const conn = await database.connect();
+
+    const buffer = await file.arrayBuffer();
+    const fileName = `upload_${Date.now()}.csv`;
+    await database.registerFileBuffer(fileName, new Uint8Array(buffer));
+
+    const result = await conn.query(`SELECT * FROM read_csv_auto('${fileName}', ALL_VARCHAR=FALSE)`);
+    await conn.close();
+    return result.toArray().map(row => JSON.parse(JSON.stringify(row, (_, value) =>
+      typeof value === 'bigint' ? Number(value) : value
+    )));
+  } catch (err) {
+    console.error("DuckDB CSV load error:", err);
+    throw err;
+  }
+}
+
 export async function loadParquetData(parquetUrl: string) {
   try {
     const database = await initDuckDB();
