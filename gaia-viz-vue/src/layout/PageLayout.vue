@@ -57,6 +57,17 @@ watchEffect(() => {
     class="flex flex-col bg-white"
     :class="fullHeight ? 'h-screen overflow-hidden' : 'min-h-screen'"
   >
+    <!-- Maintenance Banner -->
+    <div
+      class="bg-amber-50 border-b border-amber-300 px-4 py-3 text-center text-sm text-amber-900 flex items-center justify-center gap-2 shrink-0"
+    >
+      <span class="text-lg">⚠️</span>
+      <span>
+        <strong>Service Temporarily Unavailable:</strong> The dashboard is
+        currently unable to load data due to a CORS-related issue with the data
+        source. We are working on a fix.
+      </span>
+    </div>
     <Header>
       <template v-if="$slots['header-actions']" #actions>
         <slot name="header-actions" />
