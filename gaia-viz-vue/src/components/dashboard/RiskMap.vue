@@ -76,7 +76,7 @@ function handleMapLoad(mapInstance: maplibregl.Map) {
   // Add World Boundaries for Click Interaction
   mapInstance.addSource("world", {
     type: "geojson",
-    data: `${import.meta.env.BASE_URL}data/world.json`,
+    data: `./data/world.json`,
     promoteId: "iso_a3",
   });
 
@@ -122,12 +122,17 @@ function handleMapLoad(mapInstance: maplibregl.Map) {
     source: "world",
     paint: {
       "line-color": "#ca2333",
-      "line-width": 1,
+      "line-width": [
+        "case",
+        ["boolean", ["feature-state", "hover"], false],
+        2, // hover -> thicker
+        1, // default -> subtle
+      ],
       "line-opacity": [
         "case",
         ["boolean", ["feature-state", "hover"], false],
-        4, // hover  -> full
-        0.2, // default -> visible but subdued
+        1, // hover -> full
+        0.4, // default -> visible but subdued
       ],
     },
     filter: isLoaded
@@ -391,18 +396,19 @@ watch(
     ) {
       const isLoaded = newVal && newVal.length > 0;
       const validCountries = isLoaded ? newVal : ["NONE"];
+      const availableFilter: maplibregl.FilterSpecification = isLoaded
+        ? ["in", ["get", "iso_a3"], ["literal", validCountries]]
+        : ["==", "iso_a3", "DOES_NOT_EXIST"];
       mapInstance.setFilter(
         "unavailable-countries",
         isLoaded
           ? ["!", ["in", ["get", "iso_a3"], ["literal", validCountries]]]
           : ["==", "iso_a3", "DOES_NOT_EXIST"],
       );
-      mapInstance.setFilter(
-        interactLayerId,
-        isLoaded
-          ? ["in", ["get", "iso_a3"], ["literal", validCountries]]
-          : ["==", "iso_a3", "DOES_NOT_EXIST"],
-      );
+      mapInstance.setFilter(interactLayerId, availableFilter);
+      if (mapInstance.getLayer(interactLayerId + "-outline")) {
+        mapInstance.setFilter(interactLayerId + "-outline", availableFilter);
+      }
     }
   },
   { deep: true },
