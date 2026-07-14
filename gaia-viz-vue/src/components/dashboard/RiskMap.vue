@@ -483,7 +483,7 @@ defineExpose({
               </div>
             </button>
 
-            <div v-if="!isLayersCollapsed" class="flex flex-col gap-2">
+            <div v-if="!isLayersCollapsed" class="flex flex-col gap-1">
               <button
                 v-for="dimension in dimensions"
                 :key="dimension.value"
@@ -519,7 +519,7 @@ defineExpose({
 
               <v-divider class="my-2 bg-slate-200/70" />
 
-              <div class="flex flex-col gap-1.5">
+              <div class="flex flex-col gap-1.5 mb-2">
                 <label
                   :class="
                     cn(
