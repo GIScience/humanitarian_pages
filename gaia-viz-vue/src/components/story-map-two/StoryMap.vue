@@ -21,7 +21,7 @@ const { activeId, scrollTo } = useScrollSpy(
     <div class="flex flex-col gap-8 lg:flex-row lg:gap-10">
       <!-- sidebar -->
       <aside class="lg:w-[23rem] lg:flex-none">
-        <div class="lg:sticky lg:top-10 p-6">
+        <div class="lg:sticky lg:top-24 p-6">
           <div class="mb-5 flex items-start gap-3">
             <span class="mt-0.5 text-heigit-red"
               ><Icon name="waves" class="h-7 w-7"

@@ -16,12 +16,6 @@ const props = withDefaults(
     sourceUrl: string;
     layerId?: string;
     opacity?: number;
-    /**
-     * How the raster is colored:
-     * - "rgb": 3/4-band imagery (e.g. satellite), rendered directly. No color scheme.
-     * - "ramp": single-band continuous data (elevation, NDVI, temperature) with a color ramp.
-     * - "categorical": single-band classified data (e.g. land cover / LCC), one color per class.
-     */
     mode?: "rgb" | "ramp" | "categorical";
     // --- ramp mode ---
     colorScheme?: string;
@@ -29,12 +23,6 @@ const props = withDefaults(
     max?: number;
     continuous?: boolean;
     reverse?: boolean;
-    // --- categorical mode ---
-    /**
-     * Maps a pixel class value to a color. Each entry may be a hex string,
-     * an RGBA tuple, or a { color, label } object, e.g.
-     * { 4: "#1f78b4" } or { 4: { color: "#1f78b4", label: "Water" } }
-     */
     categoryColors?: Record<number, CategoryStyle>;
     belowLayerId?: string;
   }>(),
@@ -83,7 +71,6 @@ watch(
   ([url, mode, colors]) => {
     if (!url || mode !== "categorical") return;
 
-    // Runs for every pixel, so keep it allocation-free.
     setColorFunction(url, (pixel, color, metadata) => {
       const value = pixel[0];
       if (value === metadata.noData || Number.isNaN(value)) {
@@ -116,8 +103,6 @@ watch(
       minZoom.value = zooms.length
         ? Math.max(0, Math.floor(Math.min(...zooms)))
         : 0;
-      // Native full-resolution level. Capping below this is what makes the
-      // imagery blurry when zoomed in, so serve native tiles up to here.
       maxZoom.value = zooms.length ? Math.ceil(Math.max(...zooms)) : 22;
       cogBounds.value = metadata.bbox ?? null;
     } catch {

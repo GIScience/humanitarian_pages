@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from "vue";
+import { ref } from "vue";
 import { useRouter } from "vue-router";
 import PageLayout from "@/layout/PageLayout.vue";
 import DashboardControlBar from "@/components/dashboard/DashboardControlBar.vue";
@@ -10,6 +10,7 @@ import UploadModal from "@/components/dashboard/modals/UploadModal.vue";
 import MetadataModal from "@/components/dashboard/modals/MetadataModal.vue";
 import FloatingLogo from "@/components/FloatingLogo.vue";
 import { useRiskLogic } from "@/composables/useRiskLogic";
+import CustomDataInfo from "@/components/dashboard/modals/CustomDataInfo.vue";
 
 const router = useRouter();
 
@@ -29,23 +30,23 @@ const {
   showAnalysis,
   showAboutModal,
   showUploadModal,
+  showCustomDataInfo,
   riskViewMode,
   riskViewLabel,
   dimensionColumns,
   uploadError,
   countries,
   selectedCountryName,
+  existingPcodes,
+  customDimensionKeys,
   mergeCustomIndicators,
+  keepCustomData,
+  discardCustomData,
   goHome,
 } = useRiskLogic();
 
 const mapRef = ref<InstanceType<typeof RiskMap> | null>(null);
 const showMetadataModal = ref(false);
-
-const existingPcodes = computed(() => {
-  if (!pcodeField.value) return [];
-  return lastLoadedData.value.map((d) => String(d[pcodeField.value]));
-});
 
 function handleGoHome() {
   goHome();
@@ -71,7 +72,7 @@ function handleUpload(payload: Parameters<typeof mergeCustomIndicators>[0]) {
         </button>
 
         <button
-          @click="router.push('/story-map/vulnerability')"
+          @click="router.push('/story-map/flood-exposure')"
           class="px-5 py-2 rounded-full bg-slate-50 border border-slate-100 text-[12px] font-bold text-slate-500 hover:text-heigit-red hover:border-heigit-red transition-all cursor-pointer"
         >
           See Story Map
@@ -241,6 +242,7 @@ function handleUpload(payload: Parameters<typeof mergeCustomIndicators>[0]) {
       :pcode-field="pcodeField"
       :existing-pcodes="existingPcodes"
       :hazard-prefix="dimensionColumns.hazardPrefix"
+      :known-dimensions="customDimensionKeys"
       @close="
         showUploadModal = false;
         uploadError = null;
@@ -250,6 +252,12 @@ function handleUpload(payload: Parameters<typeof mergeCustomIndicators>[0]) {
     <MetadataModal
       v-if="showMetadataModal"
       @toggle="showMetadataModal = false"
+    />
+    <CustomDataInfo
+      v-if="showCustomDataInfo"
+      @close="keepCustomData"
+      @use-custom="keepCustomData"
+      @use-default="discardCustomData"
     />
   </PageLayout>
 </template>

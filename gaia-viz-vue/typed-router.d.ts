@@ -30,9 +30,16 @@ declare module 'vue-router/auto-routes' {
       Record<never, never>,
       | never
     >,
-    '/story-map/': RouteRecordInfo<
-      '/story-map/',
-      '/story-map',
+    '/[...path]': RouteRecordInfo<
+      '/[...path]',
+      '/:path(.*)',
+      { path: ParamValue<true> },
+      { path: ParamValue<false> },
+      | never
+    >,
+    '/NotFound': RouteRecordInfo<
+      '/NotFound',
+      '/NotFound',
       Record<never, never>,
       Record<never, never>,
       | never
@@ -44,9 +51,16 @@ declare module 'vue-router/auto-routes' {
       { id: ParamValue<false>, section?: ParamValueZeroOrOne<false> },
       | never
     >,
-    '/story-map-two/[id]/[[section]]': RouteRecordInfo<
-      '/story-map-two/[id]/[[section]]',
-      '/story-map-two/:id/:section?',
+    '/story-map-2/': RouteRecordInfo<
+      '/story-map-2/',
+      '/story-map-2',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
+    '/story-map-2/[id]/[[section]]': RouteRecordInfo<
+      '/story-map-2/[id]/[[section]]',
+      '/story-map-2/:id/:section?',
       { id: ParamValue<true>, section?: ParamValueZeroOrOne<true> },
       { id: ParamValue<false>, section?: ParamValueZeroOrOne<false> },
       | never
@@ -70,9 +84,15 @@ declare module 'vue-router/auto-routes' {
       views:
         | never
     }
-    'src/pages/story-map/index.vue': {
+    'src/pages/[...path].vue': {
       routes:
-        | '/story-map/'
+        | '/[...path]'
+      views:
+        | never
+    }
+    'src/pages/NotFound.vue': {
+      routes:
+        | '/NotFound'
       views:
         | never
     }
@@ -82,9 +102,15 @@ declare module 'vue-router/auto-routes' {
       views:
         | never
     }
-    'src/pages/story-map-two/[id]/[[section]].vue': {
+    'src/pages/story-map-2/index.vue': {
       routes:
-        | '/story-map-two/[id]/[[section]]'
+        | '/story-map-2/'
+      views:
+        | never
+    }
+    'src/pages/story-map-2/[id]/[[section]].vue': {
+      routes:
+        | '/story-map-2/[id]/[[section]]'
       views:
         | never
     }

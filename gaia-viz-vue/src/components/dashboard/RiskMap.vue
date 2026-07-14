@@ -2,12 +2,15 @@
 import { computed, onBeforeUnmount, ref, watch } from "vue";
 import maplibregl from "maplibre-gl";
 import * as pmtiles from "pmtiles";
+import { storeToRefs } from "pinia";
 import Map from "@/components/map/map.vue";
 import MapZoomControl from "@/components/map/MapZoomControl.vue";
 import RiskLegend from "@/components/dashboard/RiskLegend.vue";
-import { RISK_DIMENSIONS } from "@/enums/dimensions";
+import { useRiskMapStore } from "@/store/riskMapStore";
 import { cn } from "@/utils/cn";
 import type { RiskViewMode } from "@/composables/useRiskLogic";
+
+const { dimensions } = storeToRefs(useRiskMapStore());
 
 const props = defineProps<{
   pmtilesUrl: string;
@@ -28,6 +31,10 @@ const emit = defineEmits<{
 }>();
 
 
+const activeDimension = computed(() =>
+  dimensions.value.find((d) => d.value === props.riskViewMode),
+);
+const isViewingCustomData = computed(() => !!activeDimension.value?.isCustom);
 
 const mapViewRef = ref<InstanceType<typeof MapView> | null>(null);
 const map = computed<maplibregl.Map | null>(
@@ -38,6 +45,7 @@ const floodLayerId = "risk-layer";
 const interactLayerId = "world-fills";
 
 const layerOpacity = ref(0.7);
+const isLayersCollapsed = ref(false);
 
 const countryBounds = ref<maplibregl.LngLatBoundsLike | null>(null);
 
@@ -395,69 +403,104 @@ defineExpose({
         :class="
           props.isMobile
             ? 'bottom-32 left-4 w-40 px-2 py-1.5'
-            : 'top-4 left-4 w-60 px-3 py-2'
+            : 'top-8 left-4 w-60 px-3 py-2 rounded-2xl'
         "
       >
-        <div v-if="riskViewMode" class="flex flex-col gap- py-2">
+        <div v-if="riskViewMode" class="flex flex-col">
           <div class="flex flex-col gap-1">
-            <label
-              class="block text-slate-500 font-bold uppercase tracking-widest whitespace-nowrap"
-              :class="props.isMobile ? 'text-[8px]' : 'text-[9px]'"
-            >
-              Layers:
-            </label>
             <button
-              v-for="dimension in RISK_DIMENSIONS"
-              :key="dimension.value"
-              @click="selectDimension(dimension.value)"
-              class="rounded flex items-center justify-between text-left font-bold transition-colors whitespace-nowrap"
-              :class="[
-                props.isMobile
-                  ? 'px-1.5 py-0.5 text-[9px]'
-                  : 'px-2 py-2 text-xs',
-                riskViewMode === dimension.value
-                  ? 'bg-heigit-red text-white'
-                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200',
-              ]"
+              class="flex items-center justify-between gap-2"
+              @click="isLayersCollapsed = !isLayersCollapsed"
             >
-              <div class="flex items-center gap-2">
-                <v-icon :icon="dimension.icon" size="18" />
-                <span>{{ dimension.label }}</span>
-              </div>
-              <v-icon
-                @click.stop="emit('click:info')"
-                icon="mdi-information-slab-circle-outline"
-                size="15"
-                :class="
-                  cn(
-                    'ml-1 text-heigit-red',
-                    riskViewMode === dimension.value
-                      ? 'text-white'
-                      : 'text-heigit-red',
-                  )
-                "
-              />
-            </button>
-            <v-divider class="my-2 bg-slate-200/70" />
-            <div class="flex flex-col gap-1.5">
               <label
                 class="block text-slate-500 font-bold uppercase tracking-widest whitespace-nowrap"
-                :class="props.isMobile ? 'text-[8px]' : 'text-[9px]'"
+                :class="props.isMobile ? 'text-[8px]' : 'text-[11px]'"
               >
-                Opacity:
-                <span class="text-slate-700 font-extrabold"
-                  >{{ Math.round(layerOpacity * 100) }}%</span
-                >
+                Layers:
               </label>
-              <input
-                type="range"
-                min="0"
-                max="1"
-                step="0.05"
-                v-model.number="layerOpacity"
-                class="bg-slate-200 rounded-lg appearance-none cursor-pointer accent-heigit-red"
-                :class="props.isMobile ? 'w-full h-1' : 'w-full h-1.5'"
-              />
+              <div class="flex items-center gap-1">
+                <span
+                  v-if="isViewingCustomData"
+                  class="rounded-full bg-heigit-red/10 text-heigit-red font-extrabold uppercase tracking-wider whitespace-nowrap"
+                  :class="
+                    props.isMobile
+                      ? 'px-1.5 py-0.5 text-[7px]'
+                      : 'px-2 py-0.5 text-[8px]'
+                  "
+                  title="This layer is built from your uploaded custom data"
+                >
+                  Viewing Custom Data
+                </span>
+                <button
+                  type="button"
+                  class="text-slate-500 hover:text-heigit-red transition-colors"
+                  :title="
+                    isLayersCollapsed ? 'Expand layers' : 'Minimize layers'
+                  "
+                >
+                  <v-icon
+                    :icon="
+                      isLayersCollapsed ? 'mdi-chevron-down' : 'mdi-chevron-up'
+                    "
+                    size="18"
+                  />
+                </button>
+              </div>
+            </button>
+            <div v-if="!isLayersCollapsed" class="flex flex-col gap-2">
+              <button
+                v-for="dimension in dimensions"
+                :key="dimension.value"
+                @click="selectDimension(dimension.value)"
+                class="rounded flex items-center justify-between text-left font-bold transition-colors whitespace-nowrap"
+                :class="[
+                  props.isMobile
+                    ? 'px-1.5 py-0.5 text-[9px]'
+                    : 'px-2 py-2 text-xs',
+                  riskViewMode === dimension.value
+                    ? 'bg-heigit-red text-white'
+                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200',
+                ]"
+              >
+                <div class="flex items-center gap-2">
+                  <v-icon :icon="dimension.icon" size="18" />
+                  <span>{{ dimension.label }}</span>
+                </div>
+                <v-icon
+                  @click.stop="emit('click:info')"
+                  icon="mdi-information-slab-circle-outline"
+                  size="15"
+                  :class="
+                    cn(
+                      'ml-1 text-heigit-red',
+                      riskViewMode === dimension.value
+                        ? 'text-white'
+                        : 'text-heigit-red',
+                    )
+                  "
+                />
+              </button>
+              <v-divider class="my-2 bg-slate-200/70" />
+              <div class="flex flex-col gap-1.5">
+                <label
+                  class="block text-slate-500 font-bold uppercase tracking-widest whitespace-nowrap"
+                  :class="props.isMobile ? 'text-[8px]' : 'text-[9px]'"
+                >
+                  Opacity:
+                  <span class="text-slate-700 font-extrabold"
+                    >{{ Math.round(layerOpacity * 100) }}%</span
+                  >
+                </label>
+                <input
+                  type="range"
+                  min="0"
+                  max="1"
+                  step="0.05"
+                  v-model.number="layerOpacity"
+                  class="bg-slate-200 rounded-lg appearance-none cursor-pointer accent-heigit-red"
+                  :class="props.isMobile ? 'w-full h-1' : 'w-full h-1.5'"
+                />
+              </div>
             </div>
           </div>
         </div>

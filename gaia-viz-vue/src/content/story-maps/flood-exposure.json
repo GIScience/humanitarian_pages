@@ -1,5 +1,4 @@
 {
-  "$schema": "./story-map.schema.json",
   "meta": {
     "id": "flood-exposure-story-map",
     "type": "story-map",
@@ -7,53 +6,6 @@
     "locale": "en",
     "updatedAt": "2026-07-07",
     "notes": "Text fields support inline markdown. **bold** should be styled with the brand accent (the blue highlights in the design). All colors and example figures are illustrative placeholders."
-  },
-  "app": {
-    "brand": {
-      "name": "GAIA",
-      "tagline": "Risk Assessment Composer"
-    },
-    "nav": {
-      "items": [
-        {
-          "id": "dashboard",
-          "label": "Dashboard",
-          "icon": "home",
-          "href": "/dashboard"
-        },
-        {
-          "id": "map",
-          "label": "Map",
-          "icon": "map",
-          "href": "/map"
-        },
-        {
-          "id": "indicators",
-          "label": "Indicators",
-          "icon": "bar-chart",
-          "href": "/indicators"
-        },
-        {
-          "id": "data",
-          "label": "Data",
-          "icon": "database",
-          "href": "/data"
-        },
-        {
-          "id": "learn",
-          "label": "Learn",
-          "icon": "book-open",
-          "href": "/learn",
-          "active": true
-        }
-      ],
-      "context": {
-        "type": "country-selector",
-        "icon": "globe",
-        "value": "MZ",
-        "label": "Mozambique"
-      }
-    }
   },
   "storyMap": {
     "sidebar": {

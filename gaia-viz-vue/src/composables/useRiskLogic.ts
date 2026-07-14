@@ -1,28 +1,25 @@
-import { ref, watch, shallowRef, onMounted, computed } from "vue";
+import { watch, onMounted } from "vue";
 import { useRoute, useRouter } from "vue-router";
+import { storeToRefs } from "pinia";
 import { loadParquetData } from "../utils/duckdb";
-import {
-  checkFileExists,
-  fetchCountries,
-  type Country,
-} from "../services/dataService";
+import { checkFileExists, fetchCountries } from "../services/dataService";
 import {
   calculateDynamicRisk,
-  getDimensionColumns,
+  isRankingColumn,
+  discoverCustomDimensionPrefixes,
 } from "../utils/riskCalculation";
 import {
+  DimensionPrefix,
+  DIMENSION_PREFIX_VALUES,
   isRiskViewMode,
-  getRiskDimension,
   type RiskViewMode,
 } from "../enums/dimensions";
+import { useRiskMapStore } from "../store/riskMapStore";
 
 export type { RiskViewMode };
 
-function parseRiskViewMode(value: unknown): RiskViewMode | null {
-  return isRiskViewMode(value) ? value : null;
-}
-
-export type CustomIndicatorDimension = "exp" | "vul" | "cop";
+// A dimension key ("exp" | "vul" | "cop") custom prefix detected from column names), or "skip".
+export type CustomIndicatorDimension = string;
 
 export interface CustomUploadPayload {
   pcodeColumn: string;
@@ -34,7 +31,7 @@ const CUSTOM_UPLOAD_MATCH_THRESHOLD = 0.9;
 const customUploadStorageKey = (countryCode: string) =>
   `gaia-custom-upload:${countryCode}`;
 
-function sanitizeIndicatorName(name: string) {
+export function sanitizeIndicatorName(name: string) {
   const cleaned = name
     .trim()
     .toLowerCase()
@@ -46,61 +43,54 @@ function sanitizeIndicatorName(name: string) {
 export function useRiskLogic() {
   const route = useRoute();
   const router = useRouter();
+  const store = useRiskMapStore();
 
-  const selectedCountry = ref((route.query.country as string) || "");
-  const selectedDisaster = ref((route.query.disaster as string) || "");
+  const {
+    selectedCountry,
+    selectedDisaster,
+    disasters,
+    pmtilesUrl,
+    pcodeField,
+    matchArray,
+    isLoading,
+    error,
+    lastLoadedData,
+    rawOriginalData,
+    lastLoadedCountry,
+    highlightedPcode,
+    indicatorWeights,
+    viewMode,
+    showAnalysis,
+    showAboutModal,
+    showUploadModal,
+    showCustomDataInfo,
+    pendingCustomDataCountry,
+    riskViewMode,
+    uploadError,
+    countries,
+    dimensions,
+    riskViewLabel,
+    dimensionColumns,
+    selectedCountryName,
+    existingPcodes,
+  } = storeToRefs(store);
 
-  const disasters = ref<string[]>([]);
-  const pmtilesUrl = ref("");
-  const pcodeField = ref("");
-  const matchArray = ref<[string, string, number][]>([]);
-  const isLoading = ref(false);
-  const error = ref<string | null>(null);
-  const lastLoadedData = shallowRef<any[]>([]);
-  const lastLoadedCountry = ref("");
-  const highlightedPcode = ref<string | null>(null);
-
-  const indicatorWeights = ref<Record<string, number>>({});
-  const rawOriginalData = shallowRef<any[]>([]);
-
-  const viewMode = ref<"HOME" | "DASHBOARD">("HOME");
-  const showAnalysis = ref(false);
-  const showAboutModal = ref(false);
-  const showUploadModal = ref(false);
-  const riskViewMode = ref<RiskViewMode>(
-    parseRiskViewMode(route.query.indicator) ?? "total",
-  );
-  const uploadError = ref<string | null>(null);
-
-  const countries = ref<Country[]>([]);
+  if (!store.initialized) {
+    selectedCountry.value = (route.query.country as string) || "";
+    selectedDisaster.value = (route.query.disaster as string) || "";
+    const queryDimension = route.query.dimension as string;
+    if (isRiskViewMode(queryDimension, store.dimensions)) {
+      riskViewMode.value = queryDimension;
+    }
+    store.markInitialized();
+  }
 
   onMounted(async () => {
-    countries.value = await fetchCountries();
+    store.setCountries(await fetchCountries());
     if (selectedCountry.value) {
       updateCountryData(selectedCountry.value);
     }
   });
-
-  const selectedCountryName = computed(() => {
-    return (
-      countries.value.find((c) => c.code === selectedCountry.value)?.name || ""
-    );
-  });
-
-  const dimensionColumns = computed(() =>
-    getDimensionColumns(lastLoadedData.value, selectedDisaster.value),
-  );
-
-  const activeValueColumn = computed(() =>
-    getRiskDimension(riskViewMode.value).resolveColumn({
-      disaster: selectedDisaster.value,
-      dimensionColumns: dimensionColumns.value,
-    }),
-  );
-
-  const riskViewLabel = computed(
-    () => getRiskDimension(riskViewMode.value).legendLabel,
-  );
 
   function updateRiskLayer(riskColumn: string, data: any[], level: string) {
     const field = `${level}_PCODE`;
@@ -111,7 +101,7 @@ export function useRiskLogic() {
       .sort((a, b) => a - b);
 
     if (values.length === 0) {
-      matchArray.value = [];
+      store.setMatchArray([]);
       return;
     }
 
@@ -130,41 +120,38 @@ export function useRiskLogic() {
       matches.push([d[field], color, val]);
     });
 
-    matchArray.value = matches;
+    store.setMatchArray(matches);
   }
 
   function refreshMapLayer() {
+    const activeValueColumn = store.activeValueColumn;
     if (
       !lastLoadedData.value.length ||
       !pcodeField.value ||
-      !activeValueColumn.value
+      !activeValueColumn
     ) {
-      matchArray.value = [];
+      store.setMatchArray([]);
       return;
     }
     const level = pcodeField.value.split("_")[0];
-    updateRiskLayer(activeValueColumn.value, lastLoadedData.value, level);
+    updateRiskLayer(activeValueColumn, lastLoadedData.value, level);
   }
 
-  async function updateCountryData(countryCode: string) {
+  async function updateCountryData(
+    countryCode: string,
+    options: { force?: boolean } = {},
+  ) {
     if (!countryCode) {
-      viewMode.value = "HOME";
-      lastLoadedCountry.value = "";
-      pmtilesUrl.value = "";
-      matchArray.value = [];
-      lastLoadedData.value = [];
-      selectedDisaster.value = "";
-      showAnalysis.value = true;
+      store.resetToHome();
       return;
     }
 
-    if (countryCode === lastLoadedCountry.value) return;
-
-    const isSwitchingCountry = !!lastLoadedCountry.value;
+    if (!options.force && countryCode === lastLoadedCountry.value) return;
 
     isLoading.value = true;
     error.value = null;
     viewMode.value = "DASHBOARD";
+    store.resetForNewCountry();
 
     try {
       const folder = countryCode.toLowerCase();
@@ -182,27 +169,23 @@ export function useRiskLogic() {
 
       const data = await loadParquetData(parquetUrl);
 
-
       const rawJSON = JSON.parse(
         JSON.stringify(data, (_, value) =>
           typeof value === "bigint" ? Number(value) : value,
         ),
       );
-      
-      console.log("Raw JSON data loaded:", rawJSON);
-      
-      rawOriginalData.value = JSON.parse(JSON.stringify(rawJSON));
 
-      console.log(rawOriginalData.value);
+      store.setRawOriginalData(JSON.parse(JSON.stringify(rawJSON)));
+
+      // Build a mapping of PCODE to its corresponding level key (e.g., ADM1_PCODE or ADM1_PCODE)
+      store.setSelectedCountryPcodeFieldMap(
+        JSON.parse(JSON.stringify(rawJSON)).map((row: any) => row.ADM2_PCODE),
+      );
 
       const currentLevel = level;
       pcodeField.value = `${currentLevel}_PCODE`;
       lastLoadedData.value = rawJSON;
       lastLoadedCountry.value = countryCode;
-      indicatorWeights.value = {};
-      if (isSwitchingCountry) {
-        riskViewMode.value = "total";
-      }
 
       const riskCols = Object.keys(data[0] || {}).filter((c) =>
         c.startsWith("risk_"),
@@ -241,8 +224,8 @@ export function useRiskLogic() {
     if (selectedCountry.value) query.country = selectedCountry.value;
     if (selectedCountry.value && selectedDisaster.value)
       query.disaster = selectedDisaster.value;
-    if(selectedCountry.value && selectedDisaster.value && riskViewMode.value) 
-      query.indicator = riskViewMode.value;
+    if (selectedCountry.value && selectedDisaster.value && riskViewMode.value)
+      query.dimension = riskViewMode.value;
     router.replace({ query }).catch(() => {});
   };
 
@@ -256,8 +239,6 @@ export function useRiskLogic() {
     refreshMapLayer();
   }
 
-  // --- Custom Data Upload ---
-
   function buildCustomColumnName(
     rawColumn: string,
     dimension: CustomIndicatorDimension,
@@ -266,11 +247,9 @@ export function useRiskLogic() {
   ) {
     const base = sanitizeIndicatorName(rawColumn);
     const prefix =
-      dimension === "vul"
-        ? "vul_custom_"
-        : dimension === "cop"
-          ? "cop_custom_"
-          : `exp_${hazardPrefix}_custom_`;
+      dimension === DimensionPrefix.EXPOSURE
+        ? `exp_${hazardPrefix}_custom_`
+        : `${sanitizeIndicatorName(dimension)}_custom_`;
 
     let candidate = `${prefix}${base}`;
     let suffix = 1;
@@ -294,7 +273,7 @@ export function useRiskLogic() {
       return { success: false, error: message };
     }
 
-    const existingPcodes = new Set(
+    const existingPcodeSet = new Set(
       lastLoadedData.value.map((d) => String(d[pcodeField.value])),
     );
     const uploadedRowsByPcode = new Map<string, Record<string, any>>();
@@ -302,7 +281,7 @@ export function useRiskLogic() {
 
     for (const row of payload.rows) {
       const pcode = String(row[payload.pcodeColumn]);
-      if (existingPcodes.has(pcode)) {
+      if (existingPcodeSet.has(pcode)) {
         matchedCount += 1;
         uploadedRowsByPcode.set(pcode, row);
       }
@@ -316,13 +295,8 @@ export function useRiskLogic() {
       return { success: false, error: message };
     }
 
-    const { hazardPrefix } = getDimensionColumns(
-      lastLoadedData.value,
-      selectedDisaster.value,
-    );
-    const usedNames = new Set(Object.keys(rawOriginalData.value[0] || {}));
     const columnAssignments = Object.entries(payload.assignments).filter(
-      ([, dim]) => dim !== "skip",
+      ([col, dim]) => dim !== "skip" && !isRankingColumn(col),
     ) as [string, CustomIndicatorDimension][];
 
     if (columnAssignments.length === 0) {
@@ -332,6 +306,47 @@ export function useRiskLogic() {
       return { success: false, error: message };
     }
 
+    // The upload replaces every dimension's sub-indicators wholesale, so it must supply data for
+    // every required dimension (exp/vul/cop, or any future addition to dimensions.ts) - otherwise
+    // an untouched dimension would end up with zero indicators and the risk score could never be
+    // computed. UploadModal.vue already blocks this in the UI; this is the same check as a
+    // server-side safety net for reapplied/saved payloads.
+    const assignedDimensions = new Set(columnAssignments.map(([, dim]) => dim));
+    const missingDimensions = DIMENSION_PREFIX_VALUES.filter(
+      (dim) => !assignedDimensions.has(dim),
+    );
+    if (missingDimensions.length > 0) {
+      const message = `Assign at least one column to each required dimension. Missing: ${missingDimensions.join(", ")}.`;
+      uploadError.value = message;
+      return { success: false, error: message };
+    }
+
+    const { hazardPrefix } = store.dimensionColumns;
+
+    // The uploaded CSV becomes the entire indicator set, not a patch on top of the existing one -
+    // strip every current sub-indicator (default parquet columns and any earlier custom upload)
+    // so only what this file provides remains. Non-indicator columns (pcode, admin name, the
+    // disaster's risk_/ranking_ columns) are left untouched.
+    const customDimensionPrefixes = discoverCustomDimensionPrefixes(
+      rawOriginalData.value,
+    );
+    const isIndicatorColumn = (col: string) =>
+      col.startsWith("exp_") ||
+      col.startsWith("vul_") ||
+      col.startsWith("cop_") ||
+      customDimensionPrefixes.some((p) => col.startsWith(`${p}_`));
+
+    const strippedRawData = rawOriginalData.value.map(
+      (row: Record<string, any>) => {
+        const clone: Record<string, any> = {};
+        for (const [key, value] of Object.entries(row)) {
+          if (!isIndicatorColumn(key)) clone[key] = value;
+        }
+        return clone;
+      },
+    );
+
+    const usedNames = new Set(Object.keys(strippedRawData[0] || {}));
     const columnNameMap = new Map<string, string>();
     for (const [rawColumn, dimension] of columnAssignments) {
       columnNameMap.set(
@@ -340,8 +355,7 @@ export function useRiskLogic() {
       );
     }
 
-    const mergedRawData = JSON.parse(JSON.stringify(rawOriginalData.value));
-    for (const row of mergedRawData) {
+    for (const row of strippedRawData) {
       const uploadedRow = uploadedRowsByPcode.get(
         String(row[pcodeField.value]),
       );
@@ -349,9 +363,11 @@ export function useRiskLogic() {
         row[newColumn] = uploadedRow ? Number(uploadedRow[rawColumn]) : NaN;
       }
     }
-    rawOriginalData.value = mergedRawData;
+    rawOriginalData.value = strippedRawData;
 
-    const newWeights = { ...indicatorWeights.value };
+    // Weights reset to exactly the uploaded columns - tuning for indicators that no longer exist
+    // is meaningless once the upload has replaced them.
+    const newWeights: Record<string, number> = {};
     for (const newColumn of columnNameMap.values()) {
       newWeights[newColumn] = 1.0;
     }
@@ -377,10 +393,33 @@ export function useRiskLogic() {
       const saved = localStorage.getItem(customUploadStorageKey(countryCode));
       if (!saved) return;
       const payload = JSON.parse(saved) as CustomUploadPayload;
-      mergeCustomIndicators(payload, { persist: false });
+      const result = mergeCustomIndicators(payload, { persist: false });
+      if (result.success) {
+        pendingCustomDataCountry.value = countryCode;
+        showCustomDataInfo.value = true;
+      }
     } catch (err) {
       console.warn("Could not reapply saved custom upload", err);
     }
+  }
+
+  function keepCustomData() {
+    showCustomDataInfo.value = false;
+    pendingCustomDataCountry.value = null;
+  }
+
+  // Since an upload now replaces the entire indicator set in place, there's no per-column
+  // backup to restore from - reverting to the HeiGIT default means re-fetching the country's
+  // parquet data fresh.
+  function discardCustomData() {
+    const countryCode =
+      pendingCustomDataCountry.value || lastLoadedCountry.value;
+    showCustomDataInfo.value = false;
+    pendingCustomDataCountry.value = null;
+
+    if (!countryCode) return;
+    localStorage.removeItem(customUploadStorageKey(countryCode));
+    updateCountryData(countryCode, { force: true });
   }
 
   let calcTimeout: any;
@@ -418,15 +457,18 @@ export function useRiskLogic() {
     (newQuery) => {
       const qCountry = (newQuery.country as string) || "";
       const qDisaster = (newQuery.disaster as string) || "";
-      const qIndicator = parseRiskViewMode(newQuery.indicator);
+      const qDimension = newQuery.dimension;
       if (qCountry !== selectedCountry.value) {
         selectedCountry.value = qCountry;
       }
       if (qDisaster !== selectedDisaster.value) {
         selectedDisaster.value = qDisaster;
       }
-      if (qIndicator && qIndicator !== riskViewMode.value) {
-        riskViewMode.value = qIndicator;
+      if (
+        isRiskViewMode(qDimension, store.dimensions) &&
+        qDimension !== riskViewMode.value
+      ) {
+        riskViewMode.value = qDimension;
       }
     },
   );
@@ -450,20 +492,25 @@ export function useRiskLogic() {
     showAnalysis,
     showAboutModal,
     showUploadModal,
+    showCustomDataInfo,
     riskViewMode,
     uploadError,
     countries,
+    dimensions,
 
     // Getters
     riskViewLabel,
     dimensionColumns,
     selectedCountryName,
+    existingPcodes,
 
     // Actions
     updateCountryData,
     updateRiskLayer,
     loadAndCalculateWithWeights,
     mergeCustomIndicators,
+    keepCustomData,
+    discardCustomData,
     goHome,
   };
 }

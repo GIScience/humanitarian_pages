@@ -19,7 +19,7 @@ const navLinks = [{ name: "HeiGIT", href: "https://heigit.org" }];
 </script>
 
 <template>
-  <header class="w-full bg-white border-b border-slate-200 shadow-sm z-[100]">
+  <header class="w-full sticky top-0 bg-white border-b border-slate-200 shadow-sm z-[100]">
     <div class="px-6 py-3 flex items-center justify-between gap-4 mx-auto">
       <RouterLink
         :to="homeLink"

@@ -36,9 +36,7 @@ function setMetaTag(attr: "name" | "property", key: string, content: string) {
 
 watchEffect(() => {
   const pageTitle = props.title;
-
   document.title = pageTitle;
-
   setMetaTag("name", "description", props.description);
   setMetaTag("property", "og:title", pageTitle);
   setMetaTag("property", "og:description", props.description);

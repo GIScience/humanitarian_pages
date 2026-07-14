@@ -1,23 +1,74 @@
-export function getDimensionColumns(data: any[], selectedDisaster: string) {
-    const disasterSuffix = selectedDisaster.replace('risk_', '');
-    const hazardPrefix = (() => {
-        const d = disasterSuffix.toLowerCase();
-        if (d.includes('cyclone')) return 'cyc';
-        if (d.includes('flood')) return 'flo';
-        if (d.includes('drought')) return 'dr';
-        if (d.includes('earthquake')) return 'eq';
-        if (d.includes('tsunami')) return 'ts';
-        return d;
-    })();
+import type { DimensionColumns } from "@/enums/dimensions";
+import { DIMENSION_PREFIX_VALUES } from "@/enums/dimensions";
+import { HazardPrefix, resolveHazardPrefix } from "@/enums/hazards";
 
-    if (!data || data.length === 0) return { exp: '', vul: '', cop: '', hazardPrefix };
+const EXP_FLOOD_COL = `exp_${HazardPrefix.FLOOD}`;
+const EXP_CYCLONE_COL = `exp_${HazardPrefix.CYCLONE}`;
+
+// "rank"/"ranking" columns are always excluded from indicator/dimension discovery - the
+// Ranking tab is a read-only view of the already-computed risk score, never a weighted input.
+export const RESERVED_DIMENSION_PREFIXES = new Set([
+  ...DIMENSION_PREFIX_VALUES,
+  "risk",
+  "sus",
+  "rank",
+  "ranking",
+]);
+const RESERVED_PREFIXES = RESERVED_DIMENSION_PREFIXES;
+
+// The Ranking tab is a read-only view of the already-computed risk score, never a weighted will not be selected
+export function isRankingColumn(column: string): boolean {
+  return column.toLowerCase().startsWith("ranking");
+}
+
+/**
+ * Detects custom indicator dimensions from column naming convention (e.g. "edu_literacy_rate" -> "edu"),
+ * the same convention already used for "vul_" / "cop_" / "exp_". A prefix only qualifies as a dimension
+ * if at least one of its member columns actually holds numeric data - this keeps admin/name columns
+ * (e.g. "ADM2_NAME") from being picked up as bogus dimensions.
+ */
+export function discoverCustomDimensionPrefixes(data: any[]): string[] {
+  if (!data || data.length === 0) return [];
+  const cols = Object.keys(data[0]);
+  const candidates = new Set<string>();
+
+  for (const col of cols) {
+    const idx = col.indexOf("_");
+    if (idx === -1) continue;
+    const prefix = col.slice(0, idx);
+    if (RESERVED_PREFIXES.has(prefix.toLowerCase())) continue;
+    candidates.add(prefix);
+  }
+
+  return Array.from(candidates).filter((prefix) => {
+    const memberCols = cols.filter((c) => c.startsWith(`${prefix}_`));
+    return memberCols.some((c) =>
+      data.some((row) => row[c] !== null && row[c] !== "" && !isNaN(Number(row[c]))),
+    );
+  });
+}
+
+export function getDimensionColumns(
+    data: any[],
+    selectedDisaster: string,
+): DimensionColumns & { hazardPrefix: string } {
+    const disasterSuffix = selectedDisaster.replace('risk_', '');
+    const hazardPrefix = resolveHazardPrefix(disasterSuffix);
+
+    const result: DimensionColumns = { exp: '', vul: '', cop: '' };
+    if (!data || data.length === 0) return { ...result, hazardPrefix };
 
     const cols = Object.keys(data[0]);
-    const exp = cols.find(c => c === `exp_${disasterSuffix}`) || cols.find(c => c === 'exp') || '';
-    const vul = cols.find(c => c === 'vul') || '';
-    const cop = cols.find(c => c === 'cop') || '';
+    result.exp = cols.find(c => c === `exp_${disasterSuffix}`) || cols.find(c => c === 'exp') || '';
+    result.vul = cols.find(c => c === 'vul') || '';
+    result.cop = cols.find(c => c === 'cop') || '';
 
-    return { exp, vul, cop, hazardPrefix };
+    for (const prefix of discoverCustomDimensionPrefixes(data)) {
+        const composite = cols.find((c) => c === prefix);
+        if (composite) result[prefix] = composite;
+    }
+
+    return { ...result, hazardPrefix };
 }
 
 export function calculateDynamicRisk(
@@ -25,14 +76,19 @@ export function calculateDynamicRisk(
     weights: Record<string, number>
 ): any[] {
     if (!data.length) return data;
-    
+
     const cols = Object.keys(data[0]);
+    const customDimensionPrefixes = discoverCustomDimensionPrefixes(data);
+    const susceptibilityDims = ['vul', 'cop', ...customDimensionPrefixes];
+
     const bounds: Record<string, { min: number, max: number }> = {};
-    
+
     for (const col of cols) {
-        if (!col.startsWith('exp_') && !col.startsWith('vul_') && !col.startsWith('cop_')) continue;
-        if (col === 'exp_flo' || col === 'exp_cyc' || col === 'vul' || col === 'cop' || col === 'exp_flood' || col === 'exp_cyclone') continue;
-        
+        const isTrackedPrefix = col.startsWith('exp_') || col.startsWith('vul_') || col.startsWith('cop_')
+            || customDimensionPrefixes.some((p) => col.startsWith(`${p}_`));
+        if (!isTrackedPrefix) continue;
+        if (col === EXP_FLOOD_COL || col === EXP_CYCLONE_COL || col === 'vul' || col === 'cop' || col === 'exp_flood' || col === 'exp_cyclone') continue;
+
         let min = Infinity;
         let max = -Infinity;
         for (const row of data) {
@@ -45,12 +101,12 @@ export function calculateDynamicRisk(
             bounds[col] = { min, max };
         }
     }
-    
+
     const normalize = (val: number, col: string) => {
         if (isNaN(val) || !bounds[col]) return val;
         const { min, max } = bounds[col];
         if (max === min) return val;
-        return (val - min) / (max - min); 
+        return (val - min) / (max - min);
     };
 
     const getW = (col: string) => weights[col] ?? 1.0;
@@ -65,56 +121,71 @@ export function calculateDynamicRisk(
         delete row['exp_cyclone'];
         delete row['sus_cyclone'];
         delete row['risk_cyclone'];
-        delete row['exp_flo'];
-        delete row['exp_cyc'];
+        delete row[EXP_FLOOD_COL];
+        delete row[EXP_CYCLONE_COL];
+        for (const prefix of customDimensionPrefixes) delete row[prefix];
 
-        let copSum = 0; let copW = 0;
-        let vulSum = 0; let vulW = 0;
-        
+        const dimSum: Record<string, number> = {};
+        const dimW: Record<string, number> = {};
+
         let floodSum = 0; let floodW = 0;
         let cycloneSum = 0; let cycloneW = 0;
 
         for (const col of cols) {
-            if (col === 'exp_flo' || col === 'exp_cyc' || col === 'vul' || col === 'cop' || col.startsWith('risk_') || col.startsWith('sus_')) continue;
+            if (col === EXP_FLOOD_COL || col === EXP_CYCLONE_COL || col === 'vul' || col === 'cop'
+                || customDimensionPrefixes.includes(col) || col.startsWith('risk_') || col.startsWith('sus_')) continue;
             if (col === 'exp_flood' || col === 'exp_cyclone') continue;
 
             const w = getW(col);
             let rawValue = Number(row[col]);
             let val = normalize(rawValue, col);
-            
-            if (isNaN(val)) {
-                if (col.startsWith('cop_')) val = 0;
-                else if (col.startsWith('vul_')) val = 1;
-                else val = 0;
+
+            let matchedDim: string | null = null;
+            if (col.startsWith('cop_')) matchedDim = 'cop';
+            else if (col.startsWith('vul_')) matchedDim = 'vul';
+            else {
+                for (const prefix of customDimensionPrefixes) {
+                    if (col.startsWith(`${prefix}_`)) { matchedDim = prefix; break; }
+                }
             }
 
-            if (col.startsWith('cop_')) {
-                copSum += (1 - val) * w;
-                copW += w;
-            } else if (col.startsWith('vul_')) {
-                vulSum += val * w;
-                vulW += w;
-            } else if (col.startsWith('exp_flo_')) {
+            if (matchedDim) {
+                if (isNaN(val)) val = matchedDim === 'cop' ? 0 : 1;
+                const contribution = matchedDim === 'cop' ? (1 - val) : val;
+                dimSum[matchedDim] = (dimSum[matchedDim] ?? 0) + contribution * w;
+                dimW[matchedDim] = (dimW[matchedDim] ?? 0) + w;
+                continue;
+            }
+
+            if (isNaN(val)) val = 0;
+            if (col.startsWith(`${EXP_FLOOD_COL}_`)) {
                 floodSum += val * w;
                 floodW += w;
-            } else if (col.startsWith('exp_cyc_')) {
+            } else if (col.startsWith(`${EXP_CYCLONE_COL}_`)) {
                 cycloneSum += val * w;
                 cycloneW += w;
             }
         }
-        
-        let copScore = copW > 0 ? (copSum / copW) : 0;
-        let vulScore = vulW > 0 ? (vulSum / vulW) : 0;
 
-        row['cop'] = copScore;
-        row['vul'] = vulScore;
+        const dimScore: Record<string, number> = {};
+        let allDimsPresent = susceptibilityDims.length > 0;
+        for (const dim of susceptibilityDims) {
+            const w = dimW[dim] ?? 0;
+            dimScore[dim] = w > 0 ? (dimSum[dim] ?? 0) / w : 0;
+            row[dim] = dimScore[dim];
+            if (w <= 0) allDimsPresent = false;
+        }
 
-        let susScore = Math.sqrt(vulScore * copScore);
+        let susScore = 0;
+        if (allDimsPresent) {
+            const product = susceptibilityDims.reduce((acc, dim) => acc * dimScore[dim], 1);
+            susScore = Math.pow(product, 1 / susceptibilityDims.length);
+        }
 
         if (floodW > 0) {
             let expFloScore = floodSum / floodW;
             row['exp_flood'] = expFloScore;
-            if (copW > 0 && vulW > 0) {
+            if (allDimsPresent) {
                 row['sus_flood'] = susScore;
                 row['risk_flood'] = Math.sqrt(expFloScore * susScore);
             }
@@ -122,12 +193,12 @@ export function calculateDynamicRisk(
         if (cycloneW > 0) {
             let expCycScore = cycloneSum / cycloneW;
             row['exp_cyclone'] = expCycScore;
-            if (copW > 0 && vulW > 0) {
+            if (allDimsPresent) {
                 row['sus_cyclone'] = susScore;
                 row['risk_cyclone'] = Math.sqrt(expCycScore * susScore);
             }
         }
     }
-    
+
     return data;
 }

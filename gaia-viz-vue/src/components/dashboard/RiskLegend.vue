@@ -23,7 +23,7 @@ const legendItems = [
     :class="
       props.isMobile
         ? 'bottom-4 left-4 w-28 p-2'
-        : 'bottom-6 left-6 p-3.5 rounded-2xl'
+        : 'bottom-6 left-4 p-3.5 rounded-2xl'
     "
   >
     <h3
