@@ -76,7 +76,7 @@ function handleMapLoad(mapInstance: maplibregl.Map) {
   // Add World Boundaries for Click Interaction
   mapInstance.addSource("world", {
     type: "geojson",
-    data: "./data/world.json",
+    data: `${import.meta.env.BASE_URL}data/world.json`,
     promoteId: "iso_a3",
   });
 
