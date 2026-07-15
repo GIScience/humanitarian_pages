@@ -22,7 +22,7 @@ defineProps<{
   >
     <div class="flex items-start justify-between gap-3 mb-4">
       <p class="text-xs text-slate-500 leading-relaxed">
-        Toggle groups or individual sub-indicators on/off. Disabled
+        Toggle groups or individual indicators on/off. Disabled
         indicators are excluded from the risk calculation.
       </p>
       <button

@@ -53,7 +53,7 @@ const UPLOAD_MODE_OPTIONS: {
     icon: "mdi-plus-box-outline",
     title: "Append custom sub-indicator",
     description:
-      "Keep the current data and add your own column(s) as extra sub-indicators alongside it.",
+      "Keep the current data and add your own column(s) as extra indicators alongside it.",
   },
   {
     value: "replace",
@@ -62,7 +62,6 @@ const UPLOAD_MODE_OPTIONS: {
     description:
       "Your file becomes the full indicator set. Risk is calculated from whichever dimensions you assign columns to - dimensions you skip are left out of the calculation.",
   },
-  
 ];
 
 const BASE_DIMENSION_OPTIONS = BASE_DIMENSION_PREFIXES.map(
@@ -270,7 +269,7 @@ function handleDownloadTemplate() {
     selectedCountryPcodeFieldMap.value,
     "ADM2_PCODE",
     `custom_Indicator_template`,
-    selectedCountry.value
+    selectedCountry.value,
   );
 }
 
@@ -295,222 +294,226 @@ function handleClearFile() {
           @click="$emit('close')"
         />
       </v-card-title>
-      <v-card-text class="px-6 py-6">
-        <div class="d-flex align-start mb-1">
-          <v-icon size="20" color="heigit-red" class="mr-2 mt-1">
-            mdi-file-table-outline
-          </v-icon>
-          <div>
-            <div class="text-subtitle-1 font-weight-semibold mb-1">
-              Use {{ selectedCountry }} CSV template
-            </div>
-            <div class="text-body-2 text-sm">
-              Start from a template so your data is formatted correctly. It
-              includes a PCODE column. You can add your own columns for custom
-              dimensions.
+      <div
+        class="overflow-y-auto text-slate-600 leading-relaxed scroll-smooth custom-scrollbar"
+      >
+        <v-card-text class="px-6 py-6">
+          <div class="d-flex align-start mb-1">
+            <v-icon size="20" color="heigit-red" class="mr-2 mt-1">
+              mdi-file-table-outline
+            </v-icon>
+            <div>
+              <div class="text-subtitle-1 font-weight-semibold mb-1">
+                Use {{ selectedCountry }} CSV template
+              </div>
+              <div class="text-body-2 text-sm">
+                Start from a template so your data is formatted correctly. It
+                includes a PCODE column. You can add your own columns for custom
+                dimensions.
+              </div>
             </div>
           </div>
-        </div>
 
-        <div class="mt-5">
-          <v-btn
-            color="heigit-red"
-            variant="flat"
-            class="text-white font-weight-semibold px-2"
-            prepend-icon="mdi-download"
-            @click="handleDownloadTemplate()"
-          >
-            Download
-          </v-btn>
-        </div>
-      </v-card-text>
+          <div class="mt-5">
+            <v-btn
+              color="heigit-red"
+              variant="flat"
+              class="text-white font-weight-semibold px-2"
+              prepend-icon="mdi-download"
+              @click="handleDownloadTemplate()"
+            >
+              Download
+            </v-btn>
+          </div>
+        </v-card-text>
 
-      <v-divider />
-      <v-card-text class="px-6 py-6">
-        <transition v-if="step === 'select'" name="fade" mode="out-in">
-          <div class="flex flex-col gap-5">
-            <div class="mode-options">
-              <button
-                v-for="opt in UPLOAD_MODE_OPTIONS"
-                :key="opt.value"
-                type="button"
-                class="mode-option"
-                :class="{ 'mode-option--active': uploadMode === opt.value }"
-                @click="uploadMode = opt.value"
+        <v-divider />
+        <v-card-text class="px-6 py-6">
+          <transition v-if="step === 'select'" name="fade" mode="out-in">
+            <div class="flex flex-col gap-5">
+              <div class="mode-options">
+                <button
+                  v-for="opt in UPLOAD_MODE_OPTIONS"
+                  :key="opt.value"
+                  type="button"
+                  class="mode-option"
+                  :class="{ 'mode-option--active': uploadMode === opt.value }"
+                  @click="uploadMode = opt.value"
+                >
+                  <v-icon
+                    :icon="opt.icon"
+                    size="20"
+                    class="mr-2 mt-1"
+                    :color="uploadMode === opt.value ? 'heigit-red' : undefined"
+                  />
+                  <div class="text-left">
+                    <div class="text-body-2 font-weight-semibold">
+                      {{ opt.title }}
+                    </div>
+                    <div class="text-caption text-medium-emphasis">
+                      {{ opt.description }}
+                    </div>
+                  </div>
+                </button>
+              </div>
+
+              <v-alert
+                v-if="parseError"
+                type="error"
+                variant="tonal"
+                density="compact"
+                class="mt-4 text-sm p-2 rounded-xl"
+              >
+                {{ parseError }}
+              </v-alert>
+              <div
+                class="upload-dropzone"
+                :class="{ 'upload-dropzone--active': isDragging }"
+                @dragover.prevent="isDragging = true"
+                @dragleave.prevent="isDragging = false"
+                @drop.prevent="handleDrop"
               >
                 <v-icon
-                  :icon="opt.icon"
-                  size="20"
-                  class="mr-2 mt-1"
-                  :color="uploadMode === opt.value ? 'heigit-red' : undefined"
+                  icon="mdi-tray-arrow-up"
+                  size="40"
+                  class="mb-3 text-heigit-red"
                 />
-                <div class="text-left">
-                  <div class="text-body-2 font-weight-semibold">
-                    {{ opt.title }}
-                  </div>
-                  <div class="text-caption text-medium-emphasis">
-                    {{ opt.description }}
-                  </div>
-                </div>
-              </button>
-            </div>
+                <p class="text-body-2 font-weight-medium mb-1">
+                  Drag and drop a CSV here, or
+                  <label
+                    class="text-heigit-red font-weight-bold"
+                    style="cursor: pointer"
+                  >
+                    browse
+                    <input
+                      type="file"
+                      accept=".csv"
+                      class="d-none"
+                      @change="handleFileInput"
+                    />
+                  </label>
+                </p>
+                <p class="text-caption text-medium-emphasis">
+                  Must include a PCODE column matching "{{ pcodeField }}"
+                </p>
 
+                <div
+                  v-if="isParsing"
+                  class="mt-4 text-caption text-medium-emphasis"
+                >
+                  Parsing file...
+                </div>
+
+                <div
+                  v-if="selectedFile && !isParsing"
+                  class="mt-4 d-flex align-center justify-center"
+                >
+                  <v-chip
+                    closable
+                    class="p-2 space-x-2"
+                    @click:close="handleClearFile()"
+                  >
+                    <v-icon icon="mdi-file-document-outline" start />
+                    {{ selectedFile.name }}
+                  </v-chip>
+                </div>
+              </div>
+            </div>
+          </transition>
+
+          <div v-else>
             <v-alert
-              v-if="parseError"
-              type="error"
+              :type="matchIsSufficient ? 'success' : 'error'"
               variant="tonal"
               density="compact"
-              class="mt-4 text-sm p-2 rounded-xl"
+              class="mb-4 rounded-md p-3 gap-2 shadow-sm"
             >
-              {{ parseError }}
+              <span v-if="matchIsSufficient">
+                {{ matchCount }}/{{ parsedRows.length }} PCODEs matched this
+                {{ selectedCountry }}'s boundaries (using column "{{
+                  pcodeColumn
+                }}").
+              </span>
+              <span v-else>
+                Only {{ matchCount }}/{{ parsedRows.length }} PCODEs matched
+                (using column "{{ pcodeColumn }}"). At least
+                {{ Math.round(MATCH_THRESHOLD * 100) }}% must match to continue.
+              </span>
             </v-alert>
-            <div
-              class="upload-dropzone"
-              :class="{ 'upload-dropzone--active': isDragging }"
-              @dragover.prevent="isDragging = true"
-              @dragleave.prevent="isDragging = false"
-              @drop.prevent="handleDrop"
+
+            <v-alert
+              v-if="matchIsSufficient && !hasAtLeastOneAssignment"
+              type="warning"
+              variant="tonal"
+              density="compact"
+              class="mb-4 rounded-md p-3 gap-2 shadow-sm"
             >
-              <v-icon
-                icon="mdi-tray-arrow-up"
-                size="40"
-                class="mb-3 text-heigit-red"
-              />
-              <p class="text-body-2 font-weight-medium mb-1">
-                Drag and drop a CSV here, or
-                <label
-                  class="text-heigit-red font-weight-bold"
-                  style="cursor: pointer"
-                >
-                  browse
-                  <input
-                    type="file"
-                    accept=".csv"
-                    class="d-none"
-                    @change="handleFileInput"
-                  />
-                </label>
-              </p>
-              <p class="text-caption text-medium-emphasis">
-                Must include a PCODE column matching "{{ pcodeField }}"
-              </p>
+              Assign at least one column to a dimension before uploading.
+            </v-alert>
 
+            <v-alert
+              v-else-if="
+                matchIsSufficient &&
+                uploadMode === 'replace' &&
+                !hasAllRequiredDimensions
+              "
+              type="info"
+              variant="tonal"
+              density="compact"
+              class="mb-4 rounded-md p-3 gap-2 shadow-sm"
+            >
+              No column assigned to:
+              {{ missingRequiredDimensions.map((d) => d.label).join(", ") }}.
+              Risk will be calculated from the dimension(s) you did assign.
+            </v-alert>
+
+            <p class="text-caption text-medium-emphasis mb-3">
+              <template v-if="uploadMode === 'replace'">
+                Assign each column to a risk dimension so it can be weighted in
+                the model. Columns left as "Skip" are ignored.
+              </template>
+              <template v-else>
+                Assign the column(s) you want to add as custom sub-indicators to
+                a dimension. Columns left as "Skip" are ignored.
+              </template>
+            </p>
+
+            <div
+              class="d-flex flex-column"
+              style="gap: 12px; max-height: 20rem; overflow-y: auto"
+            >
               <div
-                v-if="isParsing"
-                class="mt-4 text-caption text-medium-emphasis"
+                v-for="col in assignableColumns"
+                :key="col"
+                class="d-flex align-center justify-space-between"
+                style="gap: 12px"
               >
-                Parsing file...
+                <span class="text-body-2 font-weight-medium text-truncate">{{
+                  col
+                }}</span>
+                <div class="d-flex align-center" style="gap: 8px">
+                  <select v-model="assignments[col]" class="dimension-select">
+                    <option value="skip">Skip</option>
+                    <option
+                      v-for="opt in dimensionOptions"
+                      :key="opt.value"
+                      :value="opt.value"
+                    >
+                      {{ opt.label }}
+                    </option>
+                  </select>
+                </div>
               </div>
-
               <div
-                v-if="selectedFile && !isParsing"
-                class="mt-4 d-flex align-center justify-center"
+                v-if="assignableColumns.length === 0"
+                class="text-caption text-medium-emphasis text-center py-2"
               >
-                <v-chip
-                  closable
-                  class="p-2 space-x-2"
-                  @click:close="handleClearFile()"
-                >
-                  <v-icon icon="mdi-file-document-outline" start />
-                  {{ selectedFile.name }}
-                </v-chip>
+                No additional columns found besides the PCODE column.
               </div>
             </div>
           </div>
-        </transition>
-
-        <div v-else>
-          <v-alert
-            :type="matchIsSufficient ? 'success' : 'error'"
-            variant="tonal"
-            density="compact"
-            class="mb-4 rounded-md p-3 gap-2 shadow-sm"
-          >
-            <span v-if="matchIsSufficient">
-              {{ matchCount }}/{{ parsedRows.length }} PCODEs matched this
-              {{ selectedCountry }}'s boundaries (using column "{{
-                pcodeColumn
-              }}").
-            </span>
-            <span v-else>
-              Only {{ matchCount }}/{{ parsedRows.length }} PCODEs matched
-              (using column "{{ pcodeColumn }}"). At least
-              {{ Math.round(MATCH_THRESHOLD * 100) }}% must match to continue.
-            </span>
-          </v-alert>
-
-          <v-alert
-            v-if="matchIsSufficient && !hasAtLeastOneAssignment"
-            type="warning"
-            variant="tonal"
-            density="compact"
-            class="mb-4 rounded-md p-3 gap-2 shadow-sm"
-          >
-            Assign at least one column to a dimension before uploading.
-          </v-alert>
-
-          <v-alert
-            v-else-if="
-              matchIsSufficient &&
-              uploadMode === 'replace' &&
-              !hasAllRequiredDimensions
-            "
-            type="info"
-            variant="tonal"
-            density="compact"
-            class="mb-4 rounded-md p-3 gap-2 shadow-sm"
-          >
-            No column assigned to: {{
-              missingRequiredDimensions.map((d) => d.label).join(", ")
-            }}. Risk will be calculated from the dimension(s) you did assign.
-          </v-alert>
-
-          <p class="text-caption text-medium-emphasis mb-3">
-            <template v-if="uploadMode === 'replace'">
-              Assign each column to a risk dimension so it can be weighted in
-              the model. Columns left as "Skip" are ignored.
-            </template>
-            <template v-else>
-              Assign the column(s) you want to add as custom sub-indicators to a
-              dimension. Columns left as "Skip" are ignored.
-            </template>
-          </p>
-
-          <div
-            class="d-flex flex-column"
-            style="gap: 12px; max-height: 20rem; overflow-y: auto"
-          >
-            <div
-              v-for="col in assignableColumns"
-              :key="col"
-              class="d-flex align-center justify-space-between"
-              style="gap: 12px"
-            >
-              <span class="text-body-2 font-weight-medium text-truncate">{{
-                col
-              }}</span>
-              <div class="d-flex align-center" style="gap: 8px">
-                <select v-model="assignments[col]" class="dimension-select">
-                  <option value="skip">Skip</option>
-                  <option
-                    v-for="opt in dimensionOptions"
-                    :key="opt.value"
-                    :value="opt.value"
-                  >
-                    {{ opt.label }}
-                  </option>
-                </select>
-              </div>
-            </div>
-            <div
-              v-if="assignableColumns.length === 0"
-              class="text-caption text-medium-emphasis text-center py-2"
-            >
-              No additional columns found besides the PCODE column.
-            </div>
-          </div>
-        </div>
-      </v-card-text>
+        </v-card-text>
+      </div>
 
       <v-divider />
 
@@ -588,5 +591,21 @@ function handleClearFile() {
   color: #334155;
   background: #f8fafc;
   cursor: pointer;
+}
+.custom-scrollbar::-webkit-scrollbar {
+  width: 8px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 10px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
 }
 </style>
