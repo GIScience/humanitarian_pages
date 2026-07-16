@@ -42,24 +42,33 @@ const uploadInput = ref<HTMLInputElement | null>(null);
       >
         <!-- Download/Upload Weights -->
         <div
-          class="absolute left-4 top-1/2 -translate-y-1/2 flex flex-col gap-1.5"
+          class="absolute left-4 top-1/2 -translate-y-1/2 flex flex-col gap-2"
         >
-          <button
+          <v-btn
             @click="downloadWeightsCSV"
+            variant="flat"
+            color="heigit-red"
+            size="small"
+            prepend-icon="mdi-download"
+            aria-label="download weights as CSV"
             title="Download current weights as CSV"
-            class="shrink-0 px-3 py-1.5 bg-white hover:bg-slate-50 text-slate-700 text-[10px] font-bold uppercase tracking-widest rounded shadow-sm border border-slate-200 transition-colors flex items-center gap-1.5"
+            class="shrink-0 text-white text-none gap-1.5 px-2 font-bold"
           >
-            <v-icon icon="mdi-download" size="12" class="text-heigit-red" />
             Download Weights
-          </button>
-          <button
+          </v-btn>
+
+          <v-btn
             @click="uploadInput?.click()"
+            variant="tonal"
+            color="slate-700"
+            size="small"
+            prepend-icon="mdi-upload"
             title="Upload weights from a CSV file"
-            class="shrink-0 px-3 py-1.5 bg-white hover:bg-slate-50 text-slate-700 text-[10px] font-bold uppercase tracking-widest rounded shadow-sm border border-slate-200 transition-colors flex items-center gap-1.5"
+            class="shrink-0 text-none gap-1.5 px-2 font-bold"
           >
-            <v-icon icon="mdi-upload" size="12" class="text-heigit-red" />
             Upload Weights
-          </button>
+          </v-btn>
+
           <input
             ref="uploadInput"
             type="file"

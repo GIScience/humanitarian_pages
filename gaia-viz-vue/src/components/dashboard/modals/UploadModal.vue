@@ -295,9 +295,9 @@ function handleClearFile() {
         />
       </v-card-title>
       <div
-        class="overflow-y-auto text-slate-600 leading-relaxed scroll-smooth custom-scrollbar"
+        class="overflow-y-auto text-slate-600 px-6 space-y-5 leading-relaxed scroll-smooth custom-scrollbar"
       >
-        <v-card-text class="px-6 py-6">
+        <v-card-text class="">
           <div class="d-flex align-start mb-1">
             <v-icon size="20" color="heigit-red" class="mr-2 mt-1">
               mdi-file-table-outline
@@ -316,9 +316,12 @@ function handleClearFile() {
 
           <div class="mt-5">
             <v-btn
-              color="heigit-red"
               variant="flat"
-              class="text-white font-weight-semibold px-2"
+              color="heigit-red"
+              size="small"
+              :title="`Download a CSV template for ${selectedCountry}`"
+              :aria-label="`Download a CSV template for ${selectedCountry}`"
+              class="shrink-0 text-white text-none gap-1.5 px-2 font-bold"
               prepend-icon="mdi-download"
               @click="handleDownloadTemplate()"
             >
@@ -327,8 +330,8 @@ function handleClearFile() {
           </div>
         </v-card-text>
 
-        <v-divider />
-        <v-card-text class="px-6 py-6">
+        <v-divider :thickness="1" color="grey" opacity="0.5" />
+        <v-card-text>
           <transition v-if="step === 'select'" name="fade" mode="out-in">
             <div class="flex flex-col gap-5">
               <div class="mode-options">
