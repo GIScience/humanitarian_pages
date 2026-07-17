@@ -1,4 +1,4 @@
-name: Deploy Hazard Risk Dashboard and other static pages
+name: Deploy OQAPI and other static pages
 
 on:
   push:
@@ -20,8 +20,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -32,31 +30,6 @@ jobs:
 
       - name: Setup Pages
         uses: actions/configure-pages@v4
-
-      # --- DEV BUILD: GAIA from HEAD ---
-      - name: Build GAIA Vue (Dev)
-        run: |
-          cd gaia-viz-vue
-          npm install
-          npx vite build --base=/humanitarian_pages/gaia-dashboard/dev/
-          cd ..
-
-      - name: Save GAIA dev build
-        run: cp -r gaia-viz-vue/dist gaia-viz-vue/dist-dev
-
-      # --- Checkout latest release tag ---
-      - name: Checkout latest release tag
-        run: |
-          LATEST_TAG=$(git describe --tags `git rev-list --tags --max-count=1`)
-          git checkout $LATEST_TAG
-
-      # --- PROD BUILDS from latest tag ---
-      - name: Build GAIA Vue (Prod)
-        run: |
-          cd gaia-viz-vue
-          npm install
-          npm run build
-          cd ..
 
       - name: Build OQAPI Vue
         run: |
@@ -71,22 +44,13 @@ jobs:
           mkdir _site
 
           rsync -av \
-            --exclude='gaia-viz-vue' \
             --exclude='oqapi-country-reports-vue' \
             --exclude='_site' \
             --exclude='.git' \
             --exclude='.github' \
             ./ ./_site/
 
-          # PROD GAIA (from latest tag) at /gaia-dashboard/
-          mkdir -p ./_site/gaia-dashboard
-          cp -r ./gaia-viz-vue/dist/* ./_site/gaia-dashboard/
-
-          # DEV GAIA (from HEAD) at /gaia-dashboard/dev/
-          mkdir -p ./_site/gaia-dashboard/dev
-          cp -r ./gaia-viz-vue/dist-dev/* ./_site/gaia-dashboard/dev/
-
-          # OQAPI (from latest tag)
+          # OQAPI
           mkdir -p ./_site/oqapi-country-report
           cp -r ./oqapi-country-reports-vue/dist/* ./_site/oqapi-country-report/
 
