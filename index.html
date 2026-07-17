@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>humanitarian pages</title>
+<style>
+body{max-width:760px;margin:0 auto;padding:32px 20px 60px;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;line-height:1.6;color:#1b1f23}
+a{color:#0969da}
+h1{font-size:26px;border-bottom:1px solid #d0d7de;padding-bottom:8px}
+h2{font-size:19px;margin-top:32px}
+hr{border:0;border-top:1px solid #d0d7de;margin:24px 0}
+li{margin:6px 0}
+#content{white-space:normal}
+</style>
+</head>
+<body>
+<div id="content">Loading…</div>
+<script>
+// Minimal markdown -> HTML for this repo's README (headers, hr, links, ordered/unordered lists, paragraphs).
+function mdToHtml(md){
+  const lines = md.split("\n");
+  let html = "", inList = false, listTag = "";
+  const inline = s => s.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>');
+  const closeList = () => { if (inList) { html += "</" + listTag + ">"; inList = false; } };
+  for (const raw of lines) {
+    const line = raw.trim();
+    if (line === "") { continue; }
+    if (line === "---") { closeList(); html += "<hr>"; continue; }
+    let m;
+    if ((m = line.match(/^(#{1,3})\s+(.*)$/))) { closeList(); html += `<h${m[1].length}>${inline(m[2])}</h${m[1].length}>`; continue; }
+    if ((m = line.match(/^\d+\.\s+(.*)$/))) { if (!inList || listTag !== "ol") { closeList(); html += "<ol>"; inList = true; listTag = "ol"; } html += `<li>${inline(m[1])}</li>`; continue; }
+    if ((m = line.match(/^[-*]\s+(.*)$/))) { if (!inList || listTag !== "ul") { closeList(); html += "<ul>"; inList = true; listTag = "ul"; } html += `<li>${inline(m[1])}</li>`; continue; }
+    closeList();
+    html += `<p>${inline(line)}</p>`;
+  }
+  closeList();
+  return html;
+}
+fetch("./README.md")
+  .then(r => r.text())
+  .then(md => { document.getElementById("content").innerHTML = mdToHtml(md); })
+  .catch(() => { document.getElementById("content").innerHTML = '<p>Could not load README.md. See the <a href="https://github.com/GIScience/humanitarian_pages">repository</a> directly.</p>'; });
+</script>
+</body>
+</html>
