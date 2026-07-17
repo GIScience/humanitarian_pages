@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Diverging Trends — Population &amp; Declining River Discharge, 1980–2019</title>
+<link rel="stylesheet" href="lib/leaflet.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header>
+  <div class="brand-bar"></div>
+  <div class="head-inner">
+    <div>
+      <h1>Diverging Trends: Population Dynamics in Basins with Declining River Discharge</h1>
+      <p class="subtitle">Interactive companion to the analysis, 1980–2019 · reconstructed river discharge (GLORIF1) × population (GHS-POP) on 4,734 HydroBASINS level-5 river basins</p>
+    </div>
+    <button id="aboutBtn" class="btn-ghost" title="What is this dashboard?">About&nbsp;/&nbsp;Help</button>
+  </div>
+</header>
+
+<div id="about" class="about hidden">
+  <h2>What am I looking at?</h2>
+  <p>Rivers supply most of the freshwater people use. This dashboard shows, for every large river
+  basin in the world, whether the <b>amount of water flowing in its rivers declined between 1980 and
+  2019</b> — and how many <b>people</b> live in the affected basins. The headline finding: the population
+  living in declining-discharge basins grew from <b>289 to 524&nbsp;million</b> (+81%). About <b>95% of that
+  increase is simply global population growth</b>; only a small remainder comes from population shifting
+  toward (or away from) declining basins — and that remainder differs strongly by region.</p>
+  <h3>How to read the map</h3>
+  <ul>
+    <li>Each colored shape is one <b>river basin</b> (HydroBASINS level&nbsp;5; median size ≈ 17,500&nbsp;km²). Click any basin for its details.</li>
+    <li>Use the <b>view switcher</b> (top-left of the map) to change what the colors mean. Each view has its own legend and explanation.</li>
+    <li><b>Country names</b> can be toggled on/off and appear when you zoom in.</li>
+  </ul>
+  <h3>Three honest caveats (please read)</h3>
+  <ol>
+    <li><b>“Discharge” is reconstructed, not directly measured everywhere.</b> It comes from a hydrological model corrected with machine learning against river-gauge measurements (GLORIF1). Trends can locally reflect data artifacts.</li>
+    <li><b>Everything is basin-aggregated.</b> The underlying discharge grid is coarse (~50&nbsp;km). Statements about single river reaches or small catchments are not possible.</li>
+    <li><b>Exposure ≠ impact.</b> Living in a declining-discharge basin does not automatically mean water shortage — infrastructure, groundwater and imports mediate actual impacts.</li>
+  </ol>
+  <p class="close-hint"><button class="btn-red" onclick="toggleAbout()">Close</button></p>
+</div>
+
+<main>
+  <section id="mapwrap">
+    <div id="map"></div>
+
+    <div id="modeBox" class="panel-float">
+      <div class="mode-title">Map view</div>
+      <label><input type="radio" name="mode" value="trend" checked> Discharge trend class</label>
+      <label><input type="radio" name="mode" value="frac"> Share of declining cells</label>
+      <label><input type="radio" name="mode" value="bivar"> Decline × population growth</label>
+      <label><input type="radio" name="mode" value="pop"> Population change</label>
+      <div class="mode-extra">
+        <label id="hotWrap" class="sub hidden"><input type="checkbox" id="hotChk" checked> outline statistical hotspots</label>
+        <label class="sub"><input type="checkbox" id="lblChk" checked> country names</label>
+      </div>
+    </div>
+
+    <div id="legend" class="panel-float legend"></div>
+    <div id="modeExplain" class="panel-float mode-explain"></div>
+  </section>
+
+  <aside id="side">
+    <div class="kcards" id="kcards"></div>
+
+    <div class="block">
+      <h2>Exposed population over time <span class="qmark" data-tip="How many people live in basins whose river discharge significantly declined over 1980–2019. Because 'a declining basin' can be defined more or less strictly, three definitions are shown — the shaded band spans the strict and broad definitions, the bold line is the primary (fractional) definition. The dashed grey line repeats the calculation with an independent runoff dataset (G-RUN) as a robustness check.">?</span></h2>
+      <div id="expChart"></div>
+      <p class="chart-note">The primary definition weights each basin's population by its share of declining
+      discharge cells (no arbitrary threshold). All three definitions roughly double over 40 years.</p>
+    </div>
+
+    <div class="block">
+      <h2>Why did exposure grow? <span class="qmark" data-tip="An LMDI decomposition splits the change in exposed population 1980→2020 exactly (no residual) into: growth of the total population (if people were distributed the same as before, exposure would still rise because there are simply more people) and a concentration effect (population growing faster or slower inside declining basins than outside).">?</span></h2>
+      <div class="region-row">
+        <label for="regSel">Region:</label>
+        <select id="regSel"></select>
+      </div>
+      <div id="lmdiChart"></div>
+      <p class="chart-note" id="lmdiNote"></p>
+    </div>
+
+    <div class="block">
+      <h2>The global concentration effect, resolved <span class="qmark" data-tip="A companion decomposition splits the global change into: global population scale, a between-region term (population growth was fastest in regions that are more exposed than the world average), and a within-region term (inside regions, people on net shifted slightly AWAY from declining basins). The within-region exceptions are North America and — on this discharge dataset — the Middle East & North Africa.">?</span></h2>
+      <div id="bwChart"></div>
+      <p class="chart-note">Positive bars push exposure up. The “between regions” bar means: regions that are
+      already more exposed than average (South Asia, Sub-Saharan Africa, MENA) grew fastest. The small negative
+      “within regions” bar means people did <i>not</i>, on net, move toward declining basins inside their region.</p>
+    </div>
+
+    <div class="block glossary">
+      <h2>Mini-glossary</h2>
+      <dl>
+        <dt>River discharge</dt><dd>The volume of water flowing through a river (m³/s). Here: monthly values on a global 0.5° grid, 1979–2019, reconstructed by the GLORIF1 dataset.</dd>
+        <dt>Declining / increasing</dt><dd>A statistically significant downward/upward trend of annual mean discharge over 1980–2019 (Mann–Kendall test with false-discovery-rate control — a standard guard against false positives when testing 62,464 cells at once).</dd>
+        <dt>Share of declining cells</dt><dd>The fraction of a basin's discharge grid cells that are “declining”. 0% = none, 100% = all. The primary exposure measure weights population by this share.</dd>
+        <dt>Compound hotspot</dt><dd>A basin that is in the top third worldwide for <i>both</i> discharge decline <i>and</i> population growth, and whose neighbors are too (tested with local join count statistics; only statistically significant cluster members are outlined).</dd>
+        <dt>LMDI decomposition</dt><dd>An accounting method (from energy economics) that splits a change into named contributions that add up exactly — no unexplained remainder.</dd>
+      </dl>
+    </div>
+
+    <div class="block provenance">
+      <h2>Data &amp; provenance</h2>
+      <p>Every number shown is machine-generated by the analysis pipeline
+      (configuration hash <code id="cfgHash"></code>). Data: GLORIF1 discharge reconstruction (CC-BY 4.0),
+      GHS-POP R2023A population (CC-BY 4.0), HydroBASINS v1.c (HydroSHEDS license), Natural Earth
+      country borders (public domain), G-RUN ENSEMBLE runoff (CC-BY 4.0, robustness check).
+      Map geometries are simplified for display; all statistics were computed on full-resolution data.</p>
+      <p class="fine">This dashboard is a research companion, not an operational water-risk product.
+      Basin values are statistical aggregates of a coarse (0.5°) reconstruction and must not be used
+      for local planning decisions.</p>
+    </div>
+  </aside>
+</main>
+
+<div id="tip" class="tip hidden"></div>
+
+<script src="lib/leaflet.js"></script>
+<script src="data/basins.js"></script>
+<script src="data/countries.js"></script>
+<script src="data/labels.js"></script>
+<script src="data/charts.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

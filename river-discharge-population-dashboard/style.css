@@ -1,0 +1,176 @@
+/* HeiGIT-inspired look & feel: Poppins, #cc0130 accent, light flat design */
+:root {
+  --red: #cc0130;
+  --ink: #1c1c24;
+  --body: #515161;
+  --bg: #fbfcfd;
+  --line: #e4e6ea;
+  --card: #ffffff;
+  --ocean: #eef2f5;
+  --land: #f3f2ef;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; height: 100%; }
+body {
+  font-family: 'Poppins', -apple-system, 'Segoe UI', sans-serif;
+  background: var(--bg); color: var(--body);
+  font-size: 13.5px; line-height: 1.55;
+  display: flex; flex-direction: column;
+}
+
+/* ---------- header ---------- */
+header { background: #fff; border-bottom: 1px solid var(--line); }
+.brand-bar { height: 4px; background: var(--red); }
+.head-inner {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  gap: 16px; padding: 14px 22px 12px;
+}
+h1 { font-size: 18px; font-weight: 600; color: var(--ink); margin: 0 0 2px; line-height: 1.3; }
+.subtitle { margin: 0; font-size: 12px; color: var(--body); }
+.btn-ghost {
+  font-family: inherit; font-size: 12.5px; font-weight: 500; white-space: nowrap;
+  color: var(--red); background: #fff; border: 1.5px solid var(--red);
+  padding: 7px 14px; border-radius: 3px; cursor: pointer;
+}
+.btn-ghost:hover { background: var(--red); color: #fff; }
+.btn-red {
+  font-family: inherit; font-size: 12.5px; font-weight: 500; color: #fff;
+  background: var(--red); border: none; padding: 7px 16px; border-radius: 3px; cursor: pointer;
+}
+
+/* ---------- about ---------- */
+.about {
+  background: #fff; border-bottom: 1px solid var(--line);
+  padding: 14px 22px 10px; max-width: 1100px;
+}
+.about h2 { font-size: 15px; color: var(--ink); margin: 4px 0 6px; }
+.about h3 { font-size: 13px; color: var(--ink); margin: 12px 0 4px; }
+.about ul, .about ol { margin: 4px 0; padding-left: 20px; }
+.about li { margin-bottom: 3px; }
+.hidden { display: none !important; }
+.close-hint { margin: 10px 0 4px; }
+
+/* ---------- layout ---------- */
+main { flex: 1; display: flex; min-height: 0; }
+#mapwrap { flex: 1.55; position: relative; min-width: 0; }
+#map { position: absolute; inset: 0; background: var(--ocean); }
+#side {
+  flex: 1; max-width: 470px; min-width: 360px; overflow-y: auto;
+  padding: 14px 18px 30px; background: var(--bg); border-left: 1px solid var(--line);
+}
+
+/* ---------- floating map panels ---------- */
+.panel-float {
+  position: absolute; z-index: 800; background: rgba(255,255,255,.96);
+  border: 1px solid var(--line); border-radius: 4px;
+  box-shadow: 0 1px 4px rgba(0,0,0,.08); padding: 10px 12px;
+}
+#modeBox { top: 12px; left: 12px; width: 228px; }
+.mode-title { font-weight: 600; font-size: 12px; color: var(--ink); margin-bottom: 5px;
+  text-transform: uppercase; letter-spacing: .04em; }
+#modeBox label { display: block; font-size: 12.5px; padding: 2.5px 0; cursor: pointer; color: var(--ink); }
+#modeBox input { accent-color: var(--red); margin-right: 6px; }
+.mode-extra { border-top: 1px solid var(--line); margin-top: 6px; padding-top: 5px; }
+#modeBox label.sub { font-size: 12px; color: var(--body); }
+
+#legend { bottom: 18px; left: 12px; max-width: 250px; font-size: 12px; }
+#legend .lg-title { font-weight: 600; color: var(--ink); margin-bottom: 5px; font-size: 12px; }
+.lg-row { display: flex; align-items: center; gap: 7px; padding: 1.5px 0; }
+.lg-swatch { width: 15px; height: 15px; border-radius: 2px; flex: none; border: 1px solid rgba(0,0,0,.12); }
+.lg-swatch.outline { background: none; border: 2px solid #1a1a1a; }
+.bivar-grid { display: grid; grid-template-columns: repeat(3, 17px); gap: 1.5px; margin: 4px 0 2px 14px; }
+.bivar-cell { width: 17px; height: 17px; }
+.bivar-axis { font-size: 10.5px; color: var(--body); }
+
+#modeExplain { top: 12px; right: 12px; max-width: 290px; font-size: 12px; }
+#modeExplain b { color: var(--ink); }
+
+/* ---------- side panel ---------- */
+.kcards { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 14px; }
+.kcard {
+  background: var(--card); border: 1px solid var(--line); border-radius: 4px;
+  padding: 10px 12px 8px; position: relative;
+}
+.kcard .num { font-size: 21px; font-weight: 700; color: var(--red); line-height: 1.1; }
+.kcard .lbl { font-size: 11px; color: var(--body); margin-top: 3px; line-height: 1.35; }
+
+.block { background: var(--card); border: 1px solid var(--line); border-radius: 4px;
+  padding: 12px 14px; margin-bottom: 14px; }
+.block h2 { font-size: 13.5px; font-weight: 600; color: var(--ink); margin: 0 0 8px; }
+.chart-note { font-size: 11.5px; color: var(--body); margin: 8px 0 0; }
+.region-row { margin-bottom: 6px; font-size: 12.5px; }
+.region-row select {
+  font-family: inherit; font-size: 12.5px; padding: 3px 6px; margin-left: 6px;
+  border: 1px solid var(--line); border-radius: 3px; background: #fff; color: var(--ink);
+}
+
+.qmark {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 15px; height: 15px; border-radius: 50%; background: var(--red); color: #fff;
+  font-size: 10.5px; font-weight: 600; cursor: help; vertical-align: 2px; margin-left: 2px;
+}
+.tip {
+  position: fixed; z-index: 2000; max-width: 320px; background: var(--ink); color: #fff;
+  font-size: 11.5px; line-height: 1.45; padding: 9px 11px; border-radius: 4px;
+  box-shadow: 0 3px 10px rgba(0,0,0,.25); pointer-events: none;
+}
+
+.glossary dl { margin: 0; }
+.glossary dt { font-weight: 600; font-size: 12px; color: var(--ink); margin-top: 7px; }
+.glossary dd { margin: 1px 0 0 0; font-size: 12px; }
+.provenance p { font-size: 11.5px; margin: 4px 0; }
+.provenance .fine { color: #8a8a96; }
+.provenance code { background: #f1f2f2; padding: 1px 5px; border-radius: 3px; font-size: 11px; }
+
+/* ---------- SVG charts ---------- */
+svg text { font-family: 'Poppins', sans-serif; }
+.axis line, .axis path { stroke: #c9ccd2; stroke-width: 1; }
+.gridline { stroke: #eceef1; stroke-width: 1; }
+
+/* ---------- basin mode colors ----------
+   Performance: basins carry fixed classes (set once at creation); switching the active
+   map view only swaps one class on #map, so the browser repaints via CSS, not a
+   4,734-element JS loop. Rules below are scoped by the active #map.mode-* class. */
+#map.mode-trend path.t-declining   { fill:#D55E00; }
+#map.mode-trend path.t-increasing  { fill:#0072B2; }
+#map.mode-trend path.t-no-trend    { fill:#d9d9d9; }
+#map.mode-trend path.t-no-coverage { fill:#f5f5f5; }
+
+#map.mode-frac path.f-0      { fill:#f5f5f5; }
+#map.mode-frac path.f-1      { fill:#fdd0a2; }
+#map.mode-frac path.f-2      { fill:#fd8d3c; }
+#map.mode-frac path.f-3      { fill:#d94801; }
+#map.mode-frac path.f-4      { fill:#7f2704; }
+#map.mode-frac path.f-nodata { fill:#f5f5f5; }
+
+#map.mode-bivar path.v-none { fill:#f5f5f5; }
+#map.mode-bivar path.v-0-0 { fill:#e8e8e8; } #map.mode-bivar path.v-0-1 { fill:#e4acac; } #map.mode-bivar path.v-0-2 { fill:#c85a5a; }
+#map.mode-bivar path.v-1-0 { fill:#b0d5df; } #map.mode-bivar path.v-1-1 { fill:#ad9ea5; } #map.mode-bivar path.v-1-2 { fill:#985356; }
+#map.mode-bivar path.v-2-0 { fill:#64acbe; } #map.mode-bivar path.v-2-1 { fill:#627f8c; } #map.mode-bivar path.v-2-2 { fill:#574249; }
+#map.mode-bivar.show-hot path.hot { stroke:#1a1a1a; stroke-width:1.4px; }
+
+#map.mode-pop path.p-0    { fill:#2166ac; }
+#map.mode-pop path.p-1    { fill:#f2f0eb; }
+#map.mode-pop path.p-2    { fill:#d9b38a; }
+#map.mode-pop path.p-3    { fill:#b35806; }
+#map.mode-pop path.p-4    { fill:#7f3b08; }
+#map.mode-pop path.p-none { fill:#f5f5f5; }
+
+/* ---------- leaflet tweaks ---------- */
+.leaflet-container { font-family: 'Poppins', sans-serif; background: var(--ocean); }
+.leaflet-popup-content { font-size: 12.5px; line-height: 1.5; margin: 12px 14px; }
+.leaflet-popup-content h3 { margin: 0 0 6px; font-size: 13px; color: var(--ink); }
+.pop-row { display: flex; justify-content: space-between; gap: 14px; padding: 1.5px 0;
+  border-bottom: 1px dotted #eee; }
+.pop-row .k { color: var(--body); }
+.pop-row .v { font-weight: 600; color: var(--ink); text-align: right; }
+.pop-note { font-size: 11px; color: #8a8a96; margin-top: 6px; }
+.country-label { background: none; border: none; box-shadow: none;
+  color: #7d7d88; font-weight: 500; text-shadow: 0 0 3px #fff, 0 0 3px #fff; white-space: nowrap; }
+.leaflet-control-zoom a { color: var(--ink); }
+
+@media (max-width: 980px) {
+  main { flex-direction: column; }
+  #mapwrap { min-height: 55vh; }
+  #side { max-width: none; }
+}
