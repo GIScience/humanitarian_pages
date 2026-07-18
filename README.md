@@ -31,3 +31,5 @@ Each project is more or less thematically independent, providing distinct exampl
 9. [Global drought exposure, 1980–2024](https://giscience.github.io/humanitarian_pages/drought-dashboard)
 
 10. [River discharge vs population dashboard](https://giscience.github.io/humanitarian_pages/river-discharge-population-dashboard)
+
+11. [Displacement dashboard](https://giscience.github.io/humanitarian_pages/displacement-dashboard)
