@@ -1,0 +1,10 @@
+{
+"type": "FeatureCollection",
+"features": [
+{ "type": "Feature", "properties": { "index": "0", "@osmId": "node/3150364131", "name": "Chowpatty", "opening_hours": null, "label": "Vegetarian-friendly places", "color": "#74c476" }, "geometry": { "type": "Point", "coordinates": [ 39.2836081, -6.8149424 ] } },
+{ "type": "Feature", "properties": { "index": "1", "@osmId": "node/4481455691", "name": "The Rasoi", "opening_hours": null, "label": "Vegetarian-friendly places", "color": "#74c476" }, "geometry": { "type": "Point", "coordinates": [ 39.2842559, -6.8148501 ] } },
+{ "type": "Feature", "properties": { "index": "2", "@osmId": "node/1392942485", "name": "Ari", "opening_hours": "Mo-Su,PH 10:00-23:00", "label": "Vegetarian-friendly places", "color": "#74c476" }, "geometry": { "type": "Point", "coordinates": [ 39.2794668, -6.7803019 ] } },
+{ "type": "Feature", "properties": { "index": "3", "@osmId": "node/5291053931", "name": "Café Aroma", "opening_hours": "Mo-Fr 08:00-23:00; Sa 10:00-23:00; Su 08:00-17:00", "label": "Vegetarian-friendly places", "color": "#74c476" }, "geometry": { "type": "Point", "coordinates": [ 39.2863635, -6.8011078 ] } },
+{ "type": "Feature", "properties": { "index": "4", "@osmId": "node/13254382600", "name": "Bali's & Co - International Cuisine", "opening_hours": "Mo-Su 18:00-00:00", "label": "Vegetarian-friendly places", "color": "#74c476" }, "geometry": { "type": "Point", "coordinates": [ 39.2828144, -6.8102522 ] } }
+]
+}

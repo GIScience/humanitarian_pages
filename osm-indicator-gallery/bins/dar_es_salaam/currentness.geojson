@@ -1,0 +1,26 @@
+{
+"type": "FeatureCollection",
+"features": [
+{ "type": "Feature", "properties": { "index": "0", "last_edit_year": 2020, "years_since_edit": 6, "label": "0.0–6.0 yr", "color": "#006837" }, "geometry": { "type": "Point", "coordinates": [ 39.2454941, -6.7981309 ] } },
+{ "type": "Feature", "properties": { "index": "1", "last_edit_year": 2020, "years_since_edit": 6, "label": "0.0–6.0 yr", "color": "#006837" }, "geometry": { "type": "Point", "coordinates": [ 39.2706744, -6.8330672 ] } },
+{ "type": "Feature", "properties": { "index": "2", "last_edit_year": 2020, "years_since_edit": 6, "label": "0.0–6.0 yr", "color": "#006837" }, "geometry": { "type": "Point", "coordinates": [ 39.2463992, -6.7915 ] } },
+{ "type": "Feature", "properties": { "index": "3", "last_edit_year": 2020, "years_since_edit": 6, "label": "0.0–6.0 yr", "color": "#006837" }, "geometry": { "type": "Point", "coordinates": [ 39.2726592, -6.8391595 ] } },
+{ "type": "Feature", "properties": { "index": "4", "last_edit_year": 2020, "years_since_edit": 6, "label": "0.0–6.0 yr", "color": "#006837" }, "geometry": { "type": "Point", "coordinates": [ 39.2444225, -6.8271663 ] } },
+{ "type": "Feature", "properties": { "index": "5", "last_edit_year": 2020, "years_since_edit": 6, "label": "0.0–6.0 yr", "color": "#006837" }, "geometry": { "type": "Point", "coordinates": [ 39.2463352, -6.7938609 ] } },
+{ "type": "Feature", "properties": { "index": "6", "last_edit_year": 2020, "years_since_edit": 6, "label": "0.0–6.0 yr", "color": "#006837" }, "geometry": { "type": "Point", "coordinates": [ 39.250717, -6.8020987 ] } },
+{ "type": "Feature", "properties": { "index": "7", "last_edit_year": 2020, "years_since_edit": 6, "label": "0.0–6.0 yr", "color": "#006837" }, "geometry": { "type": "Point", "coordinates": [ 39.2471586, -6.8007108 ] } },
+{ "type": "Feature", "properties": { "index": "8", "last_edit_year": 2026, "years_since_edit": 0, "label": "0.0–6.0 yr", "color": "#006837" }, "geometry": { "type": "Point", "coordinates": [ 39.2633649, -6.7999776 ] } },
+{ "type": "Feature", "properties": { "index": "9", "last_edit_year": 2026, "years_since_edit": 0, "label": "0.0–6.0 yr", "color": "#006837" }, "geometry": { "type": "Point", "coordinates": [ 39.2633184, -6.7995453 ] } },
+{ "type": "Feature", "properties": { "index": "10", "last_edit_year": 2026, "years_since_edit": 0, "label": "0.0–6.0 yr", "color": "#006837" }, "geometry": { "type": "Point", "coordinates": [ 39.2633506, -6.799638 ] } },
+{ "type": "Feature", "properties": { "index": "11", "last_edit_year": 2020, "years_since_edit": 6, "label": "0.0–6.0 yr", "color": "#006837" }, "geometry": { "type": "Point", "coordinates": [ 39.238122, -6.7970822 ] } },
+{ "type": "Feature", "properties": { "index": "12", "last_edit_year": 2020, "years_since_edit": 6, "label": "0.0–6.0 yr", "color": "#006837" }, "geometry": { "type": "Point", "coordinates": [ 39.2370644, -6.7966093 ] } },
+{ "type": "Feature", "properties": { "index": "13", "last_edit_year": 2020, "years_since_edit": 6, "label": "0.0–6.0 yr", "color": "#006837" }, "geometry": { "type": "Point", "coordinates": [ 39.2241132, -6.8059263 ] } },
+{ "type": "Feature", "properties": { "index": "14", "last_edit_year": 2020, "years_since_edit": 6, "label": "0.0–6.0 yr", "color": "#006837" }, "geometry": { "type": "Point", "coordinates": [ 39.2364687, -6.8008949 ] } },
+{ "type": "Feature", "properties": { "index": "15", "last_edit_year": 2020, "years_since_edit": 6, "label": "0.0–6.0 yr", "color": "#006837" }, "geometry": { "type": "Point", "coordinates": [ 39.2389135, -6.8354564 ] } },
+{ "type": "Feature", "properties": { "index": "16", "last_edit_year": 2020, "years_since_edit": 6, "label": "0.0–6.0 yr", "color": "#006837" }, "geometry": { "type": "Point", "coordinates": [ 39.2308272, -6.8411604 ] } },
+{ "type": "Feature", "properties": { "index": "17", "last_edit_year": 2020, "years_since_edit": 6, "label": "0.0–6.0 yr", "color": "#006837" }, "geometry": { "type": "Point", "coordinates": [ 39.2221859, -6.7951837 ] } },
+{ "type": "Feature", "properties": { "index": "18", "last_edit_year": 2020, "years_since_edit": 6, "label": "0.0–6.0 yr", "color": "#006837" }, "geometry": { "type": "Point", "coordinates": [ 39.2246978, -6.7964523 ] } },
+{ "type": "Feature", "properties": { "index": "19", "last_edit_year": 2020, "years_since_edit": 6, "label": "0.0–6.0 yr", "color": "#006837" }, "geometry": { "type": "Point", "coordinates": [ 39.2943355, -6.8115551 ] } },
+{ "type": "Feature", "properties": { "index": "20", "last_edit_year": 2020, "years_since_edit": 6, "label": "0.0–6.0 yr", "color": "#006837" }, "geometry": { "type": "Point", "coordinates": [ 39.2960029, -6.8082902 ] } }
+]
+}

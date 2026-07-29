@@ -1,0 +1,12 @@
+{
+"type": "FeatureCollection",
+"features": [
+{ "type": "Feature", "properties": { "index": "0", "@osmId": "node/346451313", "name": null, "opening_hours": null, "label": "Drinking water points", "color": "#2b8cbe" }, "geometry": { "type": "Point", "coordinates": [ 8.7004521, 49.4157261 ] } },
+{ "type": "Feature", "properties": { "index": "1", "@osmId": "node/419294001", "name": null, "opening_hours": null, "label": "Drinking water points", "color": "#2b8cbe" }, "geometry": { "type": "Point", "coordinates": [ 8.7006398, 49.4157681 ] } },
+{ "type": "Feature", "properties": { "index": "2", "@osmId": "node/2018074954", "name": null, "opening_hours": null, "label": "Drinking water points", "color": "#2b8cbe" }, "geometry": { "type": "Point", "coordinates": [ 8.7002566, 49.4095083 ] } },
+{ "type": "Feature", "properties": { "index": "3", "@osmId": "node/2280283474", "name": null, "opening_hours": null, "label": "Drinking water points", "color": "#2b8cbe" }, "geometry": { "type": "Point", "coordinates": [ 8.7018271, 49.4109969 ] } },
+{ "type": "Feature", "properties": { "index": "4", "@osmId": "node/5115143358", "name": null, "opening_hours": null, "label": "Drinking water points", "color": "#2b8cbe" }, "geometry": { "type": "Point", "coordinates": [ 8.6795902, 49.409495 ] } },
+{ "type": "Feature", "properties": { "index": "5", "@osmId": "node/5139365929", "name": null, "opening_hours": "Mo-Fr 10:30-19:00; Sa 11:00-18:00; PH off", "label": "Drinking water points", "color": "#2b8cbe" }, "geometry": { "type": "Point", "coordinates": [ 8.7042745, 49.4117 ] } },
+{ "type": "Feature", "properties": { "index": "6", "@osmId": "node/12369571055", "name": null, "opening_hours": null, "label": "Drinking water points", "color": "#2b8cbe" }, "geometry": { "type": "Point", "coordinates": [ 8.6737651, 49.4030052 ] } }
+]
+}

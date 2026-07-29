@@ -1,0 +1,14 @@
+{
+"type": "FeatureCollection",
+"features": [
+{ "type": "Feature", "properties": { "index": "0", "@osmId": "node/364775665", "name": "Denns BioMarkt", "opening_hours": "Mo-Sa 08:00-20:00; Su,PH off", "label": "Fully organic shops", "color": "#238b45" }, "geometry": { "type": "Point", "coordinates": [ 8.6883519, 49.4055378 ] } },
+{ "type": "Feature", "properties": { "index": "1", "@osmId": "node/1027945005", "name": "Masala", "opening_hours": "Sa 11:00-18:00; Tu-Fr 11:00-18:00; Mo,Su,PH off", "label": "Fully organic shops", "color": "#238b45" }, "geometry": { "type": "Point", "coordinates": [ 8.6859162, 49.4050807 ] } },
+{ "type": "Feature", "properties": { "index": "2", "@osmId": "node/1637576943", "name": "Alnatura Super Natur Markt", "opening_hours": "Mo-Sa 07:00-20:00; Su,PH off", "label": "Fully organic shops", "color": "#238b45" }, "geometry": { "type": "Point", "coordinates": [ 8.6915435, 49.4017125 ] } },
+{ "type": "Feature", "properties": { "index": "3", "@osmId": "node/1767932082", "name": "Reformhaus Vita Nova Escher", "opening_hours": "Mo-Sa 10:00-19:00; Sa 09:30-18:00; Su,PH off", "label": "Fully organic shops", "color": "#238b45" }, "geometry": { "type": "Point", "coordinates": [ 8.694105, 49.4102292 ] } },
+{ "type": "Feature", "properties": { "index": "4", "@osmId": "node/1908087448", "name": "Alnatura", "opening_hours": "Mo-Sa 08:00-20:00", "label": "Fully organic shops", "color": "#238b45" }, "geometry": { "type": "Point", "coordinates": [ 8.6887347, 49.407898 ] } },
+{ "type": "Feature", "properties": { "index": "5", "@osmId": "node/3613411403", "name": "Annas Unverpacktes", "opening_hours": "Tu-Sa 10:00-18:30", "label": "Fully organic shops", "color": "#238b45" }, "geometry": { "type": "Point", "coordinates": [ 8.6885716, 49.4142758 ] } },
+{ "type": "Feature", "properties": { "index": "6", "@osmId": "node/5580801925", "name": "Alnatura", "opening_hours": "Mo-Sa 08:00-20:00; PH off", "label": "Fully organic shops", "color": "#238b45" }, "geometry": { "type": "Point", "coordinates": [ 8.6723368, 49.3986433 ] } },
+{ "type": "Feature", "properties": { "index": "7", "@osmId": "node/1309601588", "name": "Weltladen Heidelberg-Altstadt", "opening_hours": "Mo-Th 10:00-18:00; Fr-Sa 11:00-16:00", "label": "Shops selling organic", "color": "#a1d99b" }, "geometry": { "type": "Point", "coordinates": [ 8.7076514, 49.4114091 ] } },
+{ "type": "Feature", "properties": { "index": "8", "@osmId": "node/1539741096", "name": "tegut", "opening_hours": "Mo-Sa 07:00-22:00; Su,PH off", "label": "Shops selling organic", "color": "#a1d99b" }, "geometry": { "type": "Point", "coordinates": [ 8.7040113, 49.4113305 ] } }
+]
+}

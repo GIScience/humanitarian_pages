@@ -1,0 +1,133 @@
+{
+  "indicator": "wastewater_infrastructure",
+  "name": "Waste Water Infrastructure",
+  "runs": [
+    {
+      "aoi": "dar_es_salaam",
+      "feature_count": 23,
+      "relevance": "meaningful",
+      "artifacts": [
+        {
+          "name": "About this indicator",
+          "modality": "MARKDOWN",
+          "filename": "about.md"
+        },
+        {
+          "name": "Wastewater facilities explorer",
+          "modality": "VECTOR_MAP_LAYER",
+          "filename": "feature_layer.geojson"
+        },
+        {
+          "name": "Wastewater facilities map",
+          "modality": "VECTOR_MAP_LAYER",
+          "filename": "category_map.geojson"
+        },
+        {
+          "name": "Category composition",
+          "modality": "CHART_PLOTLY",
+          "filename": "composition.json"
+        },
+        {
+          "name": "Summary",
+          "modality": "TABLE",
+          "filename": "summary.csv"
+        },
+        {
+          "name": "At a glance",
+          "modality": "MARKDOWN",
+          "filename": "headline.md"
+        },
+        {
+          "name": "Wastewater facilities over time",
+          "modality": "CHART_PLOTLY",
+          "filename": "trend.json"
+        },
+        {
+          "name": "Density distribution",
+          "modality": "CHART_PLOTLY",
+          "filename": "histogram.json"
+        },
+        {
+          "name": "Statistics",
+          "modality": "MARKDOWN",
+          "filename": "statistics.md"
+        },
+        {
+          "name": "Hot-spots & cold-spots",
+          "modality": "VECTOR_MAP_LAYER",
+          "filename": "hotspots.geojson"
+        },
+        {
+          "name": "Density by sub-area",
+          "modality": "VECTOR_MAP_LAYER",
+          "filename": "subareas.geojson"
+        },
+        {
+          "name": "Sub-area ranking",
+          "modality": "CHART_PLOTLY",
+          "filename": "subarea_ranking.json"
+        },
+        {
+          "name": "Top sub-areas",
+          "modality": "TABLE",
+          "filename": "subarea_ranking_table.csv"
+        },
+        {
+          "name": "Provision vs population",
+          "modality": "CHART_PLOTLY",
+          "filename": "population_equity.json"
+        },
+        {
+          "name": "Provision per capita",
+          "modality": "VECTOR_MAP_LAYER",
+          "filename": "per_capita.geojson"
+        },
+        {
+          "name": "Coverage on foot",
+          "modality": "VECTOR_MAP_LAYER",
+          "filename": "coverage_foot.geojson"
+        },
+        {
+          "name": "Underserved areas",
+          "modality": "VECTOR_MAP_LAYER",
+          "filename": "underserved.geojson"
+        },
+        {
+          "name": "Most underserved sub-areas",
+          "modality": "TABLE",
+          "filename": "underserved_table.csv"
+        },
+        {
+          "name": "Wastewater facilities heatmap",
+          "modality": "RASTER_MAP_LAYER",
+          "filename": "heatmap.tiff"
+        },
+        {
+          "name": "Wastewater facilities density surface",
+          "modality": "RASTER_MAP_LAYER",
+          "filename": "density_surface.tiff"
+        },
+        {
+          "name": "Distance to nearest wastewater facility",
+          "modality": "RASTER_MAP_LAYER",
+          "filename": "nearest_distance.tiff"
+        },
+        {
+          "name": "Data currentness",
+          "modality": "VECTOR_MAP_LAYER",
+          "filename": "currentness.geojson"
+        },
+        {
+          "name": "OpenStreetMap data quality",
+          "modality": "MARKDOWN",
+          "filename": "data_quality.md"
+        }
+      ],
+      "errors": {}
+    },
+    {
+      "aoi": "heidelberg",
+      "error": "ClimatoologyUserError: No matching features were found in the selected area. Try a larger area, add more categories, or help by contributing the missing features to OpenStreetMap."
+    }
+  ]
+}

@@ -1,0 +1,382 @@
+{
+  "indicator": "age_friendly_streets",
+  "name": "Age-friendly streets",
+  "runs": [
+    {
+      "aoi": "heidelberg",
+      "feature_count": 2380,
+      "relevance": "meaningful",
+      "artifacts": [
+        {
+          "name": "About this indicator",
+          "modality": "MARKDOWN",
+          "filename": "about.md"
+        },
+        {
+          "name": "Age-friendly features explorer",
+          "modality": "VECTOR_MAP_LAYER",
+          "filename": "feature_layer.geojson"
+        },
+        {
+          "name": "Benches map",
+          "modality": "VECTOR_MAP_LAYER",
+          "filename": "category_map_bench.geojson"
+        },
+        {
+          "name": "Public toilets map",
+          "modality": "VECTOR_MAP_LAYER",
+          "filename": "category_map_toilet.geojson"
+        },
+        {
+          "name": "Crossable kerbs map",
+          "modality": "VECTOR_MAP_LAYER",
+          "filename": "category_map_kerb.geojson"
+        },
+        {
+          "name": "Audible crossings map",
+          "modality": "VECTOR_MAP_LAYER",
+          "filename": "category_map_audible_crossing.geojson"
+        },
+        {
+          "name": "Category composition",
+          "modality": "CHART_PLOTLY",
+          "filename": "composition.json"
+        },
+        {
+          "name": "Summary",
+          "modality": "TABLE",
+          "filename": "summary.csv"
+        },
+        {
+          "name": "At a glance",
+          "modality": "MARKDOWN",
+          "filename": "headline.md"
+        },
+        {
+          "name": "Statistics",
+          "modality": "MARKDOWN",
+          "filename": "statistics.md"
+        },
+        {
+          "name": "Hot-spots & cold-spots",
+          "modality": "VECTOR_MAP_LAYER",
+          "filename": "hotspots_by_density.geojson"
+        },
+        {
+          "name": "Hot-spots & cold-spots (per capita)",
+          "modality": "VECTOR_MAP_LAYER",
+          "filename": "hotspots_by_capita.geojson"
+        },
+        {
+          "name": "Age-friendliness (weakest link)",
+          "modality": "VECTOR_MAP_LAYER",
+          "filename": "combined_age_friendliness_weakest_link.geojson"
+        },
+        {
+          "name": "Rest and relief",
+          "modality": "VECTOR_MAP_LAYER",
+          "filename": "combined_rest_and_relief.geojson"
+        },
+        {
+          "name": "Age-friendly deficit",
+          "modality": "VECTOR_MAP_LAYER",
+          "filename": "combined_age_friendly_deficit.geojson"
+        },
+        {
+          "name": "Density by sub-area",
+          "modality": "VECTOR_MAP_LAYER",
+          "filename": "subareas.geojson"
+        },
+        {
+          "name": "Sub-area ranking",
+          "modality": "CHART_PLOTLY",
+          "filename": "subarea_ranking.json"
+        },
+        {
+          "name": "Top sub-areas",
+          "modality": "TABLE",
+          "filename": "subarea_ranking_table.csv"
+        },
+        {
+          "name": "Provision vs population",
+          "modality": "CHART_PLOTLY",
+          "filename": "population_equity.json"
+        },
+        {
+          "name": "Provision per capita",
+          "modality": "VECTOR_MAP_LAYER",
+          "filename": "per_capita.geojson"
+        },
+        {
+          "name": "Coverage on foot (200 m)",
+          "modality": "VECTOR_MAP_LAYER",
+          "filename": "coverage_foot_reach_200.geojson"
+        },
+        {
+          "name": "Coverage on foot (400 m)",
+          "modality": "VECTOR_MAP_LAYER",
+          "filename": "coverage_foot_reach_400.geojson"
+        },
+        {
+          "name": "Coverage by wheelchair (200 m)",
+          "modality": "VECTOR_MAP_LAYER",
+          "filename": "coverage_wheelchair_chair_200.geojson"
+        },
+        {
+          "name": "Underserved areas (on foot, 200 m)",
+          "modality": "VECTOR_MAP_LAYER",
+          "filename": "underserved_beyond_200.geojson"
+        },
+        {
+          "name": "Most underserved sub-areas (on foot, 200 m)",
+          "modality": "TABLE",
+          "filename": "underserved_table_beyond_200.csv"
+        },
+        {
+          "name": "Age-friendly features heatmap",
+          "modality": "RASTER_MAP_LAYER",
+          "filename": "heatmap.tiff"
+        },
+        {
+          "name": "Age-friendly features per resident (surface)",
+          "modality": "RASTER_MAP_LAYER",
+          "filename": "per_capita_surface.tiff"
+        },
+        {
+          "name": "Distance to nearest age-friendly feature",
+          "modality": "RASTER_MAP_LAYER",
+          "filename": "nearest_distance.tiff"
+        },
+        {
+          "name": "Data currentness",
+          "modality": "VECTOR_MAP_LAYER",
+          "filename": "currentness.geojson"
+        },
+        {
+          "name": "OpenStreetMap data quality",
+          "modality": "MARKDOWN",
+          "filename": "data_quality.md"
+        }
+      ],
+      "errors": {}
+    },
+    {
+      "aoi": "montpellier",
+      "feature_count": 2172,
+      "relevance": "meaningful",
+      "artifacts": [
+        {
+          "name": "About this indicator",
+          "modality": "MARKDOWN",
+          "filename": "about.md",
+          "summary": "Counts the street features that decide whether a walk is possible for someone older or less mobile: benches to rest on, public toilets, dropped or tactile kerbs, and crossings that signal audibly. It reports them at the short distances that actually apply — 200 metres between res",
+          "description": "Provenance: OpenStreetMap data as of 2026-06-19 · indicator: age_friendly_streets · reachability: straight-line distance."
+        },
+        {
+          "name": "Age-friendly features explorer",
+          "modality": "VECTOR_MAP_LAYER",
+          "filename": "feature_layer.geojson",
+          "summary": "The actual OpenStreetMap objects behind the age-friendly features, with their attributes. Zoom in to inspect them.",
+          "description": "The true OpenStreetMap geometry of every counted feature — points, ways and areas — carrying its name and (where mapped) opening hours. It appears from a neighbourhood zoom level so you can inspect the individual objects rather than an aggregate.\n\nProvenance: OpenStreetMap data as of 2026-06-19 · indicator: age_friendly_streets · reachability: straight-line distance."
+        },
+        {
+          "name": "Benches map",
+          "modality": "VECTOR_MAP_LAYER",
+          "filename": "category_map_bench.geojson",
+          "summary": "Publicly mapped benches. Results depend on OpenStreetMap data completeness. If you can, contribute to OSM.",
+          "description": "Each point is a publicly accessible feature counted by this indicator, extracted from OpenStreetMap. Point locations are the representative centroids of the underlying OSM features.\n\nProvenance: OpenStreetMap data as of 2026-06-19 · indicator: age_friendly_streets · reachability: straight-line distance."
+        },
+        {
+          "name": "Public toilets map",
+          "modality": "VECTOR_MAP_LAYER",
+          "filename": "category_map_toilet.geojson",
+          "summary": "Publicly mapped public toilets. Results depend on OpenStreetMap data completeness. If you can, contribute to OSM.",
+          "description": "Each point is a publicly accessible feature counted by this indicator, extracted from OpenStreetMap. Point locations are the representative centroids of the underlying OSM features.\n\nProvenance: OpenStreetMap data as of 2026-06-19 · indicator: age_friendly_streets · reachability: straight-line distance."
+        },
+        {
+          "name": "Crossable kerbs map",
+          "modality": "VECTOR_MAP_LAYER",
+          "filename": "category_map_kerb.geojson",
+          "summary": "Publicly mapped crossable kerbs. Results depend on OpenStreetMap data completeness. If you can, contribute to OSM.",
+          "description": "Each point is a publicly accessible feature counted by this indicator, extracted from OpenStreetMap. Point locations are the representative centroids of the underlying OSM features.\n\nProvenance: OpenStreetMap data as of 2026-06-19 · indicator: age_friendly_streets · reachability: straight-line distance."
+        },
+        {
+          "name": "Audible crossings map",
+          "modality": "VECTOR_MAP_LAYER",
+          "filename": "category_map_audible_crossing.geojson",
+          "summary": "Publicly mapped audible crossings. Results depend on OpenStreetMap data completeness. If you can, contribute to OSM.",
+          "description": "Each point is a publicly accessible feature counted by this indicator, extracted from OpenStreetMap. Point locations are the representative centroids of the underlying OSM features.\n\nProvenance: OpenStreetMap data as of 2026-06-19 · indicator: age_friendly_streets · reachability: straight-line distance."
+        },
+        {
+          "name": "Category composition",
+          "modality": "CHART_PLOTLY",
+          "filename": "composition.json",
+          "summary": "Share of age-friendly features by category. Results depend on OpenStreetMap data completeness. If you can, contribute to OSM.",
+          "description": "The proportion of the area’s age-friendly features that falls into each category.\n\nProvenance: OpenStreetMap data as of 2026-06-19 · indicator: age_friendly_streets · reachability: straight-line distance."
+        },
+        {
+          "name": "Summary",
+          "modality": "TABLE",
+          "filename": "summary.csv",
+          "summary": "Count, density per km² and per 1,000 inhabitants and share, per category. Results depend on OpenStreetMap data completeness. If you can, contribute to OSM.",
+          "description": "Absolute count, density per km², density per 1,000 inhabitants and percentage share of age-friendly features for each selected category, with an overall total.\n\nProvenance: OpenStreetMap data as of 2026-06-19 · indicator: age_friendly_streets · reachability: straight-line distance."
+        },
+        {
+          "name": "At a glance",
+          "modality": "MARKDOWN",
+          "filename": "headline.md",
+          "summary": "2172 age-friendly features, 193.9 per km².",
+          "description": "Provenance: OpenStreetMap data as of 2026-06-19 · indicator: age_friendly_streets · reachability: straight-line distance."
+        },
+        {
+          "name": "Statistics",
+          "modality": "MARKDOWN",
+          "filename": "statistics.md",
+          "summary": "Spread, inequality and clustering measures for the area’s age-friendly features. Results depend on OpenStreetMap data completeness. If you can, contribute to OSM.",
+          "description": "Provenance: OpenStreetMap data as of 2026-06-19 · indicator: age_friendly_streets · reachability: straight-line distance."
+        },
+        {
+          "name": "Hot-spots & cold-spots",
+          "modality": "VECTOR_MAP_LAYER",
+          "filename": "hotspots_by_density.geojson",
+          "summary": "Global Moran’s I = -0.39. 0 hot-spot and 0 cold-spot neighbourhood(s) of age-friendly features density (local Moran’s I / LISA). Only 6 sub-areas: too few for the permutation test to establish significance, so read a grey map as \"not enough units to tell\", not as \"no clustering\". Use a finer `subarea_mode` or a larger area to make this map informative. Results depend on OpenStreetMap data completeness. If you can, contribute to OSM.",
+          "description": "Sub-areas classified by the local Moran’s I statistic (LISA) over age-friendly features density: **High-High** = a dense neighbourhood surrounded by others like it (hot-spot); **Low-Low** = a sparse one among others like it (cold-spot); **High-Low / Low-High** = spatial outliers. Significance uses a deterministic permutation test; non-significant sub-areas are greyed out.\n\nProvenance: OpenStreetMap data as of 2026-06-19 · indicator: age_friendly_streets · reachability: straight-line distance."
+        },
+        {
+          "name": "Hot-spots & cold-spots (per capita)",
+          "modality": "VECTOR_MAP_LAYER",
+          "filename": "hotspots_by_capita.geojson",
+          "summary": "Global Moran’s I = -0.22. 0 hot-spot and 0 cold-spot neighbourhood(s) of age-friendly features per 1,000 residents (local Moran’s I / LISA). Only 6 sub-areas: too few for the permutation test to establish significance, so read a grey map as \"not enough units to tell\", not as \"no clustering\". Use a finer `subarea_mode` or a larger area to make this map informative. Results depend on OpenStreetMap data completeness. If you can, contribute to OSM.",
+          "description": "Sub-areas classified by the local Moran’s I statistic (LISA) over age-friendly features per 1,000 residents: **High-High** = a well-supplied neighbourhood surrounded by others like it (hot-spot); **Low-Low** = a poorly-supplied one among others like it (cold-spot); **High-Low / Low-High** = spatial outliers. Significance uses a deterministic permutation test; non-significant sub-areas are greyed out.\n\nProvenance: OpenStreetMap data as of 2026-06-19 · indicator: age_friendly_streets · reachability: straight-line distance."
+        },
+        {
+          "name": "Age-friendliness (weakest link)",
+          "modality": "VECTOR_MAP_LAYER",
+          "filename": "combined_age_friendliness_weakest_link.geojson",
+          "summary": "A combined layer (weakest link) of 1×Benches, 1×Public toilets, 1×Crossable kerbs, per sub-area. Results depend on OpenStreetMap data completeness. If you can, contribute to OSM.",
+          "description": "Map algebra: for each administrative sub-area, the normalised densities of the input categories are combined by **weakest link** — 1×Benches, 1×Public toilets, 1×Crossable kerbs — into a single value. Each category is first rescaled to 0–1 across sub-areas, so the value is a unitless index. Use it to express a composite index (e.g. a weighted suitability score) as one layer instead of several.\n\nProvenance: OpenStreetMap data as of 2026-06-19 · indicator: age_friendly_streets · reachability: straight-line distance."
+        },
+        {
+          "name": "Rest and relief",
+          "modality": "VECTOR_MAP_LAYER",
+          "filename": "combined_rest_and_relief.geojson",
+          "summary": "A combined layer (geometric mean) of 1×Benches, 1×Public toilets, per sub-area. Results depend on OpenStreetMap data completeness. If you can, contribute to OSM.",
+          "description": "Map algebra: for each administrative sub-area, the normalised densities of the input categories are combined by **geometric mean** — 1×Benches, 1×Public toilets — into a single value. Each category is first rescaled to 0–1 across sub-areas, so the value is a unitless index. Use it to express a composite index (e.g. a weighted suitability score) as one layer instead of several.\n\nProvenance: OpenStreetMap data as of 2026-06-19 · indicator: age_friendly_streets · reachability: straight-line distance."
+        },
+        {
+          "name": "Age-friendly deficit",
+          "modality": "VECTOR_MAP_LAYER",
+          "filename": "combined_age_friendly_deficit.geojson",
+          "summary": "A combined layer (weighted sum) of 1×population, -1×per 1000 inhabitants, per sub-area. Results depend on OpenStreetMap data completeness. If you can, contribute to OSM.",
+          "description": "Map algebra: for each administrative sub-area, the normalised densities of the input categories are combined by **weighted sum** — 1×population, -1×per 1000 inhabitants — into a single value. Each category is first rescaled to 0–1 across sub-areas, so the value is a unitless index. Use it to express a composite index (e.g. a weighted suitability score) as one layer instead of several.\n\nProvenance: OpenStreetMap data as of 2026-06-19 · indicator: age_friendly_streets · reachability: straight-line distance."
+        },
+        {
+          "name": "Density by sub-area",
+          "modality": "VECTOR_MAP_LAYER",
+          "filename": "subareas.geojson",
+          "summary": "Age-friendly features density (per km²) across the neighbourhoods of the area. Results depend on OpenStreetMap data completeness. If you can, contribute to OSM.",
+          "description": "The area of interest split into OpenStreetMap administrative sub-areas, each shaded by its age-friendly features density (per km²). Use it to compare how well different neighbourhoods are served.\n\nProvenance: OpenStreetMap data as of 2026-06-19 · indicator: age_friendly_streets · reachability: straight-line distance."
+        },
+        {
+          "name": "Sub-area ranking",
+          "modality": "CHART_PLOTLY",
+          "filename": "subarea_ranking.json",
+          "summary": "Neighbourhoods ranked by age-friendly features density (per km²). Results depend on OpenStreetMap data completeness. If you can, contribute to OSM.",
+          "description": "Age-friendly features density per km² for each administrative sub-area, ordered from highest to lowest.\n\nProvenance: OpenStreetMap data as of 2026-06-19 · indicator: age_friendly_streets · reachability: straight-line distance."
+        },
+        {
+          "name": "Top sub-areas",
+          "modality": "TABLE",
+          "filename": "subarea_ranking_table.csv",
+          "summary": "The 6 best-served neighbourhoods by age-friendly features density (per km²). Results depend on OpenStreetMap data completeness. If you can, contribute to OSM.",
+          "description": "The 6 administrative sub-areas with the highest age-friendly features density, with their count, area and density — a compact, sortable companion to the ranking chart.\n\nProvenance: OpenStreetMap data as of 2026-06-19 · indicator: age_friendly_streets · reachability: straight-line distance."
+        },
+        {
+          "name": "Provision vs population",
+          "modality": "CHART_PLOTLY",
+          "filename": "population_equity.json",
+          "summary": "Do age-friendly features track where people live? Age-friendly features per 1,000 inhabitants against each sub-area’s population. Results depend on OpenStreetMap data completeness. If you can, contribute to OSM.",
+          "description": "Each point is an administrative sub-area, plotting its population against its age-friendly features per 1,000 inhabitants. Sub-areas low on the vertical axis but high on the horizontal axis are under-served relative to their residents — an equity signal a density map cannot show.\n\nProvenance: OpenStreetMap data as of 2026-06-19 · indicator: age_friendly_streets · reachability: straight-line distance."
+        },
+        {
+          "name": "Provision per capita",
+          "modality": "VECTOR_MAP_LAYER",
+          "filename": "per_capita.geojson",
+          "summary": "Age-friendly features per 1,000 residents across the sub-areas — provision relative to need. Results depend on OpenStreetMap data completeness. If you can, contribute to OSM.",
+          "description": "Each administrative sub-area shaded by its number of age-friendly features per 1,000 inhabitants, so the colour reflects provision *relative to residents* rather than raw density. A populous sub-area with average density can still read as under-served here. Sub-areas without usable population data are omitted.\n\nProvenance: OpenStreetMap data as of 2026-06-19 · indicator: age_friendly_streets · reachability: straight-line distance."
+        },
+        {
+          "name": "Coverage on foot (200 m)",
+          "modality": "VECTOR_MAP_LAYER",
+          "filename": "coverage_foot_reach_200.geojson",
+          "summary": "About 98% of the area is within 200 m on foot of a age-friendly feature. About 99% of residents are within reach. Results depend on OpenStreetMap data completeness. If you can, contribute to OSM.",
+          "description": "The area of interest split into the part within reach (on foot) of any feature and the part beyond it. Reachability is computed using straight-line distance.\n\nProvenance: OpenStreetMap data as of 2026-06-19 · indicator: age_friendly_streets · reachability: straight-line distance."
+        },
+        {
+          "name": "Coverage on foot (400 m)",
+          "modality": "VECTOR_MAP_LAYER",
+          "filename": "coverage_foot_reach_400.geojson",
+          "summary": "About 100% of the area is within 400 m on foot of a age-friendly feature. About 100% of residents are within reach. Results depend on OpenStreetMap data completeness. If you can, contribute to OSM.",
+          "description": "The area of interest split into the part within reach (on foot) of any feature and the part beyond it. Reachability is computed using straight-line distance.\n\nProvenance: OpenStreetMap data as of 2026-06-19 · indicator: age_friendly_streets · reachability: straight-line distance."
+        },
+        {
+          "name": "Coverage by wheelchair (200 m)",
+          "modality": "VECTOR_MAP_LAYER",
+          "filename": "coverage_wheelchair_chair_200.geojson",
+          "summary": "About 98% of the area is within 200 m by wheelchair of a age-friendly feature. About 99% of residents are within reach. Results depend on OpenStreetMap data completeness. If you can, contribute to OSM.",
+          "description": "The area of interest split into the part within reach (by wheelchair) of any feature and the part beyond it. Reachability is computed using straight-line distance.\n\nProvenance: OpenStreetMap data as of 2026-06-19 · indicator: age_friendly_streets · reachability: straight-line distance."
+        },
+        {
+          "name": "Underserved areas (on foot, 200 m)",
+          "modality": "VECTOR_MAP_LAYER",
+          "filename": "underserved_beyond_200.geojson",
+          "summary": "Share of each neighbourhood beyond 200 m on foot of any age-friendly feature. About 707 residents live beyond that reach. Results depend on OpenStreetMap data completeness. If you can, contribute to OSM.",
+          "description": "Each administrative sub-area shaded by the fraction of its area that lies **beyond reach** (on foot) of any feature — the complement of the coverage map. Darker = more underserved. Use it to target where new provision would reach the most currently-unserved people.\n\nProvenance: OpenStreetMap data as of 2026-06-19 · indicator: age_friendly_streets · reachability: straight-line distance."
+        },
+        {
+          "name": "Most underserved sub-areas (on foot, 200 m)",
+          "modality": "TABLE",
+          "filename": "underserved_table_beyond_200.csv",
+          "summary": "The 6 neighbourhoods with the largest share beyond 200 m on foot of a age-friendly feature. Results depend on OpenStreetMap data completeness. If you can, contribute to OSM.",
+          "description": "The 6 administrative sub-areas with the greatest share of their area beyond reach (on foot) of any feature — a sortable companion to the underserved-areas map.\n\nProvenance: OpenStreetMap data as of 2026-06-19 · indicator: age_friendly_streets · reachability: straight-line distance."
+        },
+        {
+          "name": "Age-friendly features heatmap",
+          "modality": "RASTER_MAP_LAYER",
+          "filename": "heatmap.tiff",
+          "summary": "A gridded density of age-friendly features across the area — brighter means more. Results depend on OpenStreetMap data completeness. If you can, contribute to OSM.",
+          "description": "A regular grid over the area of interest, each cell shaded by how many age-friendly features fall within it. It reveals clusters and gaps that individual points can hide.\n\nProvenance: OpenStreetMap data as of 2026-06-19 · indicator: age_friendly_streets · reachability: straight-line distance."
+        },
+        {
+          "name": "Age-friendly features per resident (surface)",
+          "modality": "RASTER_MAP_LAYER",
+          "filename": "per_capita_surface.tiff",
+          "summary": "A continuous surface of age-friendly features per 1,000 residents — provision relative to need, without administrative boundaries. Results depend on OpenStreetMap data completeness. If you can, contribute to OSM.",
+          "description": "Kernel-smoothed age-friendly features density divided by population density on the same grid, scaled to per 1,000 residents. Unlike the per-capita choropleth this owes nothing to administrative boundaries, so gradients *within* a district are visible; the trade-off is that it is a smoothed estimate rather than an exact count per area. Cells with fewer than 1 residents are left transparent, because dividing by a nearly empty cell produces a large figure that reflects the arithmetic rather than good provision. Populated cells with no feature within reach are drawn in the lowest class, not left blank — they are the worst-served places and the reason to read this map.\n\nProvenance: OpenStreetMap data as of 2026-06-19 · indicator: age_friendly_streets · reachability: straight-line distance."
+        },
+        {
+          "name": "Distance to nearest age-friendly feature",
+          "modality": "RASTER_MAP_LAYER",
+          "filename": "nearest_distance.tiff",
+          "summary": "How far to the nearest age-friendly feature from anywhere in the area (metres). Darker = further. Results depend on OpenStreetMap data completeness. If you can, contribute to OSM.",
+          "description": "A regular grid over the area, each cell shaded by the straight-line distance to the nearest age-friendly feature. Dark cells are the furthest from any feature — the access gaps. Straight-line (not routed), so it is an optimistic lower bound; it needs no routing service.\n\nProvenance: OpenStreetMap data as of 2026-06-19 · indicator: age_friendly_streets · reachability: straight-line distance."
+        },
+        {
+          "name": "Data currentness",
+          "modality": "VECTOR_MAP_LAYER",
+          "filename": "currentness.geojson",
+          "summary": "How recently each age-friendly feature was last edited in OpenStreetMap (median 2 yr ago). Darker = longer since the last edit. Results depend on OpenStreetMap data completeness. If you can, contribute to OSM.",
+          "description": "Each point is a feature, shaded by the number of years since its last OpenStreetMap edit (measured against the data snapshot). Clusters of dark points mark areas where the OSM picture is ageing and may warrant a re-survey — a spatial companion to the data-quality note.\n\nProvenance: OpenStreetMap data as of 2026-06-19 · indicator: age_friendly_streets · reachability: straight-line distance."
+        },
+        {
+          "name": "OpenStreetMap data quality",
+          "modality": "MARKDOWN",
+          "filename": "data_quality.md",
+          "summary": "OpenStreetMap data as of 2026-06-19. How complete is the OpenStreetMap data behind these results?",
+          "description": "Provenance: OpenStreetMap data as of 2026-06-19 · indicator: age_friendly_streets · reachability: straight-line distance."
+        }
+      ],
+      "errors": {}
+    }
+  ]
+}

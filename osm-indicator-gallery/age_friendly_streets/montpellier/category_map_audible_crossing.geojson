@@ -1,0 +1,8 @@
+{
+"type": "FeatureCollection",
+"features": [
+{ "type": "Feature", "properties": { "index": "2169", "@osmId": "node/368009808", "name": null, "opening_hours": null, "label": "Audible crossings", "color": "#31a354" }, "geometry": { "type": "Point", "coordinates": [ 3.8880793, 43.6091381 ] } },
+{ "type": "Feature", "properties": { "index": "2170", "@osmId": "node/1931294113", "name": null, "opening_hours": null, "label": "Audible crossings", "color": "#31a354" }, "geometry": { "type": "Point", "coordinates": [ 3.869789, 43.6148989 ] } },
+{ "type": "Feature", "properties": { "index": "2171", "@osmId": "node/6589069488", "name": null, "opening_hours": null, "label": "Audible crossings", "color": "#31a354" }, "geometry": { "type": "Point", "coordinates": [ 3.8760179, 43.620636 ] } }
+]
+}

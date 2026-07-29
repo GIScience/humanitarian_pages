@@ -1,0 +1,6 @@
+{
+"type": "FeatureCollection",
+"features": [
+{ "type": "Feature", "properties": { "index": "212", "@osmId": "node/3702820376", "name": null, "opening_hours": null, "label": "Car-sharing points", "color": "#f16913" }, "geometry": { "type": "Point", "coordinates": [ 39.2426865, -6.8381235 ] } }
+]
+}

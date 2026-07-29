@@ -1,0 +1,8 @@
+{
+"type": "FeatureCollection",
+"features": [
+{ "type": "Feature", "properties": { "index": "209", "@osmId": "node/3714822072", "name": null, "opening_hours": null, "label": "Bike-sharing points", "color": "#41ab5d" }, "geometry": { "type": "Point", "coordinates": [ 39.2508204, -6.8300422 ] } },
+{ "type": "Feature", "properties": { "index": "210", "@osmId": "node/3714828266", "name": "White Swan Investment", "opening_hours": null, "label": "Bike-sharing points", "color": "#41ab5d" }, "geometry": { "type": "Point", "coordinates": [ 39.25041, -6.8302282 ] } },
+{ "type": "Feature", "properties": { "index": "211", "@osmId": "node/9275336381", "name": null, "opening_hours": null, "label": "Bike-sharing points", "color": "#41ab5d" }, "geometry": { "type": "Point", "coordinates": [ 39.2580342, -6.8192277 ] } }
+]
+}

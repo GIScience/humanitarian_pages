@@ -33,3 +33,7 @@ Each project is more or less thematically independent, providing distinct exampl
 10. [River discharge vs population dashboard](https://giscience.github.io/humanitarian_pages/river-discharge-population-dashboard)
 
 11. [Displacement dashboard](https://giscience.github.io/humanitarian_pages/displacement-dashboard)
+
+12. [OSM Indicator Gallery](https://giscience.github.io/humanitarian_pages/osm-indicator-gallery)
+
+13. [Climate Trace Emissions Dashboard](https://giscience.github.io/humanitarian_pages/climate-trace-emissions-dashboard)

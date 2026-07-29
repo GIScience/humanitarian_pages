@@ -1,0 +1,6 @@
+{
+"type": "FeatureCollection",
+"features": [
+{ "type": "Feature", "properties": { "index": "0", "last_edit_year": 2024, "years_since_edit": 2, "label": "2.0–2.0 yr", "color": "#006837" }, "geometry": { "type": "Point", "coordinates": [ 39.2641922, -6.7950203 ] } }
+]
+}

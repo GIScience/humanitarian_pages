@@ -1,0 +1,14 @@
+{
+"type": "FeatureCollection",
+"features": [
+{ "type": "Feature", "properties": { "index": "0", "@osmId": "way/769690792", "name": "Old Central Railway Station", "opening_hours": null, "label": "Train stations & halts", "color": "#08519c" }, "geometry": { "type": "Point", "coordinates": [ 39.2845607, -6.8227111 ] } },
+{ "type": "Feature", "properties": { "index": "1", "@osmId": "way/864642709", "name": "New Central Railway Station", "opening_hours": null, "label": "Train stations & halts", "color": "#08519c" }, "geometry": { "type": "Point", "coordinates": [ 39.2829759, -6.8249575 ] } },
+{ "type": "Feature", "properties": { "index": "2", "@osmId": "way/1104897816", "name": "Kamata", "opening_hours": null, "label": "Train stations & halts", "color": "#08519c" }, "geometry": { "type": "Point", "coordinates": [ 39.2738463, -6.8271609 ] } },
+{ "type": "Feature", "properties": { "index": "3", "@osmId": "node/252940803", "name": "Kamata Kariakoo", "opening_hours": null, "label": "Train stations & halts", "color": "#08519c" }, "geometry": { "type": "Point", "coordinates": [ 39.2742602, -6.8266874 ] } },
+{ "type": "Feature", "properties": { "index": "4", "@osmId": "node/440137926", "name": "Dar es Salaam", "opening_hours": null, "label": "Train stations & halts", "color": "#08519c" }, "geometry": { "type": "Point", "coordinates": [ 39.2450325, -6.8464084 ] } },
+{ "type": "Feature", "properties": { "index": "5", "@osmId": "node/9125088483", "name": null, "opening_hours": null, "label": "Train stations & halts", "color": "#08519c" }, "geometry": { "type": "Point", "coordinates": [ 39.2828279, -6.8245332 ] } },
+{ "type": "Feature", "properties": { "index": "6", "@osmId": "node/252596463", "name": "Tabata Matumbi", "opening_hours": null, "label": "Train stations & halts", "color": "#08519c" }, "geometry": { "type": "Point", "coordinates": [ 39.229804, -6.8242407 ] } },
+{ "type": "Feature", "properties": { "index": "7", "@osmId": "node/252596478", "name": "Buguruni Mny Mnyamani", "opening_hours": null, "label": "Train stations & halts", "color": "#08519c" }, "geometry": { "type": "Point", "coordinates": [ 39.2380583, -6.8384568 ] } },
+{ "type": "Feature", "properties": { "index": "8", "@osmId": "node/252677460", "name": "Tabata Mwananchi", "opening_hours": null, "label": "Train stations & halts", "color": "#08519c" }, "geometry": { "type": "Point", "coordinates": [ 39.2218738, -6.814971 ] } }
+]
+}

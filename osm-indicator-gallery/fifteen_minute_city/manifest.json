@@ -1,0 +1,174 @@
+{
+  "indicator": "fifteen_minute_city",
+  "name": "Everyday essentials on foot",
+  "runs": [
+    {
+      "aoi": "montpellier",
+      "feature_count": 737,
+      "relevance": "meaningful",
+      "artifacts": [
+        {
+          "name": "About this indicator",
+          "modality": "MARKDOWN",
+          "filename": "about.md"
+        },
+        {
+          "name": "Everyday destinations explorer",
+          "modality": "VECTOR_MAP_LAYER",
+          "filename": "feature_layer.geojson"
+        },
+        {
+          "name": "Food shops map",
+          "modality": "VECTOR_MAP_LAYER",
+          "filename": "category_map_food.geojson"
+        },
+        {
+          "name": "Pharmacies map",
+          "modality": "VECTOR_MAP_LAYER",
+          "filename": "category_map_pharmacy.geojson"
+        },
+        {
+          "name": "Health care map",
+          "modality": "VECTOR_MAP_LAYER",
+          "filename": "category_map_health.geojson"
+        },
+        {
+          "name": "Primary schools & childcare map",
+          "modality": "VECTOR_MAP_LAYER",
+          "filename": "category_map_school.geojson"
+        },
+        {
+          "name": "Post & banking map",
+          "modality": "VECTOR_MAP_LAYER",
+          "filename": "category_map_civic.geojson"
+        },
+        {
+          "name": "Parks & green space map",
+          "modality": "VECTOR_MAP_LAYER",
+          "filename": "category_map_green.geojson"
+        },
+        {
+          "name": "Category composition",
+          "modality": "CHART_PLOTLY",
+          "filename": "composition.json"
+        },
+        {
+          "name": "Summary",
+          "modality": "TABLE",
+          "filename": "summary.csv"
+        },
+        {
+          "name": "At a glance",
+          "modality": "MARKDOWN",
+          "filename": "headline.md"
+        },
+        {
+          "name": "Statistics",
+          "modality": "MARKDOWN",
+          "filename": "statistics.md"
+        },
+        {
+          "name": "Hot-spots & cold-spots",
+          "modality": "VECTOR_MAP_LAYER",
+          "filename": "hotspots_by_density.geojson"
+        },
+        {
+          "name": "Hot-spots & cold-spots (per capita)",
+          "modality": "VECTOR_MAP_LAYER",
+          "filename": "hotspots_by_capita.geojson"
+        },
+        {
+          "name": "Everyday completeness (weakest link)",
+          "modality": "VECTOR_MAP_LAYER",
+          "filename": "combined_everyday_completeness_weakest_link.geojson"
+        },
+        {
+          "name": "Everyday provision (average)",
+          "modality": "VECTOR_MAP_LAYER",
+          "filename": "combined_everyday_provision_average.geojson"
+        },
+        {
+          "name": "Walkability deficit",
+          "modality": "VECTOR_MAP_LAYER",
+          "filename": "combined_walkability_deficit.geojson"
+        },
+        {
+          "name": "Density by sub-area",
+          "modality": "VECTOR_MAP_LAYER",
+          "filename": "subareas.geojson"
+        },
+        {
+          "name": "Sub-area ranking",
+          "modality": "CHART_PLOTLY",
+          "filename": "subarea_ranking.json"
+        },
+        {
+          "name": "Top sub-areas",
+          "modality": "TABLE",
+          "filename": "subarea_ranking_table.csv"
+        },
+        {
+          "name": "Provision vs population",
+          "modality": "CHART_PLOTLY",
+          "filename": "population_equity.json"
+        },
+        {
+          "name": "Provision per capita",
+          "modality": "VECTOR_MAP_LAYER",
+          "filename": "per_capita.geojson"
+        },
+        {
+          "name": "Coverage on foot (800 m)",
+          "modality": "VECTOR_MAP_LAYER",
+          "filename": "coverage_foot_walk_10min.geojson"
+        },
+        {
+          "name": "Coverage on foot (1200 m)",
+          "modality": "VECTOR_MAP_LAYER",
+          "filename": "coverage_foot_walk_15min.geojson"
+        },
+        {
+          "name": "Underserved areas (on foot, 1200 m)",
+          "modality": "VECTOR_MAP_LAYER",
+          "filename": "underserved_beyond_15min.geojson"
+        },
+        {
+          "name": "Most underserved sub-areas (on foot)",
+          "modality": "TABLE",
+          "filename": "underserved_table_beyond_15min.csv"
+        },
+        {
+          "name": "Everyday destinations heatmap",
+          "modality": "RASTER_MAP_LAYER",
+          "filename": "heatmap.tiff"
+        },
+        {
+          "name": "Everyday destinations per resident (surface)",
+          "modality": "RASTER_MAP_LAYER",
+          "filename": "per_capita_surface.tiff"
+        },
+        {
+          "name": "Distance to nearest everyday destination",
+          "modality": "RASTER_MAP_LAYER",
+          "filename": "nearest_distance.tiff"
+        },
+        {
+          "name": "Data currentness",
+          "modality": "VECTOR_MAP_LAYER",
+          "filename": "currentness.geojson"
+        },
+        {
+          "name": "Availability on a Sunday afternoon",
+          "modality": "CHART_PLOTLY",
+          "filename": "availability.json"
+        },
+        {
+          "name": "OpenStreetMap data quality",
+          "modality": "MARKDOWN",
+          "filename": "data_quality.md"
+        }
+      ],
+      "errors": {}
+    }
+  ]
+}

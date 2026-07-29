@@ -1,0 +1,217 @@
+{
+  "indicator": "heat_resilience",
+  "name": "Heat resilience",
+  "runs": [
+    {
+      "aoi": "heidelberg",
+      "feature_count": 118,
+      "relevance": "meaningful",
+      "artifacts": [
+        {
+          "name": "Heat-relief places explorer",
+          "modality": "VECTOR_MAP_LAYER",
+          "filename": "feature_layer.geojson",
+          "summary": "The actual OpenStreetMap objects behind the heat-relief places, with their attributes. Zoom in to inspect them.",
+          "description": "The true OpenStreetMap geometry of every counted feature — points, ways and areas — carrying its name and (where mapped) opening hours. It appears from a neighbourhood zoom level so you can inspect the individual objects rather than an aggregate.\n\nProvenance: OpenStreetMap data as of 2026-06-19 · indicator: heat_resilience · reachability: straight-line distance."
+        },
+        {
+          "name": "Heat-relief places heatmap",
+          "modality": "RASTER_MAP_LAYER",
+          "filename": "heatmap.tiff",
+          "summary": "A gridded density of heat-relief places across the area — brighter means more. Results depend on OpenStreetMap data completeness. If you can, contribute to OSM.",
+          "description": "A regular grid over the area of interest, each cell shaded by how many heat-relief places fall within it. It reveals clusters and gaps that individual points can hide.\n\nProvenance: OpenStreetMap data as of 2026-06-19 · indicator: heat_resilience · reachability: straight-line distance."
+        },
+        {
+          "name": "Heat-relief places density surface",
+          "modality": "RASTER_MAP_LAYER",
+          "filename": "density_surface.tiff",
+          "summary": "A smoothed, continuous density surface of heat-relief places (kernel-style). Results depend on OpenStreetMap data completeness. If you can, contribute to OSM.",
+          "description": "A kernel-smoothed density of heat-relief places: the point counts are blurred into a continuous surface so clusters show as smooth hot regions rather than individual grid cells — a boundary-free complement to the sub-area choropleth and the raw heatmap.\n\nProvenance: OpenStreetMap data as of 2026-06-19 · indicator: heat_resilience · reachability: straight-line distance."
+        },
+        {
+          "name": "Heat-relief places per resident (surface)",
+          "modality": "RASTER_MAP_LAYER",
+          "filename": "per_capita_surface.tiff",
+          "summary": "A continuous surface of heat-relief places per 1,000 residents — provision relative to need, without administrative boundaries. Results depend on OpenStreetMap data completeness. If you can, contribute to OSM.",
+          "description": "Kernel-smoothed heat-relief places density divided by population density on the same grid, scaled to per 1,000 residents. Unlike the per-capita choropleth this owes nothing to administrative boundaries, so gradients *within* a district are visible; the trade-off is that it is a smoothed estimate rather than an exact count per area. Cells with fewer than 1 residents are left transparent, because dividing by a nearly empty cell produces a large figure that reflects the arithmetic rather than good provision. Populated cells with no feature within reach are drawn in the lowest class, not left blank — they are the worst-served places and the reason to read this map.\n\nProvenance: OpenStreetMap data as of 2026-06-19 · indicator: heat_resilience · reachability: straight-line distance."
+        },
+        {
+          "name": "Distance to nearest heat-relief place",
+          "modality": "RASTER_MAP_LAYER",
+          "filename": "nearest_distance.tiff",
+          "summary": "How far to the nearest heat-relief place from anywhere in the area (metres). Darker = further. Results depend on OpenStreetMap data completeness. If you can, contribute to OSM.",
+          "description": "A regular grid over the area, each cell shaded by the straight-line distance to the nearest heat-relief place. Dark cells are the furthest from any feature — the access gaps. Straight-line (not routed), so it is an optimistic lower bound; it needs no routing service.\n\nProvenance: OpenStreetMap data as of 2026-06-19 · indicator: heat_resilience · reachability: straight-line distance."
+        }
+      ],
+      "errors": {
+        "about": "",
+        "category_map": "",
+        "composition": "",
+        "summary_table": "",
+        "headline": "",
+        "histogram": "",
+        "statistics": "",
+        "by_density": "",
+        "by_capita": "",
+        "combined": "",
+        "subarea_density": "",
+        "population_equity": "",
+        "per_capita_map": "",
+        "reach_200": "",
+        "reach_400": "",
+        "reach_800": "",
+        "beyond_200": "",
+        "currentness": "",
+        "data_quality": ""
+      }
+    },
+    {
+      "aoi": "montpellier",
+      "feature_count": 162,
+      "relevance": "meaningful",
+      "artifacts": [
+        {
+          "name": "About this indicator",
+          "modality": "MARKDOWN",
+          "filename": "about.md"
+        },
+        {
+          "name": "Heat-relief places explorer",
+          "modality": "VECTOR_MAP_LAYER",
+          "filename": "feature_layer.geojson"
+        },
+        {
+          "name": "Heat-relief places map",
+          "modality": "VECTOR_MAP_LAYER",
+          "filename": "category_map.geojson"
+        },
+        {
+          "name": "Category composition",
+          "modality": "CHART_PLOTLY",
+          "filename": "composition.json"
+        },
+        {
+          "name": "Summary",
+          "modality": "TABLE",
+          "filename": "summary.csv"
+        },
+        {
+          "name": "At a glance",
+          "modality": "MARKDOWN",
+          "filename": "headline.md"
+        },
+        {
+          "name": "Density distribution",
+          "modality": "CHART_PLOTLY",
+          "filename": "distribution.json"
+        },
+        {
+          "name": "Statistics",
+          "modality": "MARKDOWN",
+          "filename": "statistics.md"
+        },
+        {
+          "name": "Hot-spots & cold-spots",
+          "modality": "VECTOR_MAP_LAYER",
+          "filename": "hotspots_by_density.geojson"
+        },
+        {
+          "name": "Hot-spots & cold-spots (per capita)",
+          "modality": "VECTOR_MAP_LAYER",
+          "filename": "hotspots_by_capita.geojson"
+        },
+        {
+          "name": "Heat resilience (weakest link)",
+          "modality": "VECTOR_MAP_LAYER",
+          "filename": "combined_heat_resilience_weakest_link.geojson"
+        },
+        {
+          "name": "Heat vulnerability",
+          "modality": "VECTOR_MAP_LAYER",
+          "filename": "combined_heat_vulnerability.geojson"
+        },
+        {
+          "name": "Density by sub-area",
+          "modality": "VECTOR_MAP_LAYER",
+          "filename": "subareas.geojson"
+        },
+        {
+          "name": "Sub-area ranking",
+          "modality": "CHART_PLOTLY",
+          "filename": "subarea_ranking.json"
+        },
+        {
+          "name": "Top sub-areas",
+          "modality": "TABLE",
+          "filename": "subarea_ranking_table.csv"
+        },
+        {
+          "name": "Provision vs population",
+          "modality": "CHART_PLOTLY",
+          "filename": "population_equity.json"
+        },
+        {
+          "name": "Provision per capita",
+          "modality": "VECTOR_MAP_LAYER",
+          "filename": "per_capita.geojson"
+        },
+        {
+          "name": "Coverage on foot (200 m)",
+          "modality": "VECTOR_MAP_LAYER",
+          "filename": "coverage_foot_reach_200.geojson"
+        },
+        {
+          "name": "Coverage on foot (400 m)",
+          "modality": "VECTOR_MAP_LAYER",
+          "filename": "coverage_foot_reach_400.geojson"
+        },
+        {
+          "name": "Coverage on foot (800 m)",
+          "modality": "VECTOR_MAP_LAYER",
+          "filename": "coverage_foot_reach_800.geojson"
+        },
+        {
+          "name": "Underserved areas (on foot, 200 m)",
+          "modality": "VECTOR_MAP_LAYER",
+          "filename": "underserved_beyond_200.geojson"
+        },
+        {
+          "name": "Most underserved sub-areas (on foot, 200 m)",
+          "modality": "TABLE",
+          "filename": "underserved_table_beyond_200.csv"
+        },
+        {
+          "name": "Heat-relief places heatmap",
+          "modality": "RASTER_MAP_LAYER",
+          "filename": "heatmap.tiff"
+        },
+        {
+          "name": "Heat-relief places density surface",
+          "modality": "RASTER_MAP_LAYER",
+          "filename": "density_surface.tiff"
+        },
+        {
+          "name": "Heat-relief places per resident (surface)",
+          "modality": "RASTER_MAP_LAYER",
+          "filename": "per_capita_surface.tiff"
+        },
+        {
+          "name": "Distance to nearest heat-relief place",
+          "modality": "RASTER_MAP_LAYER",
+          "filename": "nearest_distance.tiff"
+        },
+        {
+          "name": "Data currentness",
+          "modality": "VECTOR_MAP_LAYER",
+          "filename": "currentness.geojson"
+        },
+        {
+          "name": "OpenStreetMap data quality",
+          "modality": "MARKDOWN",
+          "filename": "data_quality.md"
+        }
+      ],
+      "errors": {}
+    }
+  ]
+}

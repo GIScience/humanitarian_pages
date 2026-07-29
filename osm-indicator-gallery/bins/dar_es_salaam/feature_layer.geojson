@@ -1,0 +1,26 @@
+{
+"type": "FeatureCollection",
+"features": [
+{ "type": "Feature", "properties": { "index": "0", "@osmId": "node/1399692838", "name": null, "opening_hours": null, "label": "Litter bins", "color": "#31a354" }, "geometry": { "type": "Point", "coordinates": [ 39.2454941, -6.7981309 ] } },
+{ "type": "Feature", "properties": { "index": "1", "@osmId": "node/1404350208", "name": null, "opening_hours": null, "label": "Litter bins", "color": "#31a354" }, "geometry": { "type": "Point", "coordinates": [ 39.2463992, -6.7915 ] } },
+{ "type": "Feature", "properties": { "index": "2", "@osmId": "node/1408260315", "name": null, "opening_hours": null, "label": "Litter bins", "color": "#31a354" }, "geometry": { "type": "Point", "coordinates": [ 39.2463352, -6.7938609 ] } },
+{ "type": "Feature", "properties": { "index": "3", "@osmId": "node/3421307973", "name": null, "opening_hours": null, "label": "Litter bins", "color": "#31a354" }, "geometry": { "type": "Point", "coordinates": [ 39.2471586, -6.8007108 ] } },
+{ "type": "Feature", "properties": { "index": "4", "@osmId": "node/5870477140", "name": null, "opening_hours": null, "label": "Litter bins", "color": "#31a354" }, "geometry": { "type": "Point", "coordinates": [ 39.2943355, -6.8115551 ] } },
+{ "type": "Feature", "properties": { "index": "5", "@osmId": "node/5875508885", "name": null, "opening_hours": null, "label": "Litter bins", "color": "#31a354" }, "geometry": { "type": "Point", "coordinates": [ 39.2960029, -6.8082902 ] } },
+{ "type": "Feature", "properties": { "index": "6", "@osmId": "node/3660099478", "name": null, "opening_hours": null, "label": "Large waste disposal", "color": "#006d2c" }, "geometry": { "type": "Point", "coordinates": [ 39.2706744, -6.8330672 ] } },
+{ "type": "Feature", "properties": { "index": "7", "@osmId": "node/3421292528", "name": null, "opening_hours": null, "label": "Large waste disposal", "color": "#006d2c" }, "geometry": { "type": "Point", "coordinates": [ 39.250717, -6.8020987 ] } },
+{ "type": "Feature", "properties": { "index": "8", "@osmId": "node/3668620496", "name": null, "opening_hours": null, "label": "Large waste disposal", "color": "#006d2c" }, "geometry": { "type": "Point", "coordinates": [ 39.2726592, -6.8391595 ] } },
+{ "type": "Feature", "properties": { "index": "9", "@osmId": "node/6397929640", "name": null, "opening_hours": null, "label": "Large waste disposal", "color": "#006d2c" }, "geometry": { "type": "Point", "coordinates": [ 39.2444225, -6.8271663 ] } },
+{ "type": "Feature", "properties": { "index": "10", "@osmId": "node/13922674544", "name": null, "opening_hours": null, "label": "Large waste disposal", "color": "#006d2c" }, "geometry": { "type": "Point", "coordinates": [ 39.2633649, -6.7999776 ] } },
+{ "type": "Feature", "properties": { "index": "11", "@osmId": "node/13922684709", "name": null, "opening_hours": null, "label": "Large waste disposal", "color": "#006d2c" }, "geometry": { "type": "Point", "coordinates": [ 39.2633184, -6.7995453 ] } },
+{ "type": "Feature", "properties": { "index": "12", "@osmId": "node/13922684875", "name": null, "opening_hours": null, "label": "Large waste disposal", "color": "#006d2c" }, "geometry": { "type": "Point", "coordinates": [ 39.2633506, -6.799638 ] } },
+{ "type": "Feature", "properties": { "index": "13", "@osmId": "node/2668464160", "name": null, "opening_hours": null, "label": "Large waste disposal", "color": "#006d2c" }, "geometry": { "type": "Point", "coordinates": [ 39.238122, -6.7970822 ] } },
+{ "type": "Feature", "properties": { "index": "14", "@osmId": "node/2669110395", "name": null, "opening_hours": null, "label": "Large waste disposal", "color": "#006d2c" }, "geometry": { "type": "Point", "coordinates": [ 39.2370644, -6.7966093 ] } },
+{ "type": "Feature", "properties": { "index": "15", "@osmId": "node/3652749269", "name": null, "opening_hours": null, "label": "Large waste disposal", "color": "#006d2c" }, "geometry": { "type": "Point", "coordinates": [ 39.2241132, -6.8059263 ] } },
+{ "type": "Feature", "properties": { "index": "16", "@osmId": "node/3672359698", "name": null, "opening_hours": null, "label": "Large waste disposal", "color": "#006d2c" }, "geometry": { "type": "Point", "coordinates": [ 39.2364687, -6.8008949 ] } },
+{ "type": "Feature", "properties": { "index": "17", "@osmId": "node/3704414717", "name": null, "opening_hours": null, "label": "Large waste disposal", "color": "#006d2c" }, "geometry": { "type": "Point", "coordinates": [ 39.2389135, -6.8354564 ] } },
+{ "type": "Feature", "properties": { "index": "18", "@osmId": "node/3755478606", "name": null, "opening_hours": null, "label": "Large waste disposal", "color": "#006d2c" }, "geometry": { "type": "Point", "coordinates": [ 39.2308272, -6.8411604 ] } },
+{ "type": "Feature", "properties": { "index": "19", "@osmId": "node/3799127374", "name": null, "opening_hours": null, "label": "Large waste disposal", "color": "#006d2c" }, "geometry": { "type": "Point", "coordinates": [ 39.2221859, -6.7951837 ] } },
+{ "type": "Feature", "properties": { "index": "20", "@osmId": "node/3799179779", "name": null, "opening_hours": null, "label": "Large waste disposal", "color": "#006d2c" }, "geometry": { "type": "Point", "coordinates": [ 39.2246978, -6.7964523 ] } }
+]
+}

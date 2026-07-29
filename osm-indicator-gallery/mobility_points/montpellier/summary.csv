@@ -1,0 +1,8 @@
+Category,Count,Per km²,"Per 1,000 inhabitants",Share [%]
+Train stations & halts,1,0.09,0.01,0.3
+Tram & light-rail stops,71,6.34,0.74,23.0
+Bus stops,171,15.26,1.79,55.3
+Metro & subway stations,0,0.0,0.0,0.0
+Bike-sharing points,36,3.21,0.38,11.7
+Car-sharing points,30,2.68,0.31,9.7
+Total,309,27.58,3.24,100.0

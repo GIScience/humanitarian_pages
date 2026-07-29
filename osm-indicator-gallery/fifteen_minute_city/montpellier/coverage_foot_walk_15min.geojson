@@ -1,0 +1,6 @@
+{
+"type": "FeatureCollection",
+"features": [
+{ "type": "Feature", "properties": { "index": "0", "label": "Within 1200 m on foot", "color": "#2b8cbe" }, "geometry": { "type": "Polygon", "coordinates": [ [ [ 3.855, 43.625 ], [ 3.855, 43.6 ], [ 3.905, 43.6 ], [ 3.905, 43.625 ], [ 3.855, 43.625 ] ] ] } }
+]
+}
