@@ -1,0 +1,330 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>climate-trace-emissions &mdash; artifacts</title><style>
+:root{
+  --bg:#fcfcfd; --raise:#ffffff; --ink:#12191f; --muted:#5f7183; --line:#e2e8ed;
+  --accent:#0f6e70; --caution:#a2560b; --grid:#eef2f5;
+  --serif:ui-serif,Georgia,"Iowan Old Style","Times New Roman",serif;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",sans-serif;
+  --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
+}
+@media(prefers-color-scheme:dark){:root{
+  --bg:#0e1418; --raise:#141c22; --ink:#e8eef2; --muted:#8fa3b3; --line:#1f2a33;
+  --accent:#4ec9c4; --caution:#f0a860; --grid:#18222a;
+}}
+:root[data-theme=dark]{
+  --bg:#0e1418; --raise:#141c22; --ink:#e8eef2; --muted:#8fa3b3; --line:#1f2a33;
+  --accent:#4ec9c4; --caution:#f0a860; --grid:#18222a;
+}
+:root[data-theme=light]{
+  --bg:#fcfcfd; --raise:#ffffff; --ink:#12191f; --muted:#5f7183; --line:#e2e8ed;
+  --accent:#0f6e70; --caution:#a2560b; --grid:#eef2f5;
+}
+*{box-sizing:border-box}
+.ct-root{background:var(--bg);color:var(--ink);font:16px/1.65 var(--sans);
+  -webkit-font-smoothing:antialiased;overflow-x:hidden}
+.ct-wrap{max-width:1080px;margin:0 auto;padding:40px 24px 80px;display:flex;flex-direction:column;gap:14px}
+.ct-eyebrow{font:500 11px/1.4 var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--accent)}
+.ct-h1{font:600 2.05rem/1.15 var(--serif);margin:0;text-wrap:balance;letter-spacing:-.012em}
+.ct-lede{color:var(--muted);max-width:66ch;margin:0}
+.ct-meta{display:flex;flex-wrap:wrap;gap:6px 22px;font:12px/1.5 var(--mono);color:var(--muted);
+  padding:14px 0 4px;border-top:1px solid var(--line);margin-top:6px}
+.ct-meta b{color:var(--ink);font-weight:500}
+.ct-run{font:500 12px/1.4 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--muted);
+  display:flex;align-items:center;gap:10px;margin:34px 0 2px}
+.ct-run::after{content:"";flex:1;height:1px;background:var(--line)}
+.ct-card{background:var(--raise);border:1px solid var(--line);border-radius:10px;padding:22px 24px;
+  display:flex;flex-direction:column;gap:2px}
+.ct-mod{font:500 10px/1.4 var(--mono);letter-spacing:.13em;color:var(--muted)}
+.ct-card>h3{font:600 1.02rem/1.35 var(--sans);margin:2px 0 10px;letter-spacing:-.005em}
+.ct-fig{overflow-x:auto;margin:6px -6px 0}
+.ct-card h4,.ct-card h5,.ct-card h6{font:600 .95rem/1.4 var(--sans);margin:18px 0 4px}
+.ct-card h2{font:600 1.15rem/1.3 var(--serif);margin:4px 0 8px}
+.ct-card p{margin:0 0 10px;max-width:70ch}
+.ct-card p:last-child{margin-bottom:0}
+.ct-card>h3+p,.ct-card>h3+ul{margin-top:0}
+.ct-big{font:600 1.9rem/1.2 var(--mono);letter-spacing:-.02em;margin:2px 0 6px;
+  font-variant-numeric:tabular-nums}
+table{border-collapse:collapse;width:100%;margin:10px 0;font:13px/1.5 var(--sans);display:block;
+  overflow-x:auto;white-space:nowrap}
+th,td{border-bottom:1px solid var(--line);padding:8px 12px 8px 0;text-align:left}
+th{font:500 10px/1.4 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--muted);
+  border-bottom-color:var(--ink);padding-bottom:6px}
+td.num{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:12.5px}
+blockquote{margin:12px 0;padding:2px 0 2px 16px;border-left:2px solid var(--caution);color:var(--muted);
+  font-size:.92rem;max-width:68ch}
+blockquote strong{color:var(--ink)}
+ul{margin:8px 0;padding-left:0;list-style:none;display:flex;flex-direction:column;gap:7px}
+li{position:relative;padding-left:18px;max-width:70ch;font-size:.94rem}
+li::before{content:"";position:absolute;left:2px;top:.62em;width:5px;height:5px;border-radius:1px;
+  background:var(--accent);opacity:.6}
+pre.code{background:var(--grid);padding:14px 16px;border-radius:7px;overflow-x:auto;
+  font:11.5px/1.55 var(--mono);max-height:260px;margin:8px 0;color:var(--muted)}
+code{font:.87em var(--mono);color:var(--accent)}
+a{color:var(--accent);text-underline-offset:2px}
+a:focus-visible,summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:3px}
+.ttl{font:600 13px var(--sans);fill:var(--ink)}
+.lbl{font:11px var(--mono);fill:var(--muted)}
+.tick-r{text-anchor:end}.tick-c{text-anchor:end}
+.ax{stroke:var(--line);stroke-width:1}
+.mapbg{fill:var(--grid)}
+.swatch{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:8px;
+  vertical-align:baseline}
+.muted{color:var(--muted);font-size:.9rem}
+</style></head><body class="ct-root"><div class="ct-wrap"><div class="ct-eyebrow">CAN plugin output</div><h1 class="ct-h1">climate-trace-emissions</h1><p class="ct-lede">Every artifact one computation returns, exactly as the Climate Action Navigator dashboard would receive it &mdash; rendered here offline, with no dashboard, no network and no chart library.</p><div class="ct-run">power_sector &middot; 6 artifacts</div><section class="ct-card"><div class="ct-mod">MARKDOWN</div><h3>Headline emissions</h3><div class="ct-big">47.6 kt CO₂e (100-year GWP)</div>
+<p>Total CO₂e (100-year GWP) emitted in Heidelberg District, Baden-Württemberg State, DEU during 2024.</p>
+<p>The largest single contributor is <strong>Power</strong>, at 47.6 kt CO₂e (100-year GWP) (100.0 % of the total).</p>
+<blockquote><strong>Area matched:</strong> Matched to Heidelberg District, Baden-Württemberg State, DEU, whose name matches this area of interest.</blockquote></section>
+<section class="ct-card"><div class="ct-mod">CHART_PLOTLY</div><h3>Emissions by subsector</h3><div class="ct-fig"><svg viewBox="0 0 860 380" role="img" preserveAspectRatio="xMidYMid meet" style="width:100%;height:auto"><text x="12" y="26" class="ttl">Largest emission subsectors, Heidelberg District, 2024</text>
+<rect x="96" y="44.0" width="660.7" height="69.4" rx="3" fill="#d73027"><title>Electricity Generation: 35.3 kt</title></rect><text x="88" y="89.9" class="lbl tick-r">Electricity Generation</text><text x="762.7" y="89.9" class="lbl">35.3 kt</text>
+<rect x="96" y="146.0" width="197.0" height="69.4" rx="3" fill="#d73027"><title>Heat Plants: 10.5 kt</title></rect><text x="88" y="191.9" class="lbl tick-r">Heat Plants</text><text x="299.0" y="191.9" class="lbl">10.5 kt</text>
+<rect x="96" y="248.0" width="33.7" height="69.4" rx="3" fill="#d73027"><title>Other Energy Use: 1.8 kt</title></rect><text x="88" y="293.9" class="lbl tick-r">Other Energy Use</text><text x="135.7" y="293.9" class="lbl">1.8 kt</text></svg></div></section>
+<section class="ct-card"><div class="ct-mod">CHART_PLOTLY</div><h3>Emissions over time</h3><div class="ct-fig"><svg viewBox="0 0 860 380" role="img" preserveAspectRatio="xMidYMid meet" style="width:100%;height:auto"><text x="12" y="26" class="ttl">Annual CO₂e (100-year GWP) emissions, Heidelberg District</text>
+<rect x="125.6" y="69.7" width="125.8" height="214.3" rx="3" fill="#4575b4"><title>2021: 53.4 kt</title></rect><text x="188.5" y="300" class="lbl tick-c" transform="rotate(-32 188.5 300)">2021</text>
+<rect x="310.6" y="79.6" width="125.8" height="204.4" rx="3" fill="#4575b4"><title>2022: 50.9 kt</title></rect><text x="373.5" y="300" class="lbl tick-c" transform="rotate(-32 373.5 300)">2022</text>
+<rect x="495.6" y="89.0" width="125.8" height="195.0" rx="3" fill="#4575b4"><title>2023: 48.6 kt</title></rect><text x="558.5" y="300" class="lbl tick-c" transform="rotate(-32 558.5 300)">2023</text>
+<rect x="680.6" y="93.1" width="125.8" height="190.9" rx="3" fill="#4575b4"><title>2024: 47.6 kt</title></rect><text x="743.5" y="300" class="lbl tick-c" transform="rotate(-32 743.5 300)">2024</text>
+<line x1="96" y1="284" x2="836" y2="284" class="ax"/>
+<text x="88" y="50" class="lbl tick-r">59.8 kt</text></svg></div></section>
+<section class="ct-card"><div class="ct-mod">MARKDOWN</div><h3>Confidence</h3><h3>Confidence in these estimates</h3>
+<p>Climate TRACE publishes no individually-assessed emission sources for this area, so no per-source confidence bands are available. The area figures are downscaled from larger totals — see “Data and provenance”.</p></section>
+<section class="ct-card"><div class="ct-mod">MARKDOWN</div><h3>Data and provenance</h3><h3>Data and provenance</h3>
+<p><strong>Source.</strong> Climate TRACE — <a href="https://climatetrace.org" target="_blank" rel="noopener">https://climatetrace.org</a>, API v7. Licensed under <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC BY 4.0</a>.</p>
+<ul><li><strong>Area:</strong> Heidelberg District, Baden-Württemberg State, DEU</li>
+<li><strong>Gas:</strong> CO₂e (100-year GWP)</li>
+<li><strong>Data period:</strong> 2024</li>
+<li><strong>Retrieved:</strong> 2026-07-26 19:28 UTC</li>
+<li><strong>Methodology:</strong> <a href="https://climatetrace.org/about" target="_blank" rel="noopener">https://climatetrace.org/about</a></li>
+</ul><h4>Data contributors</h4>
+<p>The organisations whose data underpins the sectors that account for essentially all of these emissions. Climate TRACE draws on many more across its full inventory; the dataset citation below covers the work as a whole.</p>
+<ul><li>WattTime — <a href="https://www.watttime.org/" target="_blank" rel="noopener">https://www.watttime.org/</a></li>
+<li>TransitionZero — <a href="https://www.transitionzero.org/" target="_blank" rel="noopener">https://www.transitionzero.org/</a></li>
+<li>Global Energy Monitor — <a href="https://globalenergymonitor.org/" target="_blank" rel="noopener">https://globalenergymonitor.org/</a></li>
+</ul><h4>How to read these figures</h4>
+<ul><li>Climate TRACE figures are <strong>modelled estimates</strong>, not metered measurements. They combine satellite observations, reported data and sector-specific models, and carry real uncertainty.</li>
+<li>Emissions are attributed to <strong>where they are produced</strong>, not where the resulting goods or energy are consumed. An area with a power station carries its emissions; the customers do not.</li>
+<li>Sub-national figures (states, counties, urban areas) are available from 2021 onwards; national and global figures from 2015. Earlier years return zero rather than an error.</li>
+<li>Many sub-national figures are <strong>downscaled national totals</strong> rather than independently observed. Where a source is marked as an administrative aggregation, its location is the middle of the area, not a facility.</li>
+</ul><h4>Citation</h4>
+<pre class="code">
+@misc{climatetrace2024,
+  author = {Climate TRACE},
+  title = {Climate TRACE emissions inventory (v7), 2024},
+  year = {2024},
+  url = {https://climatetrace.org},
+  note = {Licence: CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/). Retrieved 2026-07-26.}
+}
+
+@misc{ctleadwatttime,
+  author = {WattTime},
+  title = {Data contributor to the Climate TRACE emissions inventory (v7)},
+  year = {2024},
+  url = {https://www.watttime.org/}
+}
+
+@misc{ctleadtransitionzero,
+  author = {TransitionZero},
+  title = {Data contributor to the Climate TRACE emissions inventory (v7)},
+  year = {2024},
+  url = {https://www.transitionzero.org/}
+}
+
+@misc{ctleadglobalenergymonitor,
+  author = {Global Energy Monitor},
+  title = {Data contributor to the Climate TRACE emissions inventory (v7)},
+  year = {2024},
+  url = {https://globalenergymonitor.org/}
+}
+</pre>
+<h4>How your area was matched</h4>
+<p>Climate TRACE reports emissions for its own administrative and urban areas, not for arbitrary boundaries. Your area of interest was matched to <strong>Heidelberg District, Baden-Württemberg State, DEU</strong> (confidence: likely).</p>
+<blockquote>Matched to Heidelberg District, Baden-Württemberg State, DEU, whose name matches this area of interest.</blockquote>
+<p>Other areas overlapping your selection: Bergstraße District, Hessen State, DEU, Rhein-Neckar-Kreis District, Baden-Württemberg State, DEU.</p></section>
+<section class="ct-card"><div class="ct-mod">MARKDOWN</div><h3>About</h3><h3>About this indicator</h3>
+<p>Reports greenhouse gases emitted by electricity and heat generation within an area, and locates the</p>
+<p>individual power stations responsible, using the Climate TRACE inventory.</p>
+<h4>How to read it</h4>
+<p>Power is one of the sectors Climate TRACE models at the level of individual facilities, so the plants on</p>
+<p>the map are real located assets rather than downscaled area averages. Emissions are attributed to where</p>
+<p>the electricity is generated, not where it is used — an area that exports power carries those emissions,</p>
+<p>and one that imports it does not.</p></section><div class="ct-run">total_emissions &middot; 14 artifacts</div><section class="ct-card"><div class="ct-mod">MARKDOWN</div><h3>Headline emissions</h3><div class="ct-big">555.4 kt CO₂e (100-year GWP)</div>
+<p>Total CO₂e (100-year GWP) emitted in Heidelberg District, Baden-Württemberg State, DEU during 2024.</p>
+<p>The largest single contributor is <strong>Buildings</strong>, at 219.2 kt CO₂e (100-year GWP) (39.5 % of the total).</p>
+<blockquote><strong>Area matched:</strong> Matched to Heidelberg District, Baden-Württemberg State, DEU, whose name matches this area of interest.</blockquote>
+<blockquote>1 smaller category is not shown separately (552.9 t CO₂e (100-year GWP)); the categories listed cover 99.9 % of the charted total.</blockquote></section>
+<section class="ct-card"><div class="ct-mod">CHART_PLOTLY</div><h3>Emissions by sector</h3><div class="ct-fig"><svg viewBox="0 0 860 380" role="img" preserveAspectRatio="xMidYMid meet" style="width:100%;height:auto"><text x="12" y="26" class="ttl">CO₂e (100-year GWP) emissions by sector, Heidelberg District, 2024</text>
+<rect x="109.2" y="69.7" width="55.9" height="214.3" rx="3" fill="#fee090"><title>Buildings: 219.2 kt</title></rect><text x="137.1" y="300" class="lbl tick-c" transform="rotate(-32 137.1 300)">Buildings</text>
+<rect x="191.4" y="129.4" width="55.9" height="154.6" rx="3" fill="#fc8d59"><title>Transportation: 158.1 kt</title></rect><text x="219.3" y="300" class="lbl tick-c" transform="rotate(-32 219.3 300)">Transportation</text>
+<rect x="273.6" y="221.7" width="55.9" height="62.3" rx="3" fill="#91bfdb"><title>Manufacturing: 63.7 kt</title></rect><text x="301.6" y="300" class="lbl tick-c" transform="rotate(-32 301.6 300)">Manufacturing</text>
+<rect x="355.8" y="237.5" width="55.9" height="46.5" rx="3" fill="#d73027"><title>Power: 47.6 kt</title></rect><text x="383.8" y="300" class="lbl tick-c" transform="rotate(-32 383.8 300)">Power</text>
+<rect x="438.0" y="253.4" width="55.9" height="30.6" rx="3" fill="#a6761d"><title>Waste: 31.3 kt</title></rect><text x="466.0" y="300" class="lbl tick-c" transform="rotate(-32 466.0 300)">Waste</text>
+<rect x="520.3" y="270.3" width="55.9" height="13.7" rx="3" fill="#c51b7d"><title>Fluorinated gases: 14.0 kt</title></rect><text x="548.2" y="300" class="lbl tick-c" transform="rotate(-32 548.2 300)">Fluorinated gases</text>
+<rect x="602.5" y="271.3" width="55.9" height="12.7" rx="3" fill="#91cf60"><title>Agriculture: 13.0 kt</title></rect><text x="630.4" y="300" class="lbl tick-c" transform="rotate(-32 630.4 300)">Agriculture</text>
+<rect x="684.7" y="276.3" width="55.9" height="7.7" rx="3" fill="#4575b4"><title>Fossil fuel operations: 7.8 kt</title></rect><text x="712.7" y="300" class="lbl tick-c" transform="rotate(-32 712.7 300)">Fossil fuel operations</text>
+<rect x="766.9" y="283.5" width="55.9" height="1.0" rx="3" fill="#bdbdbd"><title>Other: 553 t</title></rect><text x="794.9" y="300" class="lbl tick-c" transform="rotate(-32 794.9 300)">Other</text>
+<line x1="96" y1="284" x2="836" y2="284" class="ax"/>
+<text x="88" y="50" class="lbl tick-r">245.5 kt</text></svg></div></section>
+<section class="ct-card"><div class="ct-mod">MARKDOWN</div><h3>Emissions by sector (text)</h3><h3>Emissions by sector</h3>
+<table>
+<tr><th>Sector</th><th>Emissions</th><th>Share</th></tr>
+<tr><td>Buildings</td><td>219.2 kt CO₂e (100-year GWP)</td><td>39.5 %</td></tr>
+<tr><td>Transportation</td><td>158.1 kt CO₂e (100-year GWP)</td><td>28.5 %</td></tr>
+<tr><td>Manufacturing</td><td>63.7 kt CO₂e (100-year GWP)</td><td>11.5 %</td></tr>
+<tr><td>Power</td><td>47.6 kt CO₂e (100-year GWP)</td><td>8.6 %</td></tr>
+<tr><td>Waste</td><td>31.3 kt CO₂e (100-year GWP)</td><td>5.6 %</td></tr>
+<tr><td>Fluorinated gases</td><td>14.0 kt CO₂e (100-year GWP)</td><td>2.5 %</td></tr>
+<tr><td>Agriculture</td><td>13.0 kt CO₂e (100-year GWP)</td><td>2.3 %</td></tr>
+<tr><td>Fossil fuel operations</td><td>7.8 kt CO₂e (100-year GWP)</td><td>1.4 %</td></tr>
+<tr><td><em>Other</em></td><td>552.9 t CO₂e (100-year GWP)</td><td>&lt; 0.1 %</td></tr>
+</table>
+<p><strong>Total:</strong> 555.4 kt CO₂e (100-year GWP)</p></section>
+<section class="ct-card"><div class="ct-mod">CHART_PLOTLY</div><h3>Emissions by subsector</h3><div class="ct-fig"><svg viewBox="0 0 860 380" role="img" preserveAspectRatio="xMidYMid meet" style="width:100%;height:auto"><text x="12" y="26" class="ttl">Largest emission subsectors, Heidelberg District, 2024</text>
+<rect x="96" y="44.0" width="660.7" height="18.9" rx="3" fill="#fee090"><title>Non-Residential Onsite Fuel Usage: 157.7 kt</title></rect><text x="88" y="56.5" class="lbl tick-r">Non-Residential Onsite Fuel Usage</text><text x="762.7" y="56.5" class="lbl">157.7 kt</text>
+<rect x="96" y="71.8" width="649.2" height="18.9" rx="3" fill="#fc8d59"><title>Road Transportation: 154.9 kt</title></rect><text x="88" y="84.3" class="lbl tick-r">Road Transportation</text><text x="751.2" y="84.3" class="lbl">154.9 kt</text>
+<rect x="96" y="99.6" width="256.6" height="18.9" rx="3" fill="#fee090"><title>Residential Onsite Fuel Usage: 61.2 kt</title></rect><text x="88" y="112.2" class="lbl tick-r">Residential Onsite Fuel Usage</text><text x="358.6" y="112.2" class="lbl">61.2 kt</text>
+<rect x="96" y="127.5" width="147.7" height="18.9" rx="3" fill="#d73027"><title>Electricity Generation: 35.3 kt</title></rect><text x="88" y="140.0" class="lbl tick-r">Electricity Generation</text><text x="249.7" y="140.0" class="lbl">35.3 kt</text>
+<rect x="96" y="155.3" width="113.0" height="18.9" rx="3" fill="#91bfdb"><title>Other Manufacturing: 27.0 kt</title></rect><text x="88" y="167.8" class="lbl tick-r">Other Manufacturing</text><text x="215.0" y="167.8" class="lbl">27.0 kt</text>
+<rect x="96" y="183.1" width="98.8" height="18.9" rx="3" fill="#91bfdb"><title>Other Chemicals: 23.6 kt</title></rect><text x="88" y="195.6" class="lbl tick-r">Other Chemicals</text><text x="200.8" y="195.6" class="lbl">23.6 kt</text>
+<rect x="96" y="210.9" width="72.3" height="18.9" rx="3" fill="#a6761d"><title>Domestic Wastewater Treatment And Discharge: 17.3 kt</title></rect><text x="88" y="223.4" class="lbl tick-r">Domestic Wastewater Treatment And Discharge</text><text x="174.3" y="223.4" class="lbl">17.3 kt</text>
+<rect x="96" y="238.7" width="58.8" height="18.9" rx="3" fill="#c51b7d"><title>Fluorinated Gases: 14.0 kt</title></rect><text x="88" y="251.2" class="lbl tick-r">Fluorinated Gases</text><text x="160.8" y="251.2" class="lbl">14.0 kt</text>
+<rect x="96" y="266.5" width="44.1" height="18.9" rx="3" fill="#d73027"><title>Heat Plants: 10.5 kt</title></rect><text x="88" y="279.1" class="lbl tick-r">Heat Plants</text><text x="146.1" y="279.1" class="lbl">10.5 kt</text>
+<rect x="96" y="294.4" width="42.8" height="18.9" rx="3" fill="#91bfdb"><title>Cement: 10.2 kt</title></rect><text x="88" y="306.9" class="lbl tick-r">Cement</text><text x="144.8" y="306.9" class="lbl">10.2 kt</text>
+<rect x="96" y="322.2" width="182.9" height="18.9" rx="3" fill="#bdbdbd"><title>Other: 43.6 kt</title></rect><text x="88" y="334.7" class="lbl tick-r">Other</text><text x="284.9" y="334.7" class="lbl">43.6 kt</text></svg></div></section>
+<section class="ct-card"><div class="ct-mod">CHART_PLOTLY</div><h3>Monthly emissions</h3><div class="ct-fig"><svg viewBox="0 0 860 420" role="img" preserveAspectRatio="xMidYMid meet" style="width:100%;height:auto"><text x="12" y="26" class="ttl">Monthly CO₂e (100-year GWP) emissions, Heidelberg District, 2024</text>
+<polyline points="96.0,69.7 163.3,123.9 230.5,118.9 297.8,137.9 365.1,164.7 432.4,180.4 499.6,183.6 566.9,186.8 634.2,170.0 701.5,143.0 768.7,104.4 836.0,75.4" fill="none" stroke="#fee090" stroke-width="2.2" stroke-linejoin="round"><title>Buildings</title></polyline>
+<polyline points="96.0,176.4 163.3,183.9 230.5,177.0 297.8,180.5 365.1,177.6 432.4,181.2 499.6,178.2 566.9,178.5 634.2,181.0 701.5,176.9 768.7,179.4 836.0,175.7" fill="none" stroke="#fc8d59" stroke-width="2.2" stroke-linejoin="round"><title>Transportation</title></polyline>
+<polyline points="96.0,241.6 163.3,240.5 230.5,239.2 297.8,241.8 365.1,240.2 432.4,240.9 499.6,243.5 566.9,243.5 634.2,242.9 701.5,241.8 768.7,241.6 836.0,241.9" fill="none" stroke="#91bfdb" stroke-width="2.2" stroke-linejoin="round"><title>Manufacturing</title></polyline>
+<polyline points="96.0,250.7 163.3,252.1 230.5,250.7 297.8,252.3 365.1,252.7 432.4,253.7 499.6,253.1 566.9,253.3 634.2,253.5 701.5,252.6 768.7,252.4 836.0,251.4" fill="none" stroke="#d73027" stroke-width="2.2" stroke-linejoin="round"><title>Power</title></polyline>
+<polyline points="96.0,263.0 163.3,263.9 230.5,263.0 297.8,263.4 365.1,263.0 432.4,263.4 499.6,262.9 566.9,263.0 634.2,263.4 701.5,262.9 768.7,263.4 836.0,262.9" fill="none" stroke="#a6761d" stroke-width="2.2" stroke-linejoin="round"><title>Waste</title></polyline>
+<polyline points="96.0,274.7 163.3,274.7 230.5,274.7 297.8,274.7 365.1,274.7 432.4,274.7 499.6,274.7 566.9,274.7 634.2,274.7 701.5,274.7 768.7,274.7 836.0,274.7" fill="none" stroke="#c51b7d" stroke-width="2.2" stroke-linejoin="round"><title>Fluorinated gases</title></polyline>
+<polyline points="96.0,276.2 163.3,276.1 230.5,275.2 297.8,274.8 365.1,275.4 432.4,275.6 499.6,275.7 566.9,275.6 634.2,274.8 701.5,274.2 768.7,274.8 836.0,275.8" fill="none" stroke="#91cf60" stroke-width="2.2" stroke-linejoin="round"><title>Agriculture</title></polyline>
+<polyline points="96.0,278.7 163.3,278.7 230.5,278.8 297.8,278.8 365.1,278.8 432.4,278.9 499.6,278.9 566.9,278.9 634.2,278.9 701.5,278.8 768.7,278.8 836.0,278.7" fill="none" stroke="#4575b4" stroke-width="2.2" stroke-linejoin="round"><title>Fossil fuel operations</title></polyline>
+<text x="96.0" y="300" class="lbl tick-c" transform="rotate(-40 96.0 300)">2024-01</text>
+<text x="163.3" y="300" class="lbl tick-c" transform="rotate(-40 163.3 300)">2024-02</text>
+<text x="230.5" y="300" class="lbl tick-c" transform="rotate(-40 230.5 300)">2024-03</text>
+<text x="297.8" y="300" class="lbl tick-c" transform="rotate(-40 297.8 300)">2024-04</text>
+<text x="365.1" y="300" class="lbl tick-c" transform="rotate(-40 365.1 300)">2024-05</text>
+<text x="432.4" y="300" class="lbl tick-c" transform="rotate(-40 432.4 300)">2024-06</text>
+<text x="499.6" y="300" class="lbl tick-c" transform="rotate(-40 499.6 300)">2024-07</text>
+<text x="566.9" y="300" class="lbl tick-c" transform="rotate(-40 566.9 300)">2024-08</text>
+<text x="634.2" y="300" class="lbl tick-c" transform="rotate(-40 634.2 300)">2024-09</text>
+<text x="701.5" y="300" class="lbl tick-c" transform="rotate(-40 701.5 300)">2024-10</text>
+<text x="768.7" y="300" class="lbl tick-c" transform="rotate(-40 768.7 300)">2024-11</text>
+<text x="836.0" y="300" class="lbl tick-c" transform="rotate(-40 836.0 300)">2024-12</text>
+<line x1="96" y1="284" x2="836" y2="284" class="ax"/>
+<text x="88" y="50" class="lbl tick-r">30.1 kt</text>
+<text x="88" y="284" class="lbl tick-r">0 t</text>
+<g transform="translate(96,346)"><rect width="11" height="11" rx="2" fill="#fee090"/><text x="16" y="10" class="lbl">Buildings</text></g><g transform="translate(286,346)"><rect width="11" height="11" rx="2" fill="#fc8d59"/><text x="16" y="10" class="lbl">Transportation</text></g><g transform="translate(476,346)"><rect width="11" height="11" rx="2" fill="#91bfdb"/><text x="16" y="10" class="lbl">Manufacturing</text></g><g transform="translate(666,346)"><rect width="11" height="11" rx="2" fill="#d73027"/><text x="16" y="10" class="lbl">Power</text></g><g transform="translate(96,366)"><rect width="11" height="11" rx="2" fill="#a6761d"/><text x="16" y="10" class="lbl">Waste</text></g><g transform="translate(286,366)"><rect width="11" height="11" rx="2" fill="#c51b7d"/><text x="16" y="10" class="lbl">Fluorinated gases</text></g><g transform="translate(476,366)"><rect width="11" height="11" rx="2" fill="#91cf60"/><text x="16" y="10" class="lbl">Agriculture</text></g><g transform="translate(666,366)"><rect width="11" height="11" rx="2" fill="#4575b4"/><text x="16" y="10" class="lbl">Fossil fuel operations</text></g></svg></div></section>
+<section class="ct-card"><div class="ct-mod">CHART_PLOTLY</div><h3>Emissions over time</h3><div class="ct-fig"><svg viewBox="0 0 860 380" role="img" preserveAspectRatio="xMidYMid meet" style="width:100%;height:auto"><text x="12" y="26" class="ttl">Annual CO₂e (100-year GWP) emissions, Heidelberg District</text>
+<polyline points="96.0,69.7 342.7,75.5 589.3,83.0 836.0,82.0" fill="none" stroke="#4575b4" stroke-width="2.2" stroke-linejoin="round"><title></title></polyline>
+<text x="96.0" y="300" class="lbl tick-c" transform="rotate(-40 96.0 300)">2021</text>
+<text x="342.7" y="300" class="lbl tick-c" transform="rotate(-40 342.7 300)">2022</text>
+<text x="589.3" y="300" class="lbl tick-c" transform="rotate(-40 589.3 300)">2023</text>
+<text x="836.0" y="300" class="lbl tick-c" transform="rotate(-40 836.0 300)">2024</text>
+<line x1="96" y1="284" x2="836" y2="284" class="ax"/>
+<text x="88" y="50" class="lbl tick-r">660.0 kt</text>
+<text x="88" y="284" class="lbl tick-r">0 t</text></svg></div></section>
+<section class="ct-card"><div class="ct-mod">TABLE</div><h3>Emissions table</h3><table><tr><th>Sector</th><th>CO₂e (100-year GWP) [t]</th><th>Share [%]</th></tr><tr><td class="">Buildings</td><td class="num">219214.4</td><td class="num">39.47</td></tr><tr><td class="">Transportation</td><td class="num">158124.9</td><td class="num">28.47</td></tr><tr><td class="">Manufacturing</td><td class="num">63738.1</td><td class="num">11.48</td></tr><tr><td class="">Power</td><td class="num">47576.6</td><td class="num">8.57</td></tr><tr><td class="">Waste</td><td class="num">31320.6</td><td class="num">5.64</td></tr><tr><td class="">Fluorinated gases</td><td class="num">14045.1</td><td class="num">2.53</td></tr><tr><td class="">Agriculture</td><td class="num">12993.6</td><td class="num">2.34</td></tr><tr><td class="">Fossil fuel operations</td><td class="num">7829.8</td><td class="num">1.41</td></tr><tr><td class="">Other</td><td class="num">552.9</td><td class="num">0.1</td></tr></table></section>
+<section class="ct-card"><div class="ct-mod">TABLE</div><h3>Largest emission sources</h3><table><tr><th>Source</th><th>Sector</th><th>Subsector</th><th>CO₂e (100-year GWP) [t]</th><th>Confidence</th><th>Located facility</th></tr><tr><td class="">SKA  AZV HEIDELBERG</td><td class="">waste</td><td class="">domestic-wastewater-treatment-and-discharge</td><td class="num">17073.4</td><td class="">not assessed</td><td class="">yes</td></tr></table></section>
+<section class="ct-card"><div class="ct-mod">VECTOR_MAP_LAYER</div><h3>Emission sources (map)</h3><div class="ct-fig"><svg viewBox="0 0 620 360" style="width:100%;max-width:620px;height:auto" role="img"><rect width="620" height="360" rx="8" class="mapbg"/><circle cx="310.0" cy="180.0" r="8" fill="#a6761d" stroke="var(--bg)" stroke-width="2"><title>SKA  AZV HEIDELBERG — 17073.4 t</title></circle></svg><table><tr><th>Label</th><th>Sector</th><th>t</th><th>Type</th></tr><tr><td><span class="swatch" style="background:#a6761d"></span>SKA  AZV HEIDELBERG</td><td>waste</td><td class="num">17073.4</td><td>facility</td></tr></table></div></section>
+<section class="ct-card"><div class="ct-mod">CHART_PLOTLY</div><h3>National comparison</h3><div class="ct-fig"><svg viewBox="0 0 860 380" role="img" preserveAspectRatio="xMidYMid meet" style="width:100%;height:auto"><text x="12" y="26" class="ttl">National emissions per person, 2024</text>
+<rect x="125.6" y="69.7" width="125.8" height="214.3" rx="3" fill="#1f77b4"><title>Sweden: 14 t</title></rect><text x="188.5" y="300" class="lbl tick-c" transform="rotate(-32 188.5 300)">Sweden</text>
+<rect x="310.6" y="118.6" width="125.8" height="165.4" rx="3" fill="#1f77b4"><title>Poland: 11 t</title></rect><text x="373.5" y="300" class="lbl tick-c" transform="rotate(-32 373.5 300)">Poland</text>
+<rect x="495.6" y="139.8" width="125.8" height="144.2" rx="3" fill="#d62728"><title>Germany: 10 t</title></rect><text x="558.5" y="300" class="lbl tick-c" transform="rotate(-32 558.5 300)">Germany</text>
+<rect x="680.6" y="179.3" width="125.8" height="104.7" rx="3" fill="#1f77b4"><title>France: 7 t</title></rect><text x="743.5" y="300" class="lbl tick-c" transform="rotate(-32 743.5 300)">France</text>
+<line x1="96" y1="284" x2="836" y2="284" class="ax"/>
+<text x="88" y="50" class="lbl tick-r">16 t</text></svg></div></section>
+<section class="ct-card"><div class="ct-mod">MARKDOWN</div><h3>Emissions per person</h3><h3>For scale</h3>
+<p>In 2024, <strong>Germany</strong> emitted <strong>9.51 t/person</strong> of CO₂e (100-year GWP) per person, ranking 16 among the countries Climate TRACE reports.</p>
+<blockquote>This is a national figure. Climate TRACE does not publish population data for smaller areas, so it cannot be recalculated for your area of interest.</blockquote></section>
+<section class="ct-card"><div class="ct-mod">MARKDOWN</div><h3>Confidence</h3><h3>Confidence in these estimates</h3>
+<p>Climate TRACE grades its confidence in each input behind a source — the activity data, the emissions factor, and so on. The table shows the <strong>weakest</strong> band for each source, because an estimate is only as good as its least certain input.</p>
+<table>
+<tr><th>Source</th><th>Sector</th><th>Emissions</th><th>Lowest confidence</th></tr>
+<tr><td>SKA  AZV HEIDELBERG</td><td>domestic-wastewater-treatment-and-discharge</td><td>17.1 kt CO₂e (100-year GWP)</td><td>not assessed</td></tr>
+</table></section>
+<section class="ct-card"><div class="ct-mod">MARKDOWN</div><h3>Data and provenance</h3><h3>Data and provenance</h3>
+<p><strong>Source.</strong> Climate TRACE — <a href="https://climatetrace.org" target="_blank" rel="noopener">https://climatetrace.org</a>, API v7. Licensed under <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC BY 4.0</a>.</p>
+<ul><li><strong>Area:</strong> Heidelberg District, Baden-Württemberg State, DEU</li>
+<li><strong>Gas:</strong> CO₂e (100-year GWP)</li>
+<li><strong>Data period:</strong> 2024</li>
+<li><strong>Retrieved:</strong> 2026-07-26 19:28 UTC</li>
+<li><strong>Methodology:</strong> <a href="https://climatetrace.org/about" target="_blank" rel="noopener">https://climatetrace.org/about</a></li>
+</ul><h4>Data contributors</h4>
+<p>The organisations whose data underpins the sectors that account for essentially all of these emissions. Climate TRACE draws on many more across its full inventory; the dataset citation below covers the work as a whole.</p>
+<ul><li>Duke University — <a href="https://nicholas.duke.edu/" target="_blank" rel="noopener">https://nicholas.duke.edu/</a></li>
+<li>Johns Hopkins University Applied Physics Laboratory — <a href="https://www.jhuapl.edu/" target="_blank" rel="noopener">https://www.jhuapl.edu/</a></li>
+<li>WattTime — <a href="https://www.watttime.org/" target="_blank" rel="noopener">https://www.watttime.org/</a></li>
+<li>TransitionZero — <a href="https://www.transitionzero.org/" target="_blank" rel="noopener">https://www.transitionzero.org/</a></li>
+<li>Global Energy Monitor — <a href="https://globalenergymonitor.org/" target="_blank" rel="noopener">https://globalenergymonitor.org/</a></li>
+<li>RMI — <a href="https://rmi.org/" target="_blank" rel="noopener">https://rmi.org/</a></li>
+</ul><h4>How to read these figures</h4>
+<ul><li>Climate TRACE figures are <strong>modelled estimates</strong>, not metered measurements. They combine satellite observations, reported data and sector-specific models, and carry real uncertainty.</li>
+<li>Emissions are attributed to <strong>where they are produced</strong>, not where the resulting goods or energy are consumed. An area with a power station carries its emissions; the customers do not.</li>
+<li>Sub-national figures (states, counties, urban areas) are available from 2021 onwards; national and global figures from 2015. Earlier years return zero rather than an error.</li>
+<li>Many sub-national figures are <strong>downscaled national totals</strong> rather than independently observed. Where a source is marked as an administrative aggregation, its location is the middle of the area, not a facility.</li>
+<li>Forestry and land use is <strong>excluded</strong> from these totals. Land-use fluxes can be negative (a sink) and can be larger than all other sectors combined, so including them would make this figure incomparable with the headline figures shown on climatetrace.org.</li>
+<li>This plugin reports the area Climate TRACE matched to your area of interest, which may be larger or smaller than the boundary you drew. The matched area is always named in the results.</li>
+</ul><h4>Citation</h4>
+<pre class="code">
+@misc{climatetrace2024,
+  author = {Climate TRACE},
+  title = {Climate TRACE emissions inventory (v7), 2024},
+  year = {2024},
+  url = {https://climatetrace.org},
+  note = {Licence: CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/). Retrieved 2026-07-26.}
+}
+
+@misc{ctleaddukeuniversity,
+  author = {Duke University},
+  title = {Data contributor to the Climate TRACE emissions inventory (v7)},
+  year = {2024},
+  url = {https://nicholas.duke.edu/}
+}
+
+@misc{ctleadjohnshopkinsuniversityappliedphysicslaboratory,
+  author = {Johns Hopkins University Applied Physics Laboratory},
+  title = {Data contributor to the Climate TRACE emissions inventory (v7)},
+  year = {2024},
+  url = {https://www.jhuapl.edu/}
+}
+
+@misc{ctleadwatttime,
+  author = {WattTime},
+  title = {Data contributor to the Climate TRACE emissions inventory (v7)},
+  year = {2024},
+  url = {https://www.watttime.org/}
+}
+
+@misc{ctleadtransitionzero,
+  author = {TransitionZero},
+  title = {Data contributor to the Climate TRACE emissions inventory (v7)},
+  year = {2024},
+  url = {https://www.transitionzero.org/}
+}
+
+@misc{ctleadglobalenergymonitor,
+  author = {Global Energy Monitor},
+  title = {Data contributor to the Climate TRACE emissions inventory (v7)},
+  year = {2024},
+  url = {https://globalenergymonitor.org/}
+}
+
+@misc{ctleadrmi,
+  author = {RMI},
+  title = {Data contributor to the Climate TRACE emissions inventory (v7)},
+  year = {2024},
+  url = {https://rmi.org/}
+}
+</pre>
+<h4>How your area was matched</h4>
+<p>Climate TRACE reports emissions for its own administrative and urban areas, not for arbitrary boundaries. Your area of interest was matched to <strong>Heidelberg District, Baden-Württemberg State, DEU</strong> (confidence: likely).</p>
+<blockquote>Matched to Heidelberg District, Baden-Württemberg State, DEU, whose name matches this area of interest.</blockquote>
+<p>Other areas overlapping your selection: Bergstraße District, Hessen State, DEU, Rhein-Neckar-Kreis District, Baden-Württemberg State, DEU.</p></section>
+<section class="ct-card"><div class="ct-mod">MARKDOWN</div><h3>About</h3><h3>About this indicator</h3>
+<p>Reports the greenhouse gases emitted within an area, broken down by sector, using the Climate TRACE</p>
+<p>inventory. Climate TRACE combines satellite observations, reported data and sector-specific models to</p>
+<p>estimate emissions worldwide — including for places that publish no inventory of their own.</p>
+<h4>How to read it</h4>
+<p>Figures are modelled estimates, not meter readings, and are attributed to where emissions are produced</p>
+<p>rather than where the energy or goods are consumed. Sub-national data begins in 2021. Because many</p>
+<p>sub-national figures are downscaled from national totals, they are most useful for comparing the shape of</p>
+<p>an area&#x27;s emissions (which sectors dominate) rather than for auditing an exact tonnage.</p></section></div></body></html>
