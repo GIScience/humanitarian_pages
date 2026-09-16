@@ -249,7 +249,6 @@ interface ViewPanel {
   attributeOptions: AttributeOption[];
   selectedAttributeIndicator: string;
   mapLookup: Record<string, number>;
-  mapAvg: number;
   activePlotAvailable: boolean;
   featureCount: string;
   totalLength: string;
@@ -270,7 +269,7 @@ function createPanel(id: string, topic: string, layer: string): ViewPanel {
     id, selectedTopic: topic, topicId: 0,
     indicators: [], mapLayer: layer, activeIndicatorKey: 'currentness',
     indicatorCards: [], attributeOptions: [], selectedAttributeIndicator: '',
-    mapLookup: {}, mapAvg: 0, activePlotAvailable: true,
+    mapLookup: {}, activePlotAvailable: true,
     featureCount: '', totalLength: '', tile1Label: '',
     tagCoverage: [], showTagCoverage: false,
     schoolSwitchVisible: false, schoolSubTopic: 'operator',
@@ -422,19 +421,25 @@ function getIndicatorStackItems(panel: ViewPanel): StackItem[] {
   return entries.map(e => e.item);
 }
 
-// The hero band reflects whichever indicator is currently active on the
-// map, using the layer-level average (mapAvg) rather than the country-level
-// one in activeCard, so the headline number matches what the map is showing.
-// No-quality indicators (see isNoQualityDescription) get no Low/Medium/High
-// judgment and no "%" - just the raw count, same reasoning as the gauge card.
-// With a region selected, its own value (already sitting in mapLookup - the
-// same per-region data coloring the map) takes over from the layer-wide
-// average everywhere the hero band would otherwise show panel.mapAvg.
+// The hero band reflects whichever indicator is currently active. With no
+// region selected, it shows the exact same country-level figure the
+// indicator card itself does (card.ringPct) - not a plain average of the
+// current layer's per-district values, which used to be this function's
+// fallback. That average is a genuinely different statistic from the
+// country-level one (most quality metrics aren't "the mean of each
+// district's own percentage" - they're computed from country-wide totals),
+// and for at least mapping-saturation it can individually exceed 100% per
+// district, which pulled the naive mean above 100% too: the hero band could
+// read "101%" while the indicator card, two inches away, read "99%" for the
+// literal same indicator. With a region selected, that region's own value
+// (already sitting in mapLookup - the same per-region data coloring the
+// map) is used instead, which is a real per-district figure, not an average.
 function getHeroBandDisplayValue(panel: ViewPanel): number {
   if (panel.selectedGeomId && panel.mapLookup[panel.selectedGeomId] != null) {
     return panel.mapLookup[panel.selectedGeomId];
   }
-  return panel.mapAvg;
+  const card = getActiveCard(panel);
+  return card ? card.ringPct / 100 : 0;
 }
 function getHeroBandLevel(panel: ViewPanel): 'good' | 'warn' | 'bad' | 'neutral' {
   const card = getActiveCard(panel);
@@ -777,7 +782,6 @@ async function loadActiveMapLookup(panelIdx: number, topicName: string) {
   const [result] = await loadIndicatorLookups(urls.parquetUrl, topicName, [card.indicator]);
   if (!result) return;
   panel.mapLookup = result.lookup;
-  panel.mapAvg = result.avg;
 }
 
 // Same margin/automargin/legend/multi-axis handling as the legacy loadPlot()
