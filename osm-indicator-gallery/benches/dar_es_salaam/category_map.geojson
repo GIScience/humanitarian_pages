@@ -1,0 +1,10 @@
+{
+"type": "FeatureCollection",
+"features": [
+{ "type": "Feature", "properties": { "index": "0", "@osmId": "node/4903265321", "name": null, "opening_hours": null, "label": "Benches", "color": "#756bb1" }, "geometry": { "type": "Point", "coordinates": [ 39.2462433, -6.7836683 ] } },
+{ "type": "Feature", "properties": { "index": "1", "@osmId": "node/5870477161", "name": null, "opening_hours": null, "label": "Benches", "color": "#756bb1" }, "geometry": { "type": "Point", "coordinates": [ 39.2941944, -6.8116525 ] } },
+{ "type": "Feature", "properties": { "index": "2", "@osmId": "node/5870477887", "name": null, "opening_hours": null, "label": "Benches", "color": "#756bb1" }, "geometry": { "type": "Point", "coordinates": [ 39.2942937, -6.8115622 ] } },
+{ "type": "Feature", "properties": { "index": "3", "@osmId": "node/5870477953", "name": null, "opening_hours": null, "label": "Benches", "color": "#756bb1" }, "geometry": { "type": "Point", "coordinates": [ 39.2948586, -6.8115391 ] } },
+{ "type": "Feature", "properties": { "index": "4", "@osmId": "node/5870477967", "name": null, "opening_hours": null, "label": "Benches", "color": "#756bb1" }, "geometry": { "type": "Point", "coordinates": [ 39.2948215, -6.8113778 ] } }
+]
+}

@@ -1,0 +1,532 @@
+{
+  "indicator": "drinking_water",
+  "name": "Drinking Water Points",
+  "runs": [
+    {
+      "aoi": "heidelberg",
+      "feature_count": 8,
+      "relevance": "sparse (demo/test)",
+      "artifacts": [
+        {
+          "name": "About this indicator",
+          "modality": "MARKDOWN",
+          "filename": "about.md",
+          "summary": "Maps publicly accessible drinking water — taps, fountains and filling points — across the area you select, and reports how densely they are distributed and how much of the area lies within a short walk of one. Public water is an important part of adapting to hotter summers and pr",
+          "description": "Provenance: OpenStreetMap data as of 2026-06-19 · indicator: drinking_water · reachability: straight-line distance."
+        },
+        {
+          "name": "Drinking water points explorer",
+          "modality": "VECTOR_MAP_LAYER",
+          "filename": "feature_layer.geojson",
+          "summary": "The actual OpenStreetMap objects behind the drinking water points, with their attributes. Zoom in to inspect them.",
+          "description": "The true OpenStreetMap geometry of every counted feature — points, ways and areas — carrying its name and (where mapped) opening hours. It appears from a neighbourhood zoom level so you can inspect the individual objects rather than an aggregate.\n\nProvenance: OpenStreetMap data as of 2026-06-19 · indicator: drinking_water · reachability: straight-line distance."
+        },
+        {
+          "name": "Drinking water points map",
+          "modality": "VECTOR_MAP_LAYER",
+          "filename": "category_map_drinking_water.geojson",
+          "summary": "Publicly mapped drinking water points. Results depend on OpenStreetMap data completeness. If you can, contribute to OSM.",
+          "description": "Each point is a publicly accessible feature counted by this indicator, extracted from OpenStreetMap. Point locations are the representative centroids of the underlying OSM features.\n\nProvenance: OpenStreetMap data as of 2026-06-19 · indicator: drinking_water · reachability: straight-line distance."
+        },
+        {
+          "name": "Water taps & filling points map",
+          "modality": "VECTOR_MAP_LAYER",
+          "filename": "category_map_water_taps.geojson",
+          "summary": "Publicly mapped water taps & filling points. Results depend on OpenStreetMap data completeness. If you can, contribute to OSM.",
+          "description": "Each point is a publicly accessible feature counted by this indicator, extracted from OpenStreetMap. Point locations are the representative centroids of the underlying OSM features.\n\nProvenance: OpenStreetMap data as of 2026-06-19 · indicator: drinking_water · reachability: straight-line distance."
+        },
+        {
+          "name": "Category composition",
+          "modality": "CHART_PLOTLY",
+          "filename": "composition.json",
+          "summary": "Share of drinking water points by category. Results depend on OpenStreetMap data completeness. If you can, contribute to OSM.",
+          "description": "The proportion of the area’s drinking water points that falls into each category.\n\nProvenance: OpenStreetMap data as of 2026-06-19 · indicator: drinking_water · reachability: straight-line distance."
+        },
+        {
+          "name": "Summary",
+          "modality": "TABLE",
+          "filename": "summary.csv",
+          "summary": "Count, density per km² and per 1,000 inhabitants and share, per category. Results depend on OpenStreetMap data completeness. If you can, contribute to OSM.",
+          "description": "Absolute count, density per km², density per 1,000 inhabitants and percentage share of drinking water points for each selected category, with an overall total.\n\nProvenance: OpenStreetMap data as of 2026-06-19 · indicator: drinking_water · reachability: straight-line distance."
+        },
+        {
+          "name": "At a glance",
+          "modality": "MARKDOWN",
+          "filename": "headline.md",
+          "summary": "8 drinking water points, 0.7 per km².",
+          "description": "Provenance: OpenStreetMap data as of 2026-06-19 · indicator: drinking_water · reachability: straight-line distance."
+        },
+        {
+          "name": "Drinking water points over time",
+          "modality": "CHART_PLOTLY",
+          "filename": "trend.json",
+          "summary": "How the number of mapped drinking water points changed over time (+60% since 2016). Results depend on OpenStreetMap data completeness. If you can, contribute to OSM.",
+          "description": "The count of drinking water points in the area at successive dates, reconstructed from OpenStreetMap history via the ohsome API. A rising line can reflect real-world growth **or** improving OpenStreetMap coverage — read it alongside the data-quality note.\n\nProvenance: OpenStreetMap data as of 2026-06-19 · indicator: drinking_water · reachability: straight-line distance."
+        },
+        {
+          "name": "Density distribution",
+          "modality": "CHART_PLOTLY",
+          "filename": "distribution.json",
+          "summary": "How drinking water points density varies across neighbourhoods, as a cumulative distribution (share of sub-areas at or below each density). Results depend on OpenStreetMap data completeness. If you can, contribute to OSM.",
+          "description": "The distribution of drinking water points density (per km²) across the area’s administrative sub-areas, shown as a cumulative distribution (share of sub-areas at or below each density). A long tail or low median points to many under-served neighbourhoods.\n\nProvenance: OpenStreetMap data as of 2026-06-19 · indicator: drinking_water · reachability: straight-line distance."
+        },
+        {
+          "name": "Statistics",
+          "modality": "MARKDOWN",
+          "filename": "statistics.md",
+          "summary": "Spread, inequality and clustering measures for the area’s drinking water points. Results depend on OpenStreetMap data completeness. If you can, contribute to OSM.",
+          "description": "Provenance: OpenStreetMap data as of 2026-06-19 · indicator: drinking_water · reachability: straight-line distance."
+        },
+        {
+          "name": "Hot-spots & cold-spots",
+          "modality": "VECTOR_MAP_LAYER",
+          "filename": "hotspots_by_density.geojson",
+          "summary": "Global Moran’s I = -0.40. 0 hot-spot and 0 cold-spot neighbourhood(s) of drinking water points density (local Moran’s I / LISA). Only 10 sub-areas: too few for the permutation test to establish significance, so read a grey map as \"not enough units to tell\", not as \"no clustering\". Use a finer `subarea_mode` or a larger area to make this map informative. Results depend on OpenStreetMap data completeness. If you can, contribute to OSM.",
+          "description": "Sub-areas classified by the local Moran’s I statistic (LISA) over drinking water points density: **High-High** = a dense neighbourhood surrounded by others like it (hot-spot); **Low-Low** = a sparse one among others like it (cold-spot); **High-Low / Low-High** = spatial outliers. Significance uses a deterministic permutation test; non-significant sub-areas are greyed out.\n\nProvenance: OpenStreetMap data as of 2026-06-19 · indicator: drinking_water · reachability: straight-line distance."
+        },
+        {
+          "name": "Hot-spots & cold-spots (per capita)",
+          "modality": "VECTOR_MAP_LAYER",
+          "filename": "hotspots_by_capita.geojson",
+          "summary": "Global Moran’s I = -0.29. 0 hot-spot and 0 cold-spot neighbourhood(s) of drinking water points per 1,000 residents (local Moran’s I / LISA). Only 10 sub-areas: too few for the permutation test to establish significance, so read a grey map as \"not enough units to tell\", not as \"no clustering\". Use a finer `subarea_mode` or a larger area to make this map informative. Results depend on OpenStreetMap data completeness. If you can, contribute to OSM.",
+          "description": "Sub-areas classified by the local Moran’s I statistic (LISA) over drinking water points per 1,000 residents: **High-High** = a well-supplied neighbourhood surrounded by others like it (hot-spot); **Low-Low** = a poorly-supplied one among others like it (cold-spot); **High-Low / Low-High** = spatial outliers. Significance uses a deterministic permutation test; non-significant sub-areas are greyed out.\n\nProvenance: OpenStreetMap data as of 2026-06-19 · indicator: drinking_water · reachability: straight-line distance."
+        },
+        {
+          "name": "Any drinking-water source",
+          "modality": "VECTOR_MAP_LAYER",
+          "filename": "combined_any_drinking_water_source.geojson",
+          "summary": "A combined layer (max) of 1×Drinking water points, 1×Water taps & filling points, 1×Drinking fountains, 1×Potable springs, per sub-area. Results depend on OpenStreetMap data completeness. If you can, contribute to OSM.",
+          "description": "Map algebra: for each administrative sub-area, the per-km² densities of the input categories are combined by **max** — 1×Drinking water points, 1×Water taps & filling points, 1×Drinking fountains, 1×Potable springs — into a single value. Use it to express a composite index (e.g. a weighted suitability score) as one layer instead of several.\n\nProvenance: OpenStreetMap data as of 2026-06-19 · indicator: drinking_water · reachability: straight-line distance."
+        },
+        {
+          "name": "Unserved residents",
+          "modality": "VECTOR_MAP_LAYER",
+          "filename": "combined_unserved_residents.geojson",
+          "summary": "A combined layer (weighted sum) of 1×population, -1×per 1000 inhabitants, per sub-area. Results depend on OpenStreetMap data completeness. If you can, contribute to OSM.",
+          "description": "Map algebra: for each administrative sub-area, the normalised densities of the input categories are combined by **weighted sum** — 1×population, -1×per 1000 inhabitants — into a single value. Each category is first rescaled to 0–1 across sub-areas, so the value is a unitless index. Use it to express a composite index (e.g. a weighted suitability score) as one layer instead of several.\n\nProvenance: OpenStreetMap data as of 2026-06-19 · indicator: drinking_water · reachability: straight-line distance."
+        },
+        {
+          "name": "Density by sub-area",
+          "modality": "VECTOR_MAP_LAYER",
+          "filename": "subareas.geojson",
+          "summary": "Drinking water points density (per km²) across the neighbourhoods of the area. Results depend on OpenStreetMap data completeness. If you can, contribute to OSM.",
+          "description": "The area of interest split into OpenStreetMap administrative sub-areas, each shaded by its drinking water points density (per km²). Use it to compare how well different neighbourhoods are served.\n\nProvenance: OpenStreetMap data as of 2026-06-19 · indicator: drinking_water · reachability: straight-line distance."
+        },
+        {
+          "name": "Sub-area ranking",
+          "modality": "CHART_PLOTLY",
+          "filename": "subarea_ranking.json",
+          "summary": "Neighbourhoods ranked by drinking water points density (per km²). Results depend on OpenStreetMap data completeness. If you can, contribute to OSM.",
+          "description": "Drinking water points density per km² for each administrative sub-area, ordered from highest to lowest.\n\nProvenance: OpenStreetMap data as of 2026-06-19 · indicator: drinking_water · reachability: straight-line distance."
+        },
+        {
+          "name": "Top sub-areas",
+          "modality": "TABLE",
+          "filename": "subarea_ranking_table.csv",
+          "summary": "The 10 best-served neighbourhoods by drinking water points density (per km²). Results depend on OpenStreetMap data completeness. If you can, contribute to OSM.",
+          "description": "The 10 administrative sub-areas with the highest drinking water points density, with their count, area and density — a compact, sortable companion to the ranking chart.\n\nProvenance: OpenStreetMap data as of 2026-06-19 · indicator: drinking_water · reachability: straight-line distance."
+        },
+        {
+          "name": "Provision vs population",
+          "modality": "CHART_PLOTLY",
+          "filename": "population_equity.json",
+          "summary": "Do drinking water points track where people live? Drinking water points per 1,000 inhabitants against each sub-area’s population. Results depend on OpenStreetMap data completeness. If you can, contribute to OSM.",
+          "description": "Each point is an administrative sub-area, plotting its population against its drinking water points per 1,000 inhabitants. Sub-areas low on the vertical axis but high on the horizontal axis are under-served relative to their residents — an equity signal a density map cannot show.\n\nProvenance: OpenStreetMap data as of 2026-06-19 · indicator: drinking_water · reachability: straight-line distance."
+        },
+        {
+          "name": "Provision per capita",
+          "modality": "VECTOR_MAP_LAYER",
+          "filename": "per_capita.geojson",
+          "summary": "Drinking water points per 1,000 residents across the sub-areas — provision relative to need. Results depend on OpenStreetMap data completeness. If you can, contribute to OSM.",
+          "description": "Each administrative sub-area shaded by its number of drinking water points per 1,000 inhabitants, so the colour reflects provision *relative to residents* rather than raw density. A populous sub-area with average density can still read as under-served here. Sub-areas without usable population data are omitted.\n\nProvenance: OpenStreetMap data as of 2026-06-19 · indicator: drinking_water · reachability: straight-line distance."
+        },
+        {
+          "name": "Coverage on foot (150 m)",
+          "modality": "VECTOR_MAP_LAYER",
+          "filename": "coverage_foot_reach_150.geojson",
+          "summary": "About 4% of the area is within 150 m on foot of a drinking water point. About 5% of residents are within reach. Results depend on OpenStreetMap data completeness. If you can, contribute to OSM.",
+          "description": "The area of interest split into the part within reach (on foot) of any feature and the part beyond it. Reachability is computed using straight-line distance.\n\nProvenance: OpenStreetMap data as of 2026-06-19 · indicator: drinking_water · reachability: straight-line distance."
+        },
+        {
+          "name": "Coverage on foot (400 m)",
+          "modality": "VECTOR_MAP_LAYER",
+          "filename": "coverage_foot_reach_400.geojson",
+          "summary": "About 23% of the area is within 400 m on foot of a drinking water point. About 30% of residents are within reach. Results depend on OpenStreetMap data completeness. If you can, contribute to OSM.",
+          "description": "The area of interest split into the part within reach (on foot) of any feature and the part beyond it. Reachability is computed using straight-line distance.\n\nProvenance: OpenStreetMap data as of 2026-06-19 · indicator: drinking_water · reachability: straight-line distance."
+        },
+        {
+          "name": "Coverage by bike (1000 m)",
+          "modality": "VECTOR_MAP_LAYER",
+          "filename": "coverage_bike_ride_1000.geojson",
+          "summary": "About 77% of the area is within 1000 m by bike of a drinking water point. About 88% of residents are within reach. Results depend on OpenStreetMap data completeness. If you can, contribute to OSM.",
+          "description": "The area of interest split into the part within reach (by bike) of any feature and the part beyond it. Reachability is computed using straight-line distance.\n\nProvenance: OpenStreetMap data as of 2026-06-19 · indicator: drinking_water · reachability: straight-line distance."
+        },
+        {
+          "name": "Underserved areas (on foot, 150 m)",
+          "modality": "VECTOR_MAP_LAYER",
+          "filename": "underserved_beyond_150.geojson",
+          "summary": "Share of each neighbourhood beyond 150 m on foot of any drinking water point. About 47,298 residents live beyond that reach. Results depend on OpenStreetMap data completeness. If you can, contribute to OSM.",
+          "description": "Each administrative sub-area shaded by the fraction of its area that lies **beyond reach** (on foot) of any feature — the complement of the coverage map. Darker = more underserved. Use it to target where new provision would reach the most currently-unserved people.\n\nProvenance: OpenStreetMap data as of 2026-06-19 · indicator: drinking_water · reachability: straight-line distance."
+        },
+        {
+          "name": "Most underserved sub-areas (on foot, 150 m)",
+          "modality": "TABLE",
+          "filename": "underserved_table_beyond_150.csv",
+          "summary": "The 8 neighbourhoods with the largest share beyond 150 m on foot of a drinking water point. Results depend on OpenStreetMap data completeness. If you can, contribute to OSM.",
+          "description": "The 8 administrative sub-areas with the greatest share of their area beyond reach (on foot) of any feature — a sortable companion to the underserved-areas map.\n\nProvenance: OpenStreetMap data as of 2026-06-19 · indicator: drinking_water · reachability: straight-line distance."
+        },
+        {
+          "name": "Underserved areas (on foot, 400 m)",
+          "modality": "VECTOR_MAP_LAYER",
+          "filename": "underserved_beyond_400.geojson",
+          "summary": "Share of each neighbourhood beyond 400 m on foot of any drinking water point. About 34,706 residents live beyond that reach. Results depend on OpenStreetMap data completeness. If you can, contribute to OSM.",
+          "description": "Each administrative sub-area shaded by the fraction of its area that lies **beyond reach** (on foot) of any feature — the complement of the coverage map. Darker = more underserved. Use it to target where new provision would reach the most currently-unserved people.\n\nProvenance: OpenStreetMap data as of 2026-06-19 · indicator: drinking_water · reachability: straight-line distance."
+        },
+        {
+          "name": "Most underserved sub-areas (on foot, 400 m)",
+          "modality": "TABLE",
+          "filename": "underserved_table_beyond_400.csv",
+          "summary": "The 8 neighbourhoods with the largest share beyond 400 m on foot of a drinking water point. Results depend on OpenStreetMap data completeness. If you can, contribute to OSM.",
+          "description": "The 8 administrative sub-areas with the greatest share of their area beyond reach (on foot) of any feature — a sortable companion to the underserved-areas map.\n\nProvenance: OpenStreetMap data as of 2026-06-19 · indicator: drinking_water · reachability: straight-line distance."
+        },
+        {
+          "name": "Drinking water points heatmap",
+          "modality": "RASTER_MAP_LAYER",
+          "filename": "heatmap.tiff",
+          "summary": "A gridded density of drinking water points across the area — brighter means more. Results depend on OpenStreetMap data completeness. If you can, contribute to OSM.",
+          "description": "A regular grid over the area of interest, each cell shaded by how many drinking water points fall within it. It reveals clusters and gaps that individual points can hide.\n\nProvenance: OpenStreetMap data as of 2026-06-19 · indicator: drinking_water · reachability: straight-line distance."
+        },
+        {
+          "name": "Drinking water points density surface",
+          "modality": "RASTER_MAP_LAYER",
+          "filename": "density_surface.tiff",
+          "summary": "A smoothed, continuous density surface of drinking water points (kernel-style). Results depend on OpenStreetMap data completeness. If you can, contribute to OSM.",
+          "description": "A kernel-smoothed density of drinking water points: the point counts are blurred into a continuous surface so clusters show as smooth hot regions rather than individual grid cells — a boundary-free complement to the sub-area choropleth and the raw heatmap.\n\nProvenance: OpenStreetMap data as of 2026-06-19 · indicator: drinking_water · reachability: straight-line distance."
+        },
+        {
+          "name": "Distance to nearest drinking water point",
+          "modality": "RASTER_MAP_LAYER",
+          "filename": "nearest_distance.tiff",
+          "summary": "How far to the nearest drinking water point from anywhere in the area (metres). Darker = further. Results depend on OpenStreetMap data completeness. If you can, contribute to OSM.",
+          "description": "A regular grid over the area, each cell shaded by the straight-line distance to the nearest drinking water point. Dark cells are the furthest from any feature — the access gaps. Straight-line (not routed), so it is an optimistic lower bound; it needs no routing service.\n\nProvenance: OpenStreetMap data as of 2026-06-19 · indicator: drinking_water · reachability: straight-line distance."
+        },
+        {
+          "name": "Data currentness",
+          "modality": "VECTOR_MAP_LAYER",
+          "filename": "currentness.geojson",
+          "summary": "How recently each drinking water point was last edited in OpenStreetMap (median 1 yr ago). Darker = longer since the last edit. Results depend on OpenStreetMap data completeness. If you can, contribute to OSM.",
+          "description": "Each point is a feature, shaded by the number of years since its last OpenStreetMap edit (measured against the data snapshot). Clusters of dark points mark areas where the OSM picture is ageing and may warrant a re-survey — a spatial companion to the data-quality note.\n\nProvenance: OpenStreetMap data as of 2026-06-19 · indicator: drinking_water · reachability: straight-line distance."
+        },
+        {
+          "name": "OpenStreetMap data quality",
+          "modality": "MARKDOWN",
+          "filename": "data_quality.md",
+          "summary": "OpenStreetMap data as of 2026-06-19. How complete is the OpenStreetMap data behind these results?",
+          "description": "Provenance: OpenStreetMap data as of 2026-06-19 · indicator: drinking_water · reachability: straight-line distance."
+        }
+      ],
+      "errors": {}
+    },
+    {
+      "aoi": "montpellier",
+      "feature_count": 51,
+      "relevance": "meaningful",
+      "artifacts": [
+        {
+          "name": "About this indicator",
+          "modality": "MARKDOWN",
+          "filename": "about.md"
+        },
+        {
+          "name": "Drinking water points explorer",
+          "modality": "VECTOR_MAP_LAYER",
+          "filename": "feature_layer.geojson"
+        },
+        {
+          "name": "Drinking water points map",
+          "modality": "VECTOR_MAP_LAYER",
+          "filename": "category_map_drinking_water.geojson"
+        },
+        {
+          "name": "Category composition",
+          "modality": "CHART_PLOTLY",
+          "filename": "composition.json"
+        },
+        {
+          "name": "Summary",
+          "modality": "TABLE",
+          "filename": "summary.csv"
+        },
+        {
+          "name": "At a glance",
+          "modality": "MARKDOWN",
+          "filename": "headline.md"
+        },
+        {
+          "name": "Drinking water points over time",
+          "modality": "CHART_PLOTLY",
+          "filename": "trend.json"
+        },
+        {
+          "name": "Density distribution",
+          "modality": "CHART_PLOTLY",
+          "filename": "distribution.json"
+        },
+        {
+          "name": "Statistics",
+          "modality": "MARKDOWN",
+          "filename": "statistics.md"
+        },
+        {
+          "name": "Hot-spots & cold-spots",
+          "modality": "VECTOR_MAP_LAYER",
+          "filename": "hotspots_by_density.geojson"
+        },
+        {
+          "name": "Hot-spots & cold-spots (per capita)",
+          "modality": "VECTOR_MAP_LAYER",
+          "filename": "hotspots_by_capita.geojson"
+        },
+        {
+          "name": "Any drinking-water source",
+          "modality": "VECTOR_MAP_LAYER",
+          "filename": "combined_any_drinking_water_source.geojson"
+        },
+        {
+          "name": "Unserved residents",
+          "modality": "VECTOR_MAP_LAYER",
+          "filename": "combined_unserved_residents.geojson"
+        },
+        {
+          "name": "Density by sub-area",
+          "modality": "VECTOR_MAP_LAYER",
+          "filename": "subareas.geojson"
+        },
+        {
+          "name": "Sub-area ranking",
+          "modality": "CHART_PLOTLY",
+          "filename": "subarea_ranking.json"
+        },
+        {
+          "name": "Top sub-areas",
+          "modality": "TABLE",
+          "filename": "subarea_ranking_table.csv"
+        },
+        {
+          "name": "Provision vs population",
+          "modality": "CHART_PLOTLY",
+          "filename": "population_equity.json"
+        },
+        {
+          "name": "Provision per capita",
+          "modality": "VECTOR_MAP_LAYER",
+          "filename": "per_capita.geojson"
+        },
+        {
+          "name": "Coverage on foot (150 m)",
+          "modality": "VECTOR_MAP_LAYER",
+          "filename": "coverage_foot_reach_150.geojson"
+        },
+        {
+          "name": "Coverage on foot (400 m)",
+          "modality": "VECTOR_MAP_LAYER",
+          "filename": "coverage_foot_reach_400.geojson"
+        },
+        {
+          "name": "Coverage by bike (1000 m)",
+          "modality": "VECTOR_MAP_LAYER",
+          "filename": "coverage_bike_ride_1000.geojson"
+        },
+        {
+          "name": "Underserved areas (on foot, 150 m)",
+          "modality": "VECTOR_MAP_LAYER",
+          "filename": "underserved_beyond_150.geojson"
+        },
+        {
+          "name": "Most underserved sub-areas (on foot, 150 m)",
+          "modality": "TABLE",
+          "filename": "underserved_table_beyond_150.csv"
+        },
+        {
+          "name": "Underserved areas (on foot, 400 m)",
+          "modality": "VECTOR_MAP_LAYER",
+          "filename": "underserved_beyond_400.geojson"
+        },
+        {
+          "name": "Most underserved sub-areas (on foot, 400 m)",
+          "modality": "TABLE",
+          "filename": "underserved_table_beyond_400.csv"
+        },
+        {
+          "name": "Drinking water points heatmap",
+          "modality": "RASTER_MAP_LAYER",
+          "filename": "heatmap.tiff"
+        },
+        {
+          "name": "Drinking water points density surface",
+          "modality": "RASTER_MAP_LAYER",
+          "filename": "density_surface.tiff"
+        },
+        {
+          "name": "Distance to nearest drinking water point",
+          "modality": "RASTER_MAP_LAYER",
+          "filename": "nearest_distance.tiff"
+        },
+        {
+          "name": "Data currentness",
+          "modality": "VECTOR_MAP_LAYER",
+          "filename": "currentness.geojson"
+        },
+        {
+          "name": "OpenStreetMap data quality",
+          "modality": "MARKDOWN",
+          "filename": "data_quality.md"
+        }
+      ],
+      "errors": {}
+    },
+    {
+      "aoi": "dar_es_salaam",
+      "feature_count": 489,
+      "relevance": "meaningful",
+      "artifacts": [
+        {
+          "name": "About this indicator",
+          "modality": "MARKDOWN",
+          "filename": "about.md"
+        },
+        {
+          "name": "Drinking water points explorer",
+          "modality": "VECTOR_MAP_LAYER",
+          "filename": "feature_layer.geojson"
+        },
+        {
+          "name": "Drinking water points map",
+          "modality": "VECTOR_MAP_LAYER",
+          "filename": "category_map_drinking_water.geojson"
+        },
+        {
+          "name": "Water taps & filling points map",
+          "modality": "VECTOR_MAP_LAYER",
+          "filename": "category_map_water_taps.geojson"
+        },
+        {
+          "name": "Category composition",
+          "modality": "CHART_PLOTLY",
+          "filename": "composition.json"
+        },
+        {
+          "name": "Summary",
+          "modality": "TABLE",
+          "filename": "summary.csv"
+        },
+        {
+          "name": "At a glance",
+          "modality": "MARKDOWN",
+          "filename": "headline.md"
+        },
+        {
+          "name": "Drinking water points over time",
+          "modality": "CHART_PLOTLY",
+          "filename": "trend.json"
+        },
+        {
+          "name": "Density distribution",
+          "modality": "CHART_PLOTLY",
+          "filename": "distribution.json"
+        },
+        {
+          "name": "Statistics",
+          "modality": "MARKDOWN",
+          "filename": "statistics.md"
+        },
+        {
+          "name": "Hot-spots & cold-spots",
+          "modality": "VECTOR_MAP_LAYER",
+          "filename": "hotspots.geojson"
+        },
+        {
+          "name": "Any drinking-water source",
+          "modality": "VECTOR_MAP_LAYER",
+          "filename": "combined_any_drinking_water_source.geojson"
+        },
+        {
+          "name": "Density by sub-area",
+          "modality": "VECTOR_MAP_LAYER",
+          "filename": "subareas.geojson"
+        },
+        {
+          "name": "Sub-area ranking",
+          "modality": "CHART_PLOTLY",
+          "filename": "subarea_ranking.json"
+        },
+        {
+          "name": "Top sub-areas",
+          "modality": "TABLE",
+          "filename": "subarea_ranking_table.csv"
+        },
+        {
+          "name": "Provision vs population",
+          "modality": "CHART_PLOTLY",
+          "filename": "population_equity.json"
+        },
+        {
+          "name": "Provision per capita",
+          "modality": "VECTOR_MAP_LAYER",
+          "filename": "per_capita.geojson"
+        },
+        {
+          "name": "Coverage on foot",
+          "modality": "VECTOR_MAP_LAYER",
+          "filename": "coverage_foot.geojson"
+        },
+        {
+          "name": "Coverage by bike",
+          "modality": "VECTOR_MAP_LAYER",
+          "filename": "coverage_bike.geojson"
+        },
+        {
+          "name": "Coverage by wheelchair",
+          "modality": "VECTOR_MAP_LAYER",
+          "filename": "coverage_wheelchair.geojson"
+        },
+        {
+          "name": "Underserved areas",
+          "modality": "VECTOR_MAP_LAYER",
+          "filename": "underserved.geojson"
+        },
+        {
+          "name": "Most underserved sub-areas",
+          "modality": "TABLE",
+          "filename": "underserved_table.csv"
+        },
+        {
+          "name": "Drinking water points heatmap",
+          "modality": "RASTER_MAP_LAYER",
+          "filename": "heatmap.tiff"
+        },
+        {
+          "name": "Drinking water points density surface",
+          "modality": "RASTER_MAP_LAYER",
+          "filename": "density_surface.tiff"
+        },
+        {
+          "name": "Distance to nearest drinking water point",
+          "modality": "RASTER_MAP_LAYER",
+          "filename": "nearest_distance.tiff"
+        },
+        {
+          "name": "Data currentness",
+          "modality": "VECTOR_MAP_LAYER",
+          "filename": "currentness.geojson"
+        },
+        {
+          "name": "OpenStreetMap data quality",
+          "modality": "MARKDOWN",
+          "filename": "data_quality.md"
+        }
+      ],
+      "errors": {}
+    }
+  ]
+}

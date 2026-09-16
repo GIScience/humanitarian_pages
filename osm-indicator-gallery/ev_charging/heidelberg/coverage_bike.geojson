@@ -1,0 +1,6 @@
+{
+"type": "FeatureCollection",
+"features": [
+{ "type": "Feature", "properties": { "index": "0", "label": "Within 1500 m by bike", "color": "#2b8cbe" }, "geometry": { "type": "Polygon", "coordinates": [ [ [ 8.66, 49.422 ], [ 8.66, 49.398 ], [ 8.72, 49.398 ], [ 8.72, 49.422 ], [ 8.66, 49.422 ] ] ] } }
+]
+}

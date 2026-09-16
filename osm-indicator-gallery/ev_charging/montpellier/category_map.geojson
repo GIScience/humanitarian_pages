@@ -1,0 +1,14 @@
+{
+"type": "FeatureCollection",
+"features": [
+{ "type": "Feature", "properties": { "index": "0", "@osmId": "node/6051245043", "name": null, "opening_hours": "24/7", "label": "Rapid / DC charging", "color": "#00441b" }, "geometry": { "type": "Point", "coordinates": [ 3.8913559, 43.6071834 ] } },
+{ "type": "Feature", "properties": { "index": "1", "@osmId": "node/6051245044", "name": null, "opening_hours": "24/7", "label": "Rapid / DC charging", "color": "#00441b" }, "geometry": { "type": "Point", "coordinates": [ 3.8949758, 43.600062 ] } },
+{ "type": "Feature", "properties": { "index": "2", "@osmId": "way/76169114", "name": "Costebelle", "opening_hours": "24/7", "label": "EV charging stations", "color": "#238b45" }, "geometry": { "type": "Point", "coordinates": [ 3.8988587, 43.6072382 ] } },
+{ "type": "Feature", "properties": { "index": "3", "@osmId": "node/9159382263", "name": "Montpellier - Boulevard des Arceaux", "opening_hours": "24/7", "label": "EV charging stations", "color": "#238b45" }, "geometry": { "type": "Point", "coordinates": [ 3.8668314, 43.6114331 ] } },
+{ "type": "Feature", "properties": { "index": "4", "@osmId": "node/8680343285", "name": null, "opening_hours": null, "label": "EV charging stations", "color": "#238b45" }, "geometry": { "type": "Point", "coordinates": [ 3.8787454, 43.6048336 ] } },
+{ "type": "Feature", "properties": { "index": "5", "@osmId": "node/9058043542", "name": null, "opening_hours": null, "label": "EV charging stations", "color": "#238b45" }, "geometry": { "type": "Point", "coordinates": [ 3.8909933, 43.6074617 ] } },
+{ "type": "Feature", "properties": { "index": "6", "@osmId": "node/9058043543", "name": null, "opening_hours": null, "label": "EV charging stations", "color": "#238b45" }, "geometry": { "type": "Point", "coordinates": [ 3.8909991, 43.6075253 ] } },
+{ "type": "Feature", "properties": { "index": "7", "@osmId": "node/11276033967", "name": null, "opening_hours": null, "label": "EV charging stations", "color": "#238b45" }, "geometry": { "type": "Point", "coordinates": [ 3.8813861, 43.6095425 ] } },
+{ "type": "Feature", "properties": { "index": "8", "@osmId": "node/11886418725", "name": null, "opening_hours": null, "label": "EV charging stations", "color": "#238b45" }, "geometry": { "type": "Point", "coordinates": [ 3.8797011, 43.6113839 ] } }
+]
+}

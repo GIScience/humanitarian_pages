@@ -1,0 +1,9 @@
+{
+"type": "FeatureCollection",
+"features": [
+{ "type": "Feature", "properties": { "index": "0", "@osmId": "node/3766218735", "name": "Shabib Line Booking Office", "opening_hours": null, "label": "EV charging stations", "color": "#238b45" }, "geometry": { "type": "Point", "coordinates": [ 39.2724246, -6.8171713 ] } },
+{ "type": "Feature", "properties": { "index": "1", "@osmId": "node/3766222577", "name": null, "opening_hours": null, "label": "EV charging stations", "color": "#238b45" }, "geometry": { "type": "Point", "coordinates": [ 39.2722752, -6.8172303 ] } },
+{ "type": "Feature", "properties": { "index": "2", "@osmId": "node/3766320219", "name": "Capadona Transport Agent", "opening_hours": null, "label": "EV charging stations", "color": "#238b45" }, "geometry": { "type": "Point", "coordinates": [ 39.2727634, -6.8167051 ] } },
+{ "type": "Feature", "properties": { "index": "3", "@osmId": "node/3766320222", "name": "Tranporters", "opening_hours": null, "label": "EV charging stations", "color": "#238b45" }, "geometry": { "type": "Point", "coordinates": [ 39.2726652, -6.8167239 ] } }
+]
+}

@@ -1,0 +1,6 @@
+{
+"type": "FeatureCollection",
+"features": [
+{ "type": "Feature", "properties": { "index": "0", "@osmId": "node/1721162711", "name": "Montpellier Saint-Roch", "opening_hours": null, "label": "Train stations & halts", "color": "#08519c" }, "geometry": { "type": "Point", "coordinates": [ 3.8803219, 43.6042456 ] } }
+]
+}

@@ -1,0 +1,6 @@
+{
+"type": "FeatureCollection",
+"features": [
+{ "type": "Feature", "properties": { "index": "0", "label": "SKA  AZV HEIDELBERG", "name": "SKA  AZV HEIDELBERG", "sector": "waste", "subsector": "domestic-wastewater-treatment-and-discharge", "emissions_t": 17073.4, "confidence": "not assessed", "is_aggregation": false, "color": "#a6761d" }, "geometry": { "type": "Point", "coordinates": [ 8.6513422, 49.4346766 ] } }
+]
+}

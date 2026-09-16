@@ -1,0 +1,11 @@
+{
+"type": "FeatureCollection",
+"features": [
+{ "type": "Feature", "properties": { "index": "0", "@osmId": "node/1754898478", "name": "Wochenmarkt", "opening_hours": "Oct-Mar: Mo,Th 08:00-13:00; Apr-Sep: Mo,Th 07:00-13:00", "label": "Marketplaces", "color": "#fe9929" }, "geometry": { "type": "Point", "coordinates": [ 8.6874941, 49.403195 ] } },
+{ "type": "Feature", "properties": { "index": "1", "@osmId": "node/1754900302", "name": "Wochenmarkt", "opening_hours": "Oct-Mar: Tu,Fr 08:00-13:00; Apr-Sep: Tu,Fr 07:00-13:00; Th 15:00-20:00", "label": "Marketplaces", "color": "#fe9929" }, "geometry": { "type": "Point", "coordinates": [ 8.6983974, 49.4089758 ] } },
+{ "type": "Feature", "properties": { "index": "2", "@osmId": "node/1754909790", "name": "Wochenmarkt", "opening_hours": "Oct-Mar: We,Sa 08:00-13:00; Apr-Sep: We,Sa 07:00-13:00", "label": "Marketplaces", "color": "#fe9929" }, "geometry": { "type": "Point", "coordinates": [ 8.690476, 49.4146871 ] } },
+{ "type": "Feature", "properties": { "index": "3", "@osmId": "node/1754928750", "name": "Wochenmarkt", "opening_hours": "Oct-Mar: Sa 08:00-13:00; Apr-Sep: Sa 07:00-13:00", "label": "Marketplaces", "color": "#fe9929" }, "geometry": { "type": "Point", "coordinates": [ 8.6762559, 49.4081811 ] } },
+{ "type": "Feature", "properties": { "index": "4", "@osmId": "node/7655179279", "name": "Wochenmarkt", "opening_hours": "Fr 15:00-19:00", "label": "Marketplaces", "color": "#fe9929" }, "geometry": { "type": "Point", "coordinates": [ 8.6659348, 49.4027255 ] } },
+{ "type": "Feature", "properties": { "index": "5", "@osmId": "node/11176350163", "name": "Wochenmarkt", "opening_hours": "Sa 07:00-14:00", "label": "Marketplaces", "color": "#fe9929" }, "geometry": { "type": "Point", "coordinates": [ 8.7104702, 49.4121596 ] } }
+]
+}

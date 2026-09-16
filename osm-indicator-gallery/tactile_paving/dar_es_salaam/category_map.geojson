@@ -1,0 +1,6 @@
+{
+"type": "FeatureCollection",
+"features": [
+{ "type": "Feature", "properties": { "index": "0", "@osmId": "node/12151690530", "name": null, "opening_hours": null, "label": "Crossings with tactile paving", "color": "#6a51a3" }, "geometry": { "type": "Point", "coordinates": [ 39.2641922, -6.7950203 ] } }
+]
+}

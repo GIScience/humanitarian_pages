@@ -1,0 +1,12 @@
+{
+"type": "FeatureCollection",
+"features": [
+{ "type": "Feature", "properties": { "index": "0", "@osmId": "node/5590162234", "name": null, "opening_hours": null, "label": "E-bike & pedelec charging", "color": "#31a354" }, "geometry": { "type": "Point", "coordinates": [ 8.6747722, 49.4217822 ] } },
+{ "type": "Feature", "properties": { "index": "1", "@osmId": "node/11219533123", "name": null, "opening_hours": null, "label": "E-bike & pedelec charging", "color": "#31a354" }, "geometry": { "type": "Point", "coordinates": [ 8.7133196, 49.4136591 ] } },
+{ "type": "Feature", "properties": { "index": "2", "@osmId": "node/12750715962", "name": null, "opening_hours": "24/7", "label": "E-bike & pedelec charging", "color": "#31a354" }, "geometry": { "type": "Point", "coordinates": [ 8.6731507, 49.401335 ] } },
+{ "type": "Feature", "properties": { "index": "3", "@osmId": "node/13391849125", "name": null, "opening_hours": "24/7", "label": "E-bike & pedelec charging", "color": "#31a354" }, "geometry": { "type": "Point", "coordinates": [ 8.6743496, 49.4028515 ] } },
+{ "type": "Feature", "properties": { "index": "4", "@osmId": "node/13391849126", "name": null, "opening_hours": "24/7", "label": "E-bike & pedelec charging", "color": "#31a354" }, "geometry": { "type": "Point", "coordinates": [ 8.6743888, 49.4028964 ] } },
+{ "type": "Feature", "properties": { "index": "5", "@osmId": "node/13409497642", "name": null, "opening_hours": null, "label": "E-bike & pedelec charging", "color": "#31a354" }, "geometry": { "type": "Point", "coordinates": [ 8.7140563, 49.4095807 ] } },
+{ "type": "Feature", "properties": { "index": "6", "@osmId": "node/13929883525", "name": null, "opening_hours": "24/7", "label": "E-bike & pedelec charging", "color": "#31a354" }, "geometry": { "type": "Point", "coordinates": [ 8.6731401, 49.4018201 ] } }
+]
+}

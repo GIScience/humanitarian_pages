@@ -1,0 +1,14 @@
+{
+  "indicator": "wind_turbines",
+  "name": "Wind Turbines",
+  "runs": [
+    {
+      "aoi": "dar_es_salaam",
+      "error": "ClimatoologyUserError: No matching features were found in the selected area. Try a larger area, add more categories, or help by contributing the missing features to OpenStreetMap."
+    },
+    {
+      "aoi": "heidelberg",
+      "error": "ClimatoologyUserError: No matching features were found in the selected area. Try a larger area, add more categories, or help by contributing the missing features to OpenStreetMap."
+    }
+  ]
+}

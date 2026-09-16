@@ -1,0 +1,19 @@
+{
+"type": "FeatureCollection",
+"features": [
+{ "type": "Feature", "properties": { "index": "0", "@osmId": "relation/4139701", "name": "Berufsschule", "opening_hours": null, "label": "Train stations & halts", "color": "#08519c" }, "geometry": { "type": "Point", "coordinates": [ 8.660822, 49.4085306 ] } },
+{ "type": "Feature", "properties": { "index": "1", "@osmId": "relation/20619649", "name": "Gneisenaustraße Süd", "opening_hours": null, "label": "Train stations & halts", "color": "#08519c" }, "geometry": { "type": "Point", "coordinates": [ 8.6672729, 49.4066228 ] } },
+{ "type": "Feature", "properties": { "index": "2", "@osmId": "node/36451626", "name": "Schloss", "opening_hours": null, "label": "Train stations & halts", "color": "#08519c" }, "geometry": { "type": "Point", "coordinates": [ 8.7130291, 49.4090671 ] } },
+{ "type": "Feature", "properties": { "index": "3", "@osmId": "node/36451627", "name": "Station Kornmarkt", "opening_hours": null, "label": "Train stations & halts", "color": "#08519c" }, "geometry": { "type": "Point", "coordinates": [ 8.7119186, 49.4111178 ] } },
+{ "type": "Feature", "properties": { "index": "4", "@osmId": "node/36451628", "name": "Molkenkur", "opening_hours": null, "label": "Train stations & halts", "color": "#08519c" }, "geometry": { "type": "Point", "coordinates": [ 8.714737, 49.4074214 ] } },
+{ "type": "Feature", "properties": { "index": "5", "@osmId": "node/331194332", "name": "Molkenkur", "opening_hours": null, "label": "Train stations & halts", "color": "#08519c" }, "geometry": { "type": "Point", "coordinates": [ 8.7146699, 49.407157 ] } },
+{ "type": "Feature", "properties": { "index": "6", "@osmId": "node/1446908064", "name": "Schloss", "opening_hours": null, "label": "Train stations & halts", "color": "#08519c" }, "geometry": { "type": "Point", "coordinates": [ 8.7129853, 49.4090544 ] } },
+{ "type": "Feature", "properties": { "index": "7", "@osmId": "node/2820941790", "name": "Heidelberg Hauptbahnhof", "opening_hours": null, "label": "Train stations & halts", "color": "#08519c" }, "geometry": { "type": "Point", "coordinates": [ 8.6754223, 49.4034737 ] } },
+{ "type": "Feature", "properties": { "index": "8", "@osmId": "node/3328488465", "name": "Heidelberg-Weststadt/Südstadt", "opening_hours": null, "label": "Train stations & halts", "color": "#08519c" }, "geometry": { "type": "Point", "coordinates": [ 8.6884853, 49.3982818 ] } },
+{ "type": "Feature", "properties": { "index": "9", "@osmId": "node/13790173546", "name": "Gneisenaustraße Süd", "opening_hours": null, "label": "Train stations & halts", "color": "#08519c" }, "geometry": { "type": "Point", "coordinates": [ 8.6672681, 49.4066163 ] } },
+{ "type": "Feature", "properties": { "index": "10", "@osmId": "node/13790173547", "name": "Berufsschule", "opening_hours": null, "label": "Train stations & halts", "color": "#08519c" }, "geometry": { "type": "Point", "coordinates": [ 8.6608171, 49.4085312 ] } },
+{ "type": "Feature", "properties": { "index": "11", "@osmId": "node/13950453583", "name": null, "opening_hours": null, "label": "Train stations & halts", "color": "#08519c" }, "geometry": { "type": "Point", "coordinates": [ 8.6989329, 49.4155577 ] } },
+{ "type": "Feature", "properties": { "index": "12", "@osmId": "node/13950453584", "name": null, "opening_hours": null, "label": "Train stations & halts", "color": "#08519c" }, "geometry": { "type": "Point", "coordinates": [ 8.6990144, 49.4157166 ] } },
+{ "type": "Feature", "properties": { "index": "13", "@osmId": "node/13950453585", "name": null, "opening_hours": null, "label": "Train stations & halts", "color": "#08519c" }, "geometry": { "type": "Point", "coordinates": [ 8.6988268, 49.415351 ] } }
+]
+}

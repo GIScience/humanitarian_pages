@@ -1,0 +1,523 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Global drought exposure, 1980–2024 — interactive results</title>
+<style>
+:root{
+  /* --- HeiGIT-style tokens: --accent is the one place to set the exact brand red --- */
+  --accent:#a01e2b;          /* HeiGIT dark red */
+  --accent-dk:#7a1620;
+  --accent-soft:#f6e7e6;
+  --slate:#3f6d8c;
+  --gold:#d98324;
+  --header:#24252a;          /* dark charcoal top bar */
+  --ink:#22242a;
+  --muted:#66707a;
+  --line:#e0e2e6;
+  --panel:#f6f7f8;
+  --ocean:#eef1f3;
+  --land:#e3e6e8;
+  --bg:#ffffff;
+  --font:"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font);font-size:14px;line-height:1.5}
+a{color:var(--accent-dk)}
+code{background:var(--panel);padding:1px 4px;font-size:12px}
+header{background:var(--header);color:#fff;padding:13px 24px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+header .mark{font-weight:800;letter-spacing:1px;font-size:15px;color:#fff;background:var(--accent);padding:3px 9px}
+header h1{font-size:17px;font-weight:600;margin:0}
+header .sub{color:#aab3bd;font-size:12.5px;margin-left:auto}
+.wrap{max-width:1500px;margin:0 auto;padding:20px 24px 30px}
+.card{background:var(--bg);border:1px solid var(--line)}
+.eyebrow{font-size:11px;letter-spacing:.7px;text-transform:uppercase;color:var(--accent);font-weight:700;margin:0 0 7px}
+
+/* intro */
+.intro{display:grid;grid-template-columns:1.6fr 1fr 1fr;gap:16px;margin-bottom:16px}
+.intro .p{padding:16px 18px}
+.intro h2{margin:0 0 8px;font-size:20px;color:var(--ink);font-weight:700}
+.intro p{margin:0 0 8px;font-size:13.5px;color:#3f454d}
+.intro .big{font-size:15px}
+.kv{font-size:13px;color:#3f454d;margin:6px 0}
+.kv b{color:var(--accent-dk)}
+
+/* variable definition strip */
+.defs{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:18px}
+.def{padding:14px 16px;border-left:4px solid var(--accent)}
+.def.q{border-left-color:var(--slate)}
+.def.c{border-left-color:var(--gold)}
+.def .t{font-size:15px;font-weight:700;color:var(--ink)}
+.def .tag{font-size:12px;color:var(--muted);font-weight:600;margin-left:4px}
+.def p{margin:6px 0 0;font-size:12.8px;color:#464c54}
+
+.maprow{display:grid;grid-template-columns:1fr 360px;gap:16px;align-items:stretch}
+.mapcard{position:relative;height:74vh;min-height:540px;overflow:hidden}
+#map{width:100%;height:100%;display:block;cursor:grab;background:var(--ocean)}
+#map.drag{cursor:grabbing}
+.legend{position:absolute;left:14px;bottom:14px;background:rgba(255,255,255,.95);border:1px solid var(--line);padding:9px 11px;font-size:11px}
+.legend .bar{height:9px;width:190px;margin:5px 0 3px;background:linear-gradient(90deg,#f6efe4,#f4d08c,#e89642,#c44230,#6e141c)}
+.legend .lab{display:flex;justify-content:space-between;color:var(--muted)}
+.hint{position:absolute;right:12px;top:12px;background:rgba(255,255,255,.92);border:1px solid var(--line);font-size:11px;color:var(--muted);padding:4px 8px}
+.zoomctl{position:absolute;right:12px;top:50px;display:flex;flex-direction:column;background:rgba(255,255,255,.96);border:1px solid var(--line)}
+.zoomctl button{width:30px;height:28px;border:0;border-bottom:1px solid var(--line);background:transparent;font:inherit;font-size:16px;line-height:1;cursor:pointer;color:var(--ink)}
+.zoomctl button:nth-child(3){font-size:13px}
+.zoomctl button:last-child{border-bottom:0;font-size:12px;font-weight:700}
+.zoomctl button:hover{background:var(--panel);color:var(--accent-dk)}
+.zoomctl button#zLabels.on{color:var(--accent-dk);background:var(--accent-soft)}
+.tip{position:absolute;pointer-events:none;background:#26282c;color:#fff;font-size:11.5px;padding:5px 8px;border-radius:2px;display:none;white-space:nowrap;z-index:5}
+.tip b{color:#ffb3ad}
+
+.side{display:flex;flex-direction:column;gap:14px;overflow:auto}
+.panel{padding:14px 15px}
+.panel h3{margin:0 0 9px;font-size:11px;letter-spacing:.6px;text-transform:uppercase;color:var(--accent);font-weight:700}
+.seg{display:flex;border:1px solid var(--line)}
+.seg button{flex:1;background:#fff;border:0;border-right:1px solid var(--line);padding:7px 4px;font:inherit;font-size:12.5px;color:var(--ink);cursor:pointer}
+.seg button:last-child{border-right:0}
+.seg button.on{background:var(--accent);color:#fff;font-weight:600}
+.subhint{font-size:11.5px;color:var(--muted);margin-top:6px;line-height:1.4}
+.row{display:flex;align-items:center;gap:8px;margin-top:9px}
+.row label{font-size:12px;color:var(--muted);min-width:38px}
+input[type=range]{flex:1;accent-color:var(--accent)}
+.yv{font-weight:700;color:var(--ink);font-variant-numeric:tabular-nums;min-width:38px;text-align:right}
+.btn{width:100%;border:1px solid var(--line);background:#fff;padding:7px;font:inherit;cursor:pointer;margin-top:9px}
+.btn:hover{background:var(--panel)}
+
+.tell{font-size:13px;color:#3f454d;line-height:1.5}
+.readout .nm{font-size:16px;font-weight:700;color:var(--ink);margin-bottom:6px}
+.big{font-size:27px;font-weight:800;color:var(--accent-dk);font-variant-numeric:tabular-nums;line-height:1.05}
+.k{color:var(--muted);font-size:12px}
+.twocol{display:flex;gap:18px;margin-top:6px}
+.twocol .v{font-size:19px;font-weight:700;color:var(--ink);font-variant-numeric:tabular-nums}
+.note{font-size:11px;color:var(--muted);margin-top:8px;line-height:1.4;border-top:1px solid var(--line);padding-top:7px}
+.note.zero{border-top:0;margin-top:6px;padding:7px 9px;background:var(--accent-soft);color:var(--accent-dk);border-left:3px solid var(--accent)}
+.spark{width:100%;height:78px;display:block;margin-top:8px}
+.pill{display:inline-block;background:var(--panel);border:1px solid var(--line);padding:1px 7px;font-size:11px;color:var(--muted);margin-top:6px}
+
+.results{margin-top:22px}
+.results h2{font-size:12px;letter-spacing:.6px;text-transform:uppercase;color:var(--muted);margin:0 0 12px;font-weight:700}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.grid2 .chartcard:last-child{grid-column:1/-1}
+.chartcard{padding:15px 16px}
+.chartcard h4{margin:0 0 3px;font-size:15px;color:var(--ink)}
+.chartcard p{margin:0 0 10px;font-size:12.5px;color:var(--muted)}
+.chartcard canvas{width:100%;display:block}
+.stats{display:flex;gap:18px;margin-top:8px;flex-wrap:wrap}
+.stat .v{font-size:21px;font-weight:800;color:var(--accent-dk);font-variant-numeric:tabular-nums}
+.stat .l{font-size:11px;color:var(--muted)}
+footer{max-width:1500px;margin:0 auto;padding:14px 24px 40px;color:#4a525a;font-size:12px;line-height:1.65}
+footer h3{font-size:12px;letter-spacing:.6px;text-transform:uppercase;color:var(--accent);margin:14px 0 6px}
+footer b{color:var(--ink)}
+.foot2{display:grid;grid-template-columns:1fr 1fr;gap:24px}
+@media(max-width:1050px){.maprow{grid-template-columns:1fr}.grid2,.intro,.defs,.foot2{grid-template-columns:1fr}.mapcard{height:60vh}}
+</style>
+</head>
+<body>
+<header>
+  <span class="mark">HeiGIT</span>
+  <h1>Global population exposure to major, persistent drought &nbsp;·&nbsp; 1980–2024</h1>
+  <span class="sub">event-based accounting · 0.5° grid</span>
+</header>
+
+<div class="wrap">
+
+  <!-- INTRO -->
+  <div class="intro">
+    <div class="card p">
+      <p class="eyebrow">What this shows</p>
+      <h2>How many people were inside the world's big droughts — and for how long?</h2>
+      <p class="big">Every day from 1980 to 2024, we ask which people were living inside a large, long-lasting drought, and add it up. The result is mapped here at ~55&nbsp;km resolution, per country, and over any time span you choose.</p>
+      <p>It is an <b>exposure</b> account — people located inside a drought — measured before any question of who is harmed or how badly.</p>
+    </div>
+    <div class="card p">
+      <p class="eyebrow">The key measure</p>
+      <p class="big"><b>Person-days.</b> One person in drought for one day = one person-day.</p>
+      <p>1&nbsp;million people in drought for 100&nbsp;days = 100&nbsp;million person-days. It captures <b>how long</b> as well as <b>how many</b> — which matters, because droughts last for months.</p>
+      <p class="kv">We also report the simpler <b>people affected</b> (how many people, in a given year).</p>
+    </div>
+    <div class="card p">
+      <p class="eyebrow">What counts as a drought here</p>
+      <p>Only <b>major, persistent events</b> — at least ~125,000&nbsp;km² (a third of Germany) and lasting at least 30&nbsp;days. Small or brief droughts are deliberately left out, so every number is a lower bound.</p>
+      <p class="kv"><b>Resolution:</b> 0.5° (~55&nbsp;km) grid cells. This is the finest the drought data allow — the map does not imply sharper detail. The last chart below measures what that limit costs.</p>
+      <p class="kv" id="evStats"></p>
+    </div>
+  </div>
+
+  <!-- VARIABLE DEFINITIONS -->
+  <div class="defs">
+    <div class="card def">
+      <span class="t">SM — soil-moisture drought</span><span class="tag">“agricultural”</span>
+      <p>Dry soil. The drought that parches fields, pastures and forests — what most people picture as a drought. This is our primary variable.</p>
+    </div>
+    <div class="card def q">
+      <span class="t">Q — runoff drought</span><span class="tag">“hydrological”</span>
+      <p>Low river flow and water supply. The drought you feel in rivers, reservoirs and taps, rather than in the soil. It can behave quite differently from soil drought.</p>
+    </div>
+    <div class="card def c">
+      <span class="t">SM ∩ Q — compound</span><span class="tag">“no fallback”</span>
+      <p>Both at once, on the <b>same day</b>: crops failing <em>and</em> rivers low, so there is no dry-season irrigation to fall back on. The hardest-hit population.</p>
+    </div>
+  </div>
+
+  <!-- MAP + SIDEBAR -->
+  <div class="maprow">
+    <div class="card mapcard">
+      <canvas id="map"></canvas>
+      <div class="tip" id="tip"></div>
+      <div class="hint">drag to pan · scroll to zoom · hover a cell · click a country</div>
+      <div class="zoomctl">
+        <button id="zIn" title="Zoom in">+</button>
+        <button id="zOut" title="Zoom out">&minus;</button>
+        <button id="zReset" title="Reset view">&#8634;</button>
+        <button id="zLabels" title="Toggle country name labels" class="on">Aa</button>
+      </div>
+      <div class="legend">
+        <div id="legTitle">cumulative person-days · SM</div>
+        <div class="bar"></div>
+        <div class="lab"><span>fewer / shorter</span><span id="legMax">more · longer</span></div>
+      </div>
+    </div>
+
+    <div class="side">
+      <div class="card panel">
+        <h3>Drought variable</h3>
+        <div class="seg" id="varSeg">
+          <button data-v="SM" class="on">SM · soil</button>
+          <button data-v="Q">Q · runoff</button>
+          <button data-v="SMxQ">SM∩Q · both</button>
+        </div>
+
+        <h3 style="margin-top:15px">Time span</h3>
+        <div class="seg" id="spanModeSeg">
+          <button data-m="single" class="on">Single year</button>
+          <button data-m="range">Period (expert)</button>
+        </div>
+        <div class="row" id="singleRow"><label>Year</label><input type="range" id="ySingle" min="1980" max="2024" value="2024" step="1"><span class="yv" id="ySingleV">2024</span></div>
+        <div id="rangeRows" style="display:none">
+          <div class="row"><label>From</label><input type="range" id="y0" min="1980" max="2024" value="1980" step="1"><span class="yv" id="y0v">1980</span></div>
+          <div class="row"><label>To</label><input type="range" id="y1" min="1980" max="2024" value="2024" step="1"><span class="yv" id="y1v">2024</span></div>
+          <button class="btn" id="play">▶ Watch it build up, 1980→2024</button>
+        </div>
+        <div class="subhint" id="spanHint"></div>
+
+        <h3 style="margin-top:15px">Headline number</h3>
+        <div class="seg" id="metSeg">
+          <button data-k="pd" class="on">Person-days</button>
+          <button data-k="ppl">People affected</button>
+        </div>
+
+        <h3 style="margin-top:15px">Map units</h3>
+        <div class="seg" id="unitSeg">
+          <button data-u="grid" class="on">0.5° grid</button>
+          <button data-u="country">Countries</button>
+        </div>
+      </div>
+
+      <div class="card panel">
+        <h3>What you're looking at</h3>
+        <div class="tell" id="tell"></div>
+      </div>
+
+      <div class="card panel readout">
+        <h3>Numbers</h3>
+        <div id="readout"></div>
+        <canvas class="spark" id="spark" width="640" height="156" style="display:none"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- FINDINGS -->
+  <div class="results">
+    <h2>Findings from the study</h2>
+    <div class="grid2">
+      <div class="card chartcard">
+        <h4>What drives the rise — the hazard, or population?</h4>
+        <p>A statistical split (LMDI) of the increase in person-days into a “more/longer drought” part and a “more people” part, for three ways of choosing the start and end years. Soil-moisture drought is overwhelmingly hazard-driven; runoff drought is not.</p>
+        <canvas id="cAttr" width="640" height="300"></canvas>
+      </div>
+      <div class="card chartcard">
+        <h4>The rise, and the two “what-if” lines (soil-moisture)</h4>
+        <p>Black: what happened. Red dashed: what exposure would have been if population had stayed at 1980 (hazard alone). Blue dotted: if the drought pattern had stayed at 1980 (population alone). The red line tracks the black one — the hazard is doing the work.</p>
+        <canvas id="cTrend" width="640" height="300"></canvas>
+      </div>
+      <div class="card chartcard">
+        <h4>Does drought fall hardest on the poorest?</h4>
+        <p>Share of exposure vs share of population, ordering the world from least to most deprived. A curve on the diagonal means exposure is spread in proportion to population. Both curves sit almost on it — at this scale, drought is <em>not</em> concentrated on the most deprived.</p>
+        <canvas id="cConc" width="640" height="300"></canvas>
+      </div>
+      <div class="card chartcard">
+        <h4>What the coarse grid costs</h4>
+        <p>Exposure counted on the 0.5° grid, compared with a finer 0.1° reference. Treating each coarse cell as simply “in or out” of drought (red) understates exposure — up to 17% in fragmented years like 1986. Keeping each cell's drought <em>fraction</em> (blue) almost removes the error.</p>
+        <canvas id="cMaup" width="640" height="240"></canvas>
+        <div class="stats" id="maupStats"></div>
+      </div>
+      <div class="card chartcard">
+        <h4>What causes the coarse-grid bias</h4>
+        <p>Each point is one year. X-axis: the share of drought-affected population sitting in cells just under the 50% majority threshold — where the binary rule discards the whole cell. Y-axis: how badly that year's binary count undershot the truth. The two move together — fragmented drought footprints, not a fixed discount, drive the bias.</p>
+        <canvas id="cFrag" width="640" height="240"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+
+<footer>
+  <div class="foot2">
+    <div>
+      <h3>Data</h3>
+      <b>Drought events</b> — a global catalogue of spatiotemporally clustered drought events (Štovíček et al. 2026, <i>Scientific Data</i>; Zenodo 10.5281/zenodo.18292641), daily, 0.5°, 1980–2024. Each grid cell each day carries the identity of the drought event it belongs to. <b>Population</b> — GHS-POP R2023A (European Commission JRC), summed to 0.5°. <b>Deprivation</b> — Global Gridded Relative Deprivation Index v1 (CIESIN/SEDAC). <b>Independent check</b> — MCDI (0.1°, monthly). <b>Country borders, rivers</b> — Natural Earth (rivers shown for context only, not part of the analysis). All inputs are open and checksummed.
+    </div>
+    <div>
+      <h3>Method &amp; reading the numbers</h3>
+      For each cell and year we multiply population by the number of drought-days to get <b>person-days</b>, and count <b>people affected</b> (anyone in a cell with at least one drought-day). Over a time span, person-days add up correctly; <b>people affected do not</b> — someone in drought in two different years would be counted twice — so for a span we report the <b>peak</b> and <b>average</b> year, not a sum. Person-days shown in millions/billions. The map shows genuine per-cell person-days at 0.5°; it does not imply finer precision. <b>A country reading zero is not necessarily drought-free</b> — it means no event there ever met the catalogue's size and persistence threshold (≥125,000&nbsp;km², ≥30&nbsp;days). This happens for two different reasons: some hyper-arid climates (e.g. Egypt, Libya) are already so uniformly dry that a standardized index struggles to detect an "anomaly" at all; some small or fragmented landmasses (e.g. New Zealand) rarely produce a single drought footprint large and persistent enough on their own, since — unlike a continental drought — they cannot spread across a border into neighbouring land. Design follows <a href="https://heigit.org">heigit.org</a>. Self-contained: no server, no external service.
+    </div>
+  </div>
+</footer>
+
+<script src="borders.js"></script>
+<script src="rivers.js"></script>
+<script src="data.js"></script>
+<script>
+"use strict";
+const D=window.DXP, B=window.DXP_BORDERS, RIVERS=window.DXP_RIVERS||[];
+function b64bytes(s){const bin=atob(s);const a=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)a[i]=bin.charCodeAt(i);return a;}
+function u16(s){return new Uint16Array(b64bytes(s).buffer);}
+function i32(s){return new Int32Array(b64bytes(s).buffer);}
+
+const NLAT=D.grid.nlat,NLON=D.grid.nlon,RES=D.grid.res,LAT0=D.grid.lat0,LON0=D.grid.lon0;
+const cumArr={SM:u16(D.cum.SM.b64),Q:u16(D.cum.Q.b64),SMxQ:u16(D.cum.SMxQ.b64)};
+const cumMax={SM:D.cum.SM.max_m,Q:D.cum.Q.max_m,SMxQ:D.cum.SMxQ.max_m};
+const cumPplArr={SM:u16(D.cumPpl.SM.b64),Q:u16(D.cumPpl.Q.b64),SMxQ:u16(D.cumPpl.SMxQ.b64)};
+const cumPplMax={SM:D.cumPpl.SM.max_m,Q:D.cumPpl.Q.max_m,SMxQ:D.cumPpl.SMxQ.max_m};
+const smCells=i32(D.smYear.cells_b64),smVals=u16(D.smYear.vals_b64),smPplVals=u16(D.smYear.ppl_vals_b64),smYears=D.smYear.years,smNc=D.smYear.ncell;
+const countries=D.countries,years=D.years,glob=D.global;
+const VNAME={SM:"soil-moisture (agricultural) drought",Q:"runoff (hydrological) drought",SMxQ:"compound soil-moisture ∩ runoff drought"};
+const VSH={SM:"SM",Q:"Q",SMxQ:"SM∩Q"};
+const countryMax={SM:1,Q:1,SMxQ:1},countryMaxPpl={SM:1,Q:1,SMxQ:1};
+
+// SM per-cell person-days summed over an inclusive year-index range -> dense (millions)
+function smRangeDense(i0,i1){const a=new Uint16Array(NLAT*NLON);for(let yi=i0;yi<=i1;yi++){const base=yi*smNc;for(let c=0;c<smNc;c++)a[smCells[c]]=Math.min(65535,a[smCells[c]]+smVals[base+c]);}return a;}
+// SM per-cell people affected over a range -> dense (millions), peak year per cell (NOT summed)
+function smRangePeopleDense(i0,i1){const a=new Uint16Array(NLAT*NLON);for(let yi=i0;yi<=i1;yi++){const base=yi*smNc;for(let c=0;c<smNc;c++){const v=smPplVals[base+c],idx=smCells[c];if(v>a[idx])a[idx]=v;}}return a;}
+
+// warm sequential ramp (drought intensity)
+const RAMP=[[0,246,239,228],[0.22,244,208,140],[0.45,232,150,66],[0.7,196,66,48],[1,110,20,28]];
+function ramp(t){t=Math.max(0,Math.min(1,t));for(let i=1;i<RAMP.length;i++){if(t<=RAMP[i][0]){const a=RAMP[i-1],b=RAMP[i],f=(t-a[0])/(b[0]-a[0]);return[a[1]+(b[1]-a[1])*f|0,a[2]+(b[2]-a[2])*f|0,a[3]+(b[3]-a[3])*f|0];}}return RAMP[RAMP.length-1].slice(1);}
+function logt(v,max){return v<=0?-1:Math.log(1+v)/Math.log(1+max);}
+
+// state
+const state={v:"SM",i0:years.length-1,i1:years.length-1,met:"pd",u:"grid",spanMode:"single",labels:true};
+const LABEL_T=500; // area(deg²) * view.k threshold for drawing a country name
+let marker=null,selCountry=null,rasterArr=null,rasterMax=1;
+
+// offscreen raster
+const off=document.createElement("canvas");off.width=NLON;off.height=NLAT;const offc=off.getContext("2d");
+function fullSpan(){return state.i0===0&&state.i1===years.length-1;}
+function buildRaster(){
+  const cA=state.met==="ppl"?cumPplArr:cumArr, cM=state.met==="ppl"?cumPplMax:cumMax;
+  if(state.v==="SM"){
+    if(fullSpan())rasterArr=cA.SM;
+    else rasterArr=state.met==="ppl"?smRangePeopleDense(state.i0,state.i1):smRangeDense(state.i0,state.i1);
+    rasterMax=cM.SM;
+  }else{rasterArr=cA[state.v];rasterMax=cM[state.v];}   // Q/SMxQ: full-period map only (peak year for people)
+  const img=offc.createImageData(NLON,NLAT),px=img.data;
+  for(let i=0;i<rasterArr.length;i++){const v=rasterArr[i],o=i*4;if(v>0){const c=ramp(logt(v,rasterMax));px[o]=c[0];px[o+1]=c[1];px[o+2]=c[2];px[o+3]=255;}else px[o+3]=0;}
+  offc.putImageData(img,0,0);
+}
+
+// map transform
+const cv=document.getElementById("map"),ctx=cv.getContext("2d");
+let W=0,Hh=0,dpr=Math.min(2,window.devicePixelRatio||1);
+const view={k:1,tx:0,ty:0};
+function fit(){const r=cv.getBoundingClientRect();W=r.width;Hh=r.height;cv.width=W*dpr;cv.height=Hh*dpr;ctx.setTransform(dpr,0,0,dpr,0,0);const base=W/360;view.k=base*0.98;view.tx=(W-360*view.k)/2;view.ty=(Hh-180*view.k)/2;draw();}
+const lonX=lon=>(lon+180)*view.k+view.tx, latY=lat=>(90-lat)*view.k+view.ty;
+const xLon=x=>(x-view.tx)/view.k-180, yLat=y=>90-(y-view.ty)/view.k;
+function eachCountry(cb){for(const f of B.features){const g=f.geometry;cb(f,g.type==="Polygon"?[g.coordinates]:g.coordinates);}}
+function pathPolys(polys){ctx.beginPath();for(const poly of polys)for(const ring of poly){for(let i=0;i<ring.length;i++){const x=lonX(ring[i][0]),y=latY(ring[i][1]);i?ctx.lineTo(x,y):ctx.moveTo(x,y);}ctx.closePath();}}
+// major rivers, shown for the Q / SM∩Q variables (context for "rivers, reservoirs and taps")
+function drawRivers(){
+  if(state.v==="SM"||!RIVERS.length)return;
+  ctx.strokeStyle="rgba(63,109,140,.72)";ctx.lineWidth=Math.max(0.9,Math.min(2.4,view.k*0.4));
+  ctx.beginPath();
+  for(const riv of RIVERS)for(const ln of riv.lines)for(let i=0;i<ln.length;i++){const x=lonX(ln[i][0]),y=latY(ln[i][1]);i?ctx.lineTo(x,y):ctx.moveTo(x,y);}
+  ctx.stroke();
+}
+// country name labels, zoom-gated by on-screen size (area × zoom) so world view stays uncluttered
+function drawLabels(){
+  if(!state.labels)return;
+  ctx.font="11px "+getComputedStyle(document.body).fontFamily;ctx.textAlign="center";ctx.textBaseline="middle";
+  for(const f of B.features){
+    const p=f.properties;if(!p.rep||p.name==="Antarctica")continue;
+    if(p.area*view.k<LABEL_T)continue;
+    const x=lonX(p.rep[0]),y=latY(p.rep[1]);
+    if(x<-40||x>W+40||y<-20||y>Hh+20)continue;
+    ctx.lineWidth=3;ctx.strokeStyle="rgba(255,255,255,.85)";ctx.strokeText(p.name,x,y);
+    ctx.fillStyle="#22242a";ctx.fillText(p.name,x,y);
+  }
+}
+// person-days: summed over the chosen span (additive). people affected: peak year in the span (not summed).
+function countryVal(code,v,met){const e=countries[code];if(!e)return 0;met=met||state.met;const key=(met==="ppl"?"ppl_":"pd_")+v;const s=e[key];if(!s)return 0;const a=(v==="SM"?state.i0:0),b=(v==="SM"?state.i1:years.length-1);if(met==="ppl"){let mx=0;for(let i=a;i<=b;i++)mx=Math.max(mx,s[i]);return mx;}let t=0;for(let i=a;i<=b;i++)t+=s[i];return t*1000;} // pd billions->millions
+function draw(){
+  ctx.clearRect(0,0,W,Hh);
+  ctx.fillStyle="#eef1f3";ctx.fillRect(lonX(-180),latY(90),360*view.k,180*view.k);
+  if(state.u==="country"){
+    const cmx=state.met==="ppl"?countryMaxPpl[state.v]:countryMax[state.v];
+    eachCountry((f,polys)=>{const v=countryVal(f.properties.code,state.v);pathPolys(polys);if(v>0){const c=ramp(logt(v,cmx));ctx.fillStyle=`rgb(${c[0]},${c[1]},${c[2]})`;}else ctx.fillStyle=getComputedStyle(document.body).getPropertyValue("--land");ctx.fill();ctx.lineWidth=0.6;ctx.strokeStyle="#fff";ctx.stroke();});
+  }else{
+    ctx.fillStyle=getComputedStyle(document.body).getPropertyValue("--land");eachCountry((f,polys)=>{pathPolys(polys);ctx.fill();});
+    ctx.imageSmoothingEnabled=false;ctx.drawImage(off,0,0,NLON,NLAT,lonX(-180),latY(90),360*view.k,180*view.k);ctx.imageSmoothingEnabled=true;
+    ctx.lineWidth=0.5;ctx.strokeStyle="rgba(120,132,142,.55)";eachCountry((f,polys)=>{pathPolys(polys);ctx.stroke();});
+  }
+  drawRivers();
+  if(marker){const x=lonX(marker.lon),y=latY(marker.lat);ctx.strokeStyle="#7a1620";ctx.lineWidth=1.6;ctx.strokeRect(x-view.k/2,y-view.k/2,view.k,view.k);}
+  if(selCountry!=null)drawSelCountry();
+  drawLabels();
+}
+function drawSelCountry(){const f=B.features.find(f=>f.properties.code===selCountry);if(!f)return;const g=f.geometry,polys=g.type==="Polygon"?[g.coordinates]:g.coordinates;ctx.strokeStyle="#7a1620";ctx.lineWidth=2;pathPolys(polys);ctx.stroke();}
+
+// ---- text: what you're looking at ----
+function spanTxt(){return state.i0===state.i1?("in "+years[state.i1]):("over "+years[state.i0]+"–"+years[state.i1]);}
+function updateTell(){
+  const full=fullSpan(),vt=VNAME[state.v],isPpl=state.met==="ppl";
+  const metricPhrase=isPpl?"people affected":"person-days";
+  let t="";
+  if(state.u==="country"){
+    t=isPpl
+      ? `Each country is shaded by its <b>peak-year people affected</b> by ${vt}, ${full?"1980–2024":spanTxt()} — the highest single year in the span, not a sum (people affected can't be added across years). Darker = more people in that country's worst year. <b>Click a country</b> for its year-by-year trend.`
+      : `Each country is shaded by its <b>total person-days</b> of exposure to ${vt}, ${full?"1980–2024":spanTxt()}. Darker = a larger, longer-lasting drought burden. <b>Click a country</b> for its year-by-year trend.`;
+  }else{
+    t=isPpl
+      ? `Each 0.5° cell (~55 km) is shaded by <b>people affected</b> by ${vt} — the peak year within the chosen span, not a sum. Darker = more people there in that cell's worst year. <b>Hover</b> a cell for its exact value; <b>click</b> a country for its trend.`
+      : `Each 0.5° cell (~55 km) is shaded by <b>person-days</b> of exposure to ${vt}, ${full?"accumulated over 1980–2024":"summed "+spanTxt()}. Darker = more people exposed for longer. <b>Hover</b> a cell for its exact value; <b>click</b> a country for its trend.`;
+    if(state.v!=="SM"&&!full)t+=` <span style="color:var(--muted)">(The map shows the full 1980–2024 ${isPpl?"peak year":"total"} for ${VSH[state.v]}; the chosen years apply to the numbers below and the panels.)</span>`;
+  }
+  if(state.v!=="SM")t+=` <span style="color:var(--muted)">Major rivers are drawn for context.</span>`;
+  document.getElementById("tell").innerHTML=t;
+  const spanLabel=state.u==="country"?"national totals · ":(full?"cumulative · ":spanTxt().replace("in ","year ").replace("over ","")+" · ");
+  document.getElementById("legTitle").textContent=spanLabel+(isPpl?"people affected (peak yr) · ":"person-days · ")+VSH[state.v];
+  document.querySelector(".legend .lab span:first-child").textContent=isPpl?"fewer people":"fewer / shorter";
+  document.getElementById("legMax").textContent=isPpl?"more people":"more · longer";
+  document.getElementById("spanHint").textContent=state.i0===state.i1
+    ?("Showing "+years[state.i1]+"."+(state.spanMode==="single"?" Switch to Period (expert) for a custom span or the build-up animation.":" Widen From/To for a period, or press play."))
+    :("Period "+years[state.i0]+"–"+years[state.i1]+" · "+(state.i1-state.i0+1)+" years.");
+}
+
+// ---- numbers panel ----
+function fmtPD(bn){if(bn>=1000)return (bn/1000).toFixed(bn>=10000?0:1)+" tn";if(bn>=1)return bn.toFixed(bn>=10?0:1)+" bn";return (bn*1000).toFixed(0)+" M";}
+function fmtInt(n){return Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g,",");}
+function fmtP(M){if(M>=1000)return (M/1000).toFixed(1)+" bn";return M.toFixed(M<10?1:0)+" M";}
+function rangeStats(entry){
+  const a=state.i0,b=state.i1,v=state.v;
+  const pd=entry["pd_"+v],ppl=entry["ppl_"+v];
+  let pdSum=0,pplPeak=0,pplMean=0,n=0;
+  for(let i=a;i<=b;i++){pdSum+=pd[i];pplPeak=Math.max(pplPeak,ppl[i]);pplMean+=ppl[i];n++;}
+  pplMean/=n;
+  return {pdSum,pplPeak,pplMean,single:a===b,pplYear:ppl[b]};
+}
+function renderReadout(){
+  const el=document.getElementById("readout"),sp=document.getElementById("spark");
+  const isCountry=selCountry!=null&&countries[selCountry];
+  const entry=isCountry?countries[selCountry]:glob;
+  const name=isCountry?countries[selCountry].name:"Global";
+  const s=rangeStats(entry);
+  const pdBig=fmtPD(s.pdSum),spanLab=state.i0===state.i1?(""+years[state.i1]):(years[state.i0]+"–"+years[state.i1]);
+  const pplHeadline=s.single?s.pplYear:s.pplPeak;
+  const primary=state.met==="pd"
+     ? `<div class="big">${pdBig}</div><div class="k">person-days · ${VSH[state.v]} · ${spanLab}</div>`
+     : `<div class="big">${fmtP(pplHeadline)}</div><div class="k">people affected · ${VSH[state.v]} · ${s.single?years[state.i1]:"peak year of "+spanLab}</div>`;
+  const isZero=isCountry&&(state.met==="pd"?s.pdSum===0:pplHeadline===0);
+  const zeroNote=isZero?`<div class="note zero">A reading of <b>zero</b> means no drought event here ever met the catalogue's size + persistence threshold (≥125,000&nbsp;km² and ≥30&nbsp;days) for ${VSH[state.v]} — <b>not</b> that ${name} is drought-free. Small/brief/local droughts, and droughts in climates too flat or arid for a standardized index to register an anomaly, are excluded by construction. See Method, below.</div>`:"";
+  el.innerHTML=`<div class="nm">${name}</div>${primary}
+     <div class="twocol">
+       <div><div class="v">${pdBig}</div><div class="k">person-days${state.i0!==state.i1?" (summed)":""}</div></div>
+       <div><div class="v">${fmtP(s.single?s.pplYear:s.pplPeak)}</div><div class="k">${s.single?"people affected":"peak-year people"}</div></div>
+     </div>
+     <div class="note">Person-days add up across years. People affected are <b>not</b> summed — the same person in two dry years would count twice — so over a span we show the peak and average year.${isCountry?"":' Click a country on the map for its own numbers.'}</div>
+     ${zeroNote}`;
+  // sparkline: chosen metric per year, selected span highlighted
+  const arr=state.met==="pd"?entry["pd_"+state.v]:entry["ppl_"+state.v];
+  sp.style.display="block";
+  sparkline(sp,years,arr,state.i0,state.i1,state.met==="pd"?"person-days/yr (bn)":"people/yr (M)");
+}
+
+// ---- interaction ----
+let dragging=false,last=null;
+cv.addEventListener("mousedown",e=>{dragging=true;last=[e.clientX,e.clientY];cv.classList.add("drag");});
+window.addEventListener("mouseup",()=>{dragging=false;cv.classList.remove("drag");});
+window.addEventListener("mousemove",e=>{if(dragging){view.tx+=e.clientX-last[0];view.ty+=e.clientY-last[1];last=[e.clientX,e.clientY];draw();}});
+const tip=document.getElementById("tip");
+// place the tooltip offset from the cursor, clear of the grab-hand icon, clamped to the map card
+function placeTip(mx,my,html){
+  tip.innerHTML=html;tip.style.display="block";
+  let left=mx+18,top=my-14-tip.offsetHeight;
+  if(left+tip.offsetWidth>W-4)left=mx-18-tip.offsetWidth;
+  if(top<4)top=my+22;
+  tip.style.left=left+"px";tip.style.top=top+"px";
+}
+cv.addEventListener("mousemove",e=>{if(dragging){tip.style.display="none";return;}const r=cv.getBoundingClientRect();const mx=e.clientX-r.left,my=e.clientY-r.top;const lon=xLon(mx),lat=yLat(my);
+  if(state.u==="country"){const code=pickCountry(lon,lat);if(code!=null&&countries[code]){const raw=countryVal(code,state.v);const lab=raw===0?`<b>0</b> — no qualifying event, not necessarily drought-free`:(state.met==="ppl"?`<b>${fmtP(raw)}</b> people affected (peak yr)`:`<b>${fmtPD(raw/1000)}</b> person-days`);placeTip(mx,my,`${countries[code].name} · ${lab}`);}else tip.style.display="none";return;}
+  if(lon<-180||lon>180||lat<-90||lat>90){tip.style.display="none";return;}const col=Math.round((lon-LON0)/RES),row=Math.round((LAT0-lat)/RES);if(row<0||row>=NLAT||col<0||col>=NLON){tip.style.display="none";return;}
+  const idx=row*NLON+col;const v=(rasterArr)?rasterArr[idx]:cumArr[state.v][idx];marker={lon:LON0+col*RES,lat:LAT0-row*RES};
+  const lab=state.met==="ppl"?`<b>${v>0?fmtP(v):"0"}</b> people affected (peak yr)`:`<b>${v>0?fmtPD(v/1000):"0"}</b> person-days`;
+  placeTip(mx,my,`${Math.abs(marker.lat).toFixed(1)}°${marker.lat>=0?"N":"S"}, ${Math.abs(marker.lon).toFixed(1)}°${marker.lon>=0?"E":"W"} · ${lab}`);
+  draw();});
+cv.addEventListener("mouseleave",()=>{tip.style.display="none";marker=null;draw();});
+function zoomAt(cx,cy,factor){const nk=Math.max(W/360*0.6,Math.min(W/360*40,view.k*factor));const s=nk/view.k;view.tx=cx-(cx-view.tx)*s;view.ty=cy-(cy-view.ty)*s;view.k=nk;draw();}
+cv.addEventListener("wheel",e=>{e.preventDefault();const r=cv.getBoundingClientRect();zoomAt(e.clientX-r.left,e.clientY-r.top,Math.exp(-e.deltaY*0.0015));},{passive:false});
+document.getElementById("zIn").addEventListener("click",()=>zoomAt(W/2,Hh/2,1.5));
+document.getElementById("zOut").addEventListener("click",()=>zoomAt(W/2,Hh/2,1/1.5));
+document.getElementById("zReset").addEventListener("click",()=>fit());
+document.getElementById("zLabels").addEventListener("click",e=>{state.labels=!state.labels;e.target.classList.toggle("on",state.labels);draw();});
+cv.addEventListener("click",e=>{const r=cv.getBoundingClientRect();const lon=xLon(e.clientX-r.left),lat=yLat(e.clientY-r.top);const hit=pickCountry(lon,lat);selCountry=hit;renderReadout();updateTell();draw();});
+function pointInRing(lon,lat,ring){let inside=false;for(let i=0,j=ring.length-1;i<ring.length;j=i++){const xi=ring[i][0],yi=ring[i][1],xj=ring[j][0],yj=ring[j][1];if(((yi>lat)!=(yj>lat))&&(lon<(xj-xi)*(lat-yi)/(yj-yi)+xi))inside=!inside;}return inside;}
+function pickCountry(lon,lat){for(const f of B.features){const g=f.geometry,polys=g.type==="Polygon"?[g.coordinates]:g.coordinates;for(const poly of polys){if(pointInRing(lon,lat,poly[0])){let hole=false;for(let h=1;h<poly.length;h++)if(pointInRing(lon,lat,poly[h]))hole=true;if(!hole)return f.properties.code;}}}return null;}
+// ---- controls ----
+function seg(id,attr,fn){document.getElementById(id).addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;[...e.currentTarget.children].forEach(c=>c.classList.remove("on"));b.classList.add("on");fn(b.getAttribute(attr));});}
+function refreshAll(){buildRaster();updateTell();renderReadout();draw();}
+seg("varSeg","data-v",v=>{state.v=v;refreshAll();});
+seg("metSeg","data-k",k=>{state.met=k;refreshAll();});
+seg("unitSeg","data-u",u=>{state.u=u;updateTell();draw();});
+const y0=document.getElementById("y0"),y1=document.getElementById("y1"),ySingle=document.getElementById("ySingle");
+const singleRow=document.getElementById("singleRow"),rangeRows=document.getElementById("rangeRows");
+function onYear(){let a=+y0.value,b=+y1.value;if(a>b){if(document.activeElement===y0)b=a,y1.value=b;else a=b,y0.value=a;}state.i0=years.indexOf(a);state.i1=years.indexOf(b);document.getElementById("y0v").textContent=a;document.getElementById("y1v").textContent=b;refreshAll();}
+y0.addEventListener("input",onYear);y1.addEventListener("input",onYear);
+function onYearSingle(){const y=+ySingle.value;state.i0=state.i1=years.indexOf(y);document.getElementById("ySingleV").textContent=y;y0.value=y;y1.value=y;document.getElementById("y0v").textContent=y;document.getElementById("y1v").textContent=y;refreshAll();}
+ySingle.addEventListener("input",onYearSingle);
+seg("spanModeSeg","data-m",m=>{
+  state.spanMode=m;
+  if(m==="single"){rangeRows.style.display="none";singleRow.style.display="";ySingle.value=years[state.i1];document.getElementById("ySingleV").textContent=years[state.i1];state.i0=state.i1;refreshAll();}
+  else{singleRow.style.display="none";rangeRows.style.display="";y0.value=years[state.i0];y1.value=years[state.i1];document.getElementById("y0v").textContent=years[state.i0];document.getElementById("y1v").textContent=years[state.i1];}
+});
+let playing=null;
+document.getElementById("play").addEventListener("click",e=>{
+  if(playing){clearInterval(playing);playing=null;e.target.textContent="▶ Watch it build up, 1980→2024";return;}
+  e.target.textContent="❚❚ Pause";let i=state.i0;
+  playing=setInterval(()=>{i++;if(i>=years.length){clearInterval(playing);playing=null;e.target.textContent="▶ Watch it build up, 1980→2024";return;}state.i1=i;y1.value=years[i];document.getElementById("y1v").textContent=years[i];refreshAll();},240);
+});
+
+// ---- charts ----
+const AC="#a01e2b",SL="#3f6d8c",GD="#d98324",OB="#26282c";
+function setupC(id,h){const c=document.getElementById(id);const w=c.parentElement.clientWidth-32;c.width=w*dpr;c.height=h*dpr;c.style.height=h+"px";const x=c.getContext("2d");x.setTransform(dpr,0,0,dpr,0,0);return[x,w,h];}
+const PX=(w,pad,xr)=>v=>pad.l+(w-pad.l-pad.r)*(v-xr[0])/(xr[1]-xr[0]);
+const PY=(h,pad,yr)=>v=>h-pad.b-(h-pad.t-pad.b)*(v-yr[0])/(yr[1]-yr[0]);
+function axes(x,w,h,pad,yr,yfmt){x.strokeStyle="#eceff1";x.lineWidth=1;x.fillStyle="#8a939b";x.font="11px "+getComputedStyle(document.body).fontFamily;const yt=4;for(let i=0;i<=yt;i++){const v=yr[0]+(yr[1]-yr[0])*i/yt,py=h-pad.b-(h-pad.t-pad.b)*i/yt;x.beginPath();x.moveTo(pad.l,py);x.lineTo(w-pad.r,py);x.stroke();x.textAlign="right";x.fillText(yfmt(v),pad.l-6,py+3);}}
+
+function sparkline(c,xs,ys,i0,i1,lab){const x=c.getContext("2d");const w=c.width,h=c.height;x.setTransform(1,0,0,1,0,0);x.clearRect(0,0,w,h);const pad={l:6,r:6,t:10,b:15};const mx=Math.max(...ys,1e-6);const px=PX(w,pad,[0,xs.length-1]),py=PY(h,pad,[0,mx]);for(let i=0;i<xs.length;i++){if(ys[i]>0){const bx=px(i),by=py(ys[i]);x.fillStyle=(i>=i0&&i<=i1)?"#a01e2b":"#d9c3c1";x.fillRect(bx-w/xs.length/2+1,by,w/xs.length-2,h-pad.b-by);}}x.strokeStyle="#eceff1";x.beginPath();x.moveTo(pad.l,h-pad.b);x.lineTo(w-pad.r,h-pad.b);x.stroke();x.fillStyle="#8a939b";x.font="10px sans-serif";x.textAlign="left";x.fillText(xs[0],pad.l,h-3);x.textAlign="right";x.fillText(xs[xs.length-1],w-pad.r,h-3);x.fillText(lab,w-pad.r,10);}
+
+function drawAttr(){const[x,w,h]=setupC("cAttr",300);x.clearRect(0,0,w,h);const pad={l:40,r:10,t:16,b:46};const vars=["SM","Q","SMxQ"];const groups=[];let mn=0,mx=0;vars.forEach(v=>D.attribution[v].windows.forEach((wd,wi)=>{groups.push({v,wi,hz:wd.hazard_bn,pp:wd.pop_bn});mx=Math.max(mx,wd.hazard_bn,wd.pop_bn);mn=Math.min(mn,wd.hazard_bn,wd.pop_bn);}));mx=Math.ceil(mx/20)*20;mn=Math.floor(mn/20)*20;axes(x,w,h,pad,[mn,mx],v=>v.toFixed(0));const py=PY(h,pad,[mn,mx]),zy=py(0);x.strokeStyle="#b9c1c8";x.beginPath();x.moveTo(pad.l,zy);x.lineTo(w-pad.r,zy);x.stroke();const n=groups.length,gw=(w-pad.l-pad.r)/n;groups.forEach((g,i)=>{const cx=pad.l+gw*i+gw*0.5,bw=gw*0.30;x.fillStyle=AC;x.fillRect(cx-bw-1,Math.min(py(g.hz),zy),bw,Math.abs(py(g.hz)-zy));x.fillStyle=SL;x.fillRect(cx+1,Math.min(py(g.pp),zy),bw,Math.abs(py(g.pp)-zy));x.fillStyle="#66707a";x.font="10px sans-serif";x.textAlign="center";x.fillText(["’80–24","5-yr","10-yr"][g.wi],cx,h-30);if(g.wi===1){x.fillStyle=OB;x.font="bold 11px sans-serif";x.fillText(VSH[g.v],cx,h-15);}});x.fillStyle=AC;x.fillRect(pad.l,5,9,9);x.fillStyle="#66707a";x.textAlign="left";x.font="10px sans-serif";x.fillText("hazard (more/longer drought)",pad.l+13,13);x.fillStyle=SL;x.fillRect(pad.l+178,5,9,9);x.fillText("population",pad.l+191,13);}
+function drawTrend(){const[x,w,h]=setupC("cTrend",300);x.clearRect(0,0,w,h);const pad={l:42,r:12,t:12,b:26};const cf=D.counterfactual_SM,xs=cf.years,mx=Math.max(...cf.observed);axes(x,w,h,pad,[0,mx],v=>v.toFixed(0));const px=PX(w,pad,[xs[0],xs[xs.length-1]]),py=PY(h,pad,[0,mx]);const line=(ys,col,dash,lw)=>{x.strokeStyle=col;x.lineWidth=lw||2;x.setLineDash(dash||[]);x.beginPath();ys.forEach((v,i)=>{const X=px(xs[i]),Y=py(v);i?x.lineTo(X,Y):x.moveTo(X,Y);});x.stroke();x.setLineDash([]);};line(cf.population,SL,[2,3]);line(cf.hazard,AC,[6,4]);line(cf.observed,OB,[],2.4);x.font="10px sans-serif";x.textAlign="left";x.fillStyle=OB;x.fillText("observed",px(xs[2]),py(mx)-2);x.fillStyle=AC;x.fillText("hazard-driven",px(xs[24]),py(cf.hazard[24])-4);x.fillStyle=SL;x.fillText("population-driven",px(xs[26]),py(cf.population[26])+12);x.fillStyle="#8a939b";x.textAlign="right";x.fillText("10⁹ person-days / yr",w-pad.r,pad.t+2);}
+function drawConc(){const[x,w,h]=setupC("cConc",300);x.clearRect(0,0,w,h);const pad={l:38,r:12,t:12,b:32};axes(x,w,h,pad,[0,1],v=>v.toFixed(1));const px=PX(w,pad,[0,1]),py=PY(h,pad,[0,1]);x.strokeStyle="#b9c1c8";x.setLineDash([4,4]);x.beginPath();x.moveTo(px(0),py(0));x.lineTo(px(1),py(1));x.stroke();x.setLineDash([]);const curve=(o,col)=>{const cp=[0],ce=[0];let a=0,b=0;const ps=o.pop_share,es=o.pd_share,pt=ps.reduce((s,v)=>s+v,0),et=es.reduce((s,v)=>s+v,0);for(let i=0;i<ps.length;i++){a+=ps[i]/pt;b+=es[i]/et;cp.push(a);ce.push(b);}x.strokeStyle=col;x.lineWidth=2.2;x.beginPath();cp.forEach((v,i)=>{const X=px(v),Y=py(ce[i]);i?x.lineTo(X,Y):x.moveTo(X,Y);});x.stroke();for(let i=1;i<cp.length;i++){x.fillStyle=col;x.beginPath();x.arc(px(cp[i]),py(ce[i]),2.6,0,7);x.fill();}};curve(D.concentration.SM,AC);curve(D.concentration.SMxQ,GD);x.font="11px sans-serif";x.textAlign="left";x.fillStyle=AC;x.fillText("SM  (index "+D.concentration.SM.ci.toFixed(3)+")",px(0.04),py(0.93));x.fillStyle=GD;x.fillText("SM∩Q  (index "+D.concentration.SMxQ.ci.toFixed(3)+")",px(0.04),py(0.84));x.fillStyle="#8a939b";x.textAlign="center";x.fillText("population, ordered least → most deprived",(w+pad.l)/2,h-9);}
+function drawMaup(){const[x,w,h]=setupC("cMaup",240);x.clearRect(0,0,w,h);const pad={l:42,r:12,t:12,b:26};const M=D.maup,xs=M.years,yr=[0.80,1.03];axes(x,w,h,pad,yr,v=>v.toFixed(2));const px=PX(w,pad,[xs[0],xs[xs.length-1]]),py=PY(h,pad,yr);x.strokeStyle="#b9c1c8";x.setLineDash([3,3]);x.beginPath();x.moveTo(px(xs[0]),py(1));x.lineTo(px(xs[xs.length-1]),py(1));x.stroke();x.setLineDash([]);const line=(ys,col,dash)=>{x.strokeStyle=col;x.lineWidth=2;x.setLineDash(dash||[]);x.beginPath();ys.forEach((v,i)=>{const X=px(xs[i]),Y=py(v);i?x.lineTo(X,Y):x.moveTo(X,Y);});x.stroke();x.setLineDash([]);};line(M.ratio_frac,SL,[5,4]);line(M.ratio_bin,AC);const i86=xs.indexOf(1986);if(i86>=0){x.fillStyle=AC;x.beginPath();x.arc(px(1986),py(M.ratio_bin[i86]),3,0,7);x.fill();x.font="10px sans-serif";x.textAlign="left";x.fillStyle=AC;x.fillText("1986: 0.83",px(1988),py(0.85));}x.font="10px sans-serif";x.textAlign="left";x.fillStyle=AC;x.fillText("in-or-out (binary)",px(xs[22]),py(0.965));x.fillStyle=SL;x.fillText("keeps the fraction",px(xs[2]),py(1.018));const st=document.getElementById("maupStats");st.innerHTML=`<div class="stat"><div class="v">up to 17%</div><div class="l">exposure understated<br>in fragmented years</div></div><div class="stat"><div class="v">r=${M.r}</div><div class="l">explained by<br>fragmentation</div></div><div class="stat"><div class="v">ρ=${M.agree.spearman}</div><div class="l">trend agreement with<br>an independent index</div></div>`;}
+function drawFragScatter(){const[x,w,h]=setupC("cFrag",240);x.clearRect(0,0,w,h);const pad={l:42,r:14,t:14,b:30};const M=D.maup,xs=M.borderline,ys=M.ratio_bin,yrs=M.years;const xmax=Math.max(...xs)*1.1;axes(x,w,h,pad,[0.80,1.03],v=>v.toFixed(2));const px=PX(w,pad,[0,xmax]),py=PY(h,pad,[0.80,1.03]);x.strokeStyle="#b9c1c8";x.setLineDash([3,3]);x.beginPath();x.moveTo(pad.l,py(1));x.lineTo(w-pad.r,py(1));x.stroke();x.setLineDash([]);xs.forEach((bx,i)=>{const X=px(bx),Y=py(ys[i]),is86=yrs[i]===1986;x.fillStyle=is86?AC:"rgba(63,109,140,.55)";x.beginPath();x.arc(X,Y,is86?4.5:3,0,7);x.fill();});const i86=yrs.indexOf(1986);if(i86>=0){x.fillStyle=AC;x.font="bold 11px sans-serif";x.textAlign="left";x.fillText("1986",px(xs[i86])+7,py(ys[i86])+3);}x.fillStyle="#66707a";x.font="10px sans-serif";x.textAlign="right";x.fillText("r = "+M.r,w-pad.r,pad.t+2);x.textAlign="center";x.fillText("population share in borderline (40–49% coverage) cells →",(w+pad.l)/2,h-6);}
+function drawCharts(){drawAttr();drawTrend();drawConc();drawMaup();drawFragScatter();}
+
+// ---- boot ----
+function boot(){for(const v of ["SM","Q","SMxQ"]){let mx=1,mxP=1;for(const code in countries){const e=countries[code];let t=0;for(const x of e["pd_"+v])t+=x;mx=Math.max(mx,t*1000);let p=0;for(const x of e["ppl_"+v])p=Math.max(p,x);mxP=Math.max(mxP,p);}countryMax[v]=mx;countryMaxPpl[v]=mxP;}
+  const ec=D.eventCatalogue;
+  if(ec)document.getElementById("evStats").innerHTML=`<b>In practice:</b> ${ec.SM.n} SM events since 1980 (median ${ec.SM.durMedian} days, median footprint ${fmtInt(ec.SM.areaMedianKm2)} km²); ${ec.Q.n} Q events (median ${ec.Q.durMedian} days).`;
+  fit();refreshAll();drawCharts();}
+window.addEventListener("resize",()=>{fit();drawCharts();renderReadout();});
+boot();
+</script>
+</body>
+</html>

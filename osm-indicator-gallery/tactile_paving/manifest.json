@@ -1,0 +1,298 @@
+{
+  "indicator": "tactile_paving",
+  "name": "Tactile Paving",
+  "runs": [
+    {
+      "aoi": "heidelberg",
+      "feature_count": 160,
+      "relevance": "meaningful",
+      "artifacts": [
+        {
+          "name": "About this indicator",
+          "modality": "MARKDOWN",
+          "filename": "about.md",
+          "summary": "Maps pedestrian crossings and kerbs fitted with tactile paving — the ridged or blistered surfaces that guide blind and partially sighted people. It is best read as a coverage indicator: what share of crossings and kerbs are barrier-free.",
+          "description": "Provenance: OpenStreetMap data as of 2026-06-19 · indicator: tactile_paving · reachability: straight-line distance."
+        },
+        {
+          "name": "Tactile paving locations explorer",
+          "modality": "VECTOR_MAP_LAYER",
+          "filename": "feature_layer.geojson",
+          "summary": "The actual OpenStreetMap objects behind the tactile paving locations, with their attributes. Zoom in to inspect them.",
+          "description": "The true OpenStreetMap geometry of every counted feature — points, ways and areas — carrying its name and (where mapped) opening hours. It appears from a neighbourhood zoom level so you can inspect the individual objects rather than an aggregate.\n\nProvenance: OpenStreetMap data as of 2026-06-19 · indicator: tactile_paving · reachability: straight-line distance."
+        },
+        {
+          "name": "Tactile paving locations map",
+          "modality": "VECTOR_MAP_LAYER",
+          "filename": "category_map.geojson",
+          "summary": "Publicly mapped tactile paving locations, coloured by category. Results depend on OpenStreetMap data completeness. If you can, contribute to OSM.",
+          "description": "Each point is a publicly accessible feature counted by this indicator, extracted from OpenStreetMap. Point locations are the representative centroids of the underlying OSM features.\n\nProvenance: OpenStreetMap data as of 2026-06-19 · indicator: tactile_paving · reachability: straight-line distance."
+        },
+        {
+          "name": "Category composition",
+          "modality": "CHART_PLOTLY",
+          "filename": "composition.json",
+          "summary": "Share of tactile paving locations by category. Results depend on OpenStreetMap data completeness. If you can, contribute to OSM.",
+          "description": "The proportion of the area’s tactile paving locations that falls into each category.\n\nProvenance: OpenStreetMap data as of 2026-06-19 · indicator: tactile_paving · reachability: straight-line distance."
+        },
+        {
+          "name": "Summary",
+          "modality": "TABLE",
+          "filename": "summary.csv",
+          "summary": "Count, density per km² and per 1,000 inhabitants and share, per category. Results depend on OpenStreetMap data completeness. If you can, contribute to OSM.",
+          "description": "Absolute count, density per km², density per 1,000 inhabitants and percentage share of tactile paving locations for each selected category, with an overall total.\n\nProvenance: OpenStreetMap data as of 2026-06-19 · indicator: tactile_paving · reachability: straight-line distance."
+        },
+        {
+          "name": "At a glance",
+          "modality": "MARKDOWN",
+          "filename": "headline.md",
+          "summary": "160 tactile paving locations, 13.8 per km².",
+          "description": "Provenance: OpenStreetMap data as of 2026-06-19 · indicator: tactile_paving · reachability: straight-line distance."
+        },
+        {
+          "name": "Tactile paving locations over time",
+          "modality": "CHART_PLOTLY",
+          "filename": "trend.json",
+          "summary": "How the number of mapped tactile paving locations changed over time. Results depend on OpenStreetMap data completeness. If you can, contribute to OSM.",
+          "description": "The count of tactile paving locations in the area at successive dates, reconstructed from OpenStreetMap history via the ohsome API. A rising line can reflect real-world growth **or** improving OpenStreetMap coverage — read it alongside the data-quality note.\n\nProvenance: OpenStreetMap data as of 2026-06-19 · indicator: tactile_paving · reachability: straight-line distance."
+        },
+        {
+          "name": "Density distribution",
+          "modality": "CHART_PLOTLY",
+          "filename": "distribution.json",
+          "summary": "How tactile paving locations density varies across neighbourhoods, as a box plot (median, quartiles and outliers). Results depend on OpenStreetMap data completeness. If you can, contribute to OSM.",
+          "description": "The distribution of tactile paving locations density (per km²) across the area’s administrative sub-areas, shown as a box plot (median, quartiles and outliers). A long tail or low median points to many under-served neighbourhoods.\n\nProvenance: OpenStreetMap data as of 2026-06-19 · indicator: tactile_paving · reachability: straight-line distance."
+        },
+        {
+          "name": "Statistics",
+          "modality": "MARKDOWN",
+          "filename": "statistics.md",
+          "summary": "Spread, inequality and clustering measures for the area’s tactile paving locations. Results depend on OpenStreetMap data completeness. If you can, contribute to OSM.",
+          "description": "Provenance: OpenStreetMap data as of 2026-06-19 · indicator: tactile_paving · reachability: straight-line distance."
+        },
+        {
+          "name": "Hot-spots & cold-spots",
+          "modality": "VECTOR_MAP_LAYER",
+          "filename": "hotspots.geojson",
+          "summary": "Global Moran’s I = -0.03. 1 hot-spot and 1 cold-spot neighbourhood(s) of tactile paving locations density (local Moran’s I / LISA). Only 10 sub-areas: too few for the permutation test to establish significance, so read a grey map as \"not enough units to tell\", not as \"no clustering\". Use a finer `subarea_mode` or a larger area to make this map informative. Results depend on OpenStreetMap data completeness. If you can, contribute to OSM.",
+          "description": "Sub-areas classified by the local Moran’s I statistic (LISA) over tactile paving locations density: **High-High** = a dense neighbourhood surrounded by others like it (hot-spot); **Low-Low** = a sparse one among others like it (cold-spot); **High-Low / Low-High** = spatial outliers. Significance uses a deterministic permutation test; non-significant sub-areas are greyed out.\n\nProvenance: OpenStreetMap data as of 2026-06-19 · indicator: tactile_paving · reachability: straight-line distance."
+        },
+        {
+          "name": "Density by sub-area",
+          "modality": "VECTOR_MAP_LAYER",
+          "filename": "subareas.geojson",
+          "summary": "Tactile paving locations density (per km²) across the neighbourhoods of the area. Results depend on OpenStreetMap data completeness. If you can, contribute to OSM.",
+          "description": "The area of interest split into OpenStreetMap administrative sub-areas, each shaded by its tactile paving locations density (per km²). Use it to compare how well different neighbourhoods are served.\n\nProvenance: OpenStreetMap data as of 2026-06-19 · indicator: tactile_paving · reachability: straight-line distance."
+        },
+        {
+          "name": "Sub-area ranking",
+          "modality": "CHART_PLOTLY",
+          "filename": "subarea_ranking.json",
+          "summary": "Neighbourhoods ranked by tactile paving locations density (per km²). Results depend on OpenStreetMap data completeness. If you can, contribute to OSM.",
+          "description": "Tactile paving locations density per km² for each administrative sub-area, ordered from highest to lowest.\n\nProvenance: OpenStreetMap data as of 2026-06-19 · indicator: tactile_paving · reachability: straight-line distance."
+        },
+        {
+          "name": "Top sub-areas",
+          "modality": "TABLE",
+          "filename": "subarea_ranking_table.csv",
+          "summary": "The 10 best-served neighbourhoods by tactile paving locations density (per km²). Results depend on OpenStreetMap data completeness. If you can, contribute to OSM.",
+          "description": "The 10 administrative sub-areas with the highest tactile paving locations density, with their count, area and density — a compact, sortable companion to the ranking chart.\n\nProvenance: OpenStreetMap data as of 2026-06-19 · indicator: tactile_paving · reachability: straight-line distance."
+        },
+        {
+          "name": "Provision vs population",
+          "modality": "CHART_PLOTLY",
+          "filename": "population_equity.json",
+          "summary": "Do tactile paving locations track where people live? Tactile paving locations per 1,000 inhabitants against each sub-area’s population. Results depend on OpenStreetMap data completeness. If you can, contribute to OSM.",
+          "description": "Each point is an administrative sub-area, plotting its population against its tactile paving locations per 1,000 inhabitants. Sub-areas low on the vertical axis but high on the horizontal axis are under-served relative to their residents — an equity signal a density map cannot show.\n\nProvenance: OpenStreetMap data as of 2026-06-19 · indicator: tactile_paving · reachability: straight-line distance."
+        },
+        {
+          "name": "Provision per capita",
+          "modality": "VECTOR_MAP_LAYER",
+          "filename": "per_capita.geojson",
+          "summary": "Tactile paving locations per 1,000 residents across the sub-areas — provision relative to need. Results depend on OpenStreetMap data completeness. If you can, contribute to OSM.",
+          "description": "Each administrative sub-area shaded by its number of tactile paving locations per 1,000 inhabitants, so the colour reflects provision *relative to residents* rather than raw density. A populous sub-area with average density can still read as under-served here. Sub-areas without usable population data are omitted.\n\nProvenance: OpenStreetMap data as of 2026-06-19 · indicator: tactile_paving · reachability: straight-line distance."
+        },
+        {
+          "name": "Coverage on foot",
+          "modality": "VECTOR_MAP_LAYER",
+          "filename": "coverage_foot.geojson",
+          "summary": "About 48% of the area is within 300 m on foot of a tactile paving location. About 78% of residents are within reach. Results depend on OpenStreetMap data completeness. If you can, contribute to OSM.",
+          "description": "The area of interest split into the part within reach (on foot) of any feature and the part beyond it. Reachability is computed using straight-line distance.\n\nProvenance: OpenStreetMap data as of 2026-06-19 · indicator: tactile_paving · reachability: straight-line distance."
+        },
+        {
+          "name": "Underserved areas",
+          "modality": "VECTOR_MAP_LAYER",
+          "filename": "underserved.geojson",
+          "summary": "Share of each neighbourhood beyond 300 m on foot of any tactile paving location. About 10,922 residents live beyond that reach. Results depend on OpenStreetMap data completeness. If you can, contribute to OSM.",
+          "description": "Each administrative sub-area shaded by the fraction of its area that lies **beyond reach** (on foot) of any feature — the complement of the coverage map. Darker = more underserved. Use it to target where new provision would reach the most currently-unserved people.\n\nProvenance: OpenStreetMap data as of 2026-06-19 · indicator: tactile_paving · reachability: straight-line distance."
+        },
+        {
+          "name": "Most underserved sub-areas",
+          "modality": "TABLE",
+          "filename": "underserved_table.csv",
+          "summary": "The 10 neighbourhoods with the largest share beyond 300 m on foot of a tactile paving location. Results depend on OpenStreetMap data completeness. If you can, contribute to OSM.",
+          "description": "The 10 administrative sub-areas with the greatest share of their area beyond reach (on foot) of any feature — a sortable companion to the underserved-areas map.\n\nProvenance: OpenStreetMap data as of 2026-06-19 · indicator: tactile_paving · reachability: straight-line distance."
+        },
+        {
+          "name": "Tactile paving locations heatmap",
+          "modality": "RASTER_MAP_LAYER",
+          "filename": "heatmap.tiff",
+          "summary": "A gridded density of tactile paving locations across the area — brighter means more. Results depend on OpenStreetMap data completeness. If you can, contribute to OSM.",
+          "description": "A regular grid over the area of interest, each cell shaded by how many tactile paving locations fall within it. It reveals clusters and gaps that individual points can hide.\n\nProvenance: OpenStreetMap data as of 2026-06-19 · indicator: tactile_paving · reachability: straight-line distance."
+        },
+        {
+          "name": "Tactile paving locations density surface",
+          "modality": "RASTER_MAP_LAYER",
+          "filename": "density_surface.tiff",
+          "summary": "A smoothed, continuous density surface of tactile paving locations (kernel-style). Results depend on OpenStreetMap data completeness. If you can, contribute to OSM.",
+          "description": "A kernel-smoothed density of tactile paving locations: the point counts are blurred into a continuous surface so clusters show as smooth hot regions rather than individual grid cells — a boundary-free complement to the sub-area choropleth and the raw heatmap.\n\nProvenance: OpenStreetMap data as of 2026-06-19 · indicator: tactile_paving · reachability: straight-line distance."
+        },
+        {
+          "name": "Distance to nearest tactile paving location",
+          "modality": "RASTER_MAP_LAYER",
+          "filename": "nearest_distance.tiff",
+          "summary": "How far to the nearest tactile paving location from anywhere in the area (metres). Darker = further. Results depend on OpenStreetMap data completeness. If you can, contribute to OSM.",
+          "description": "A regular grid over the area, each cell shaded by the straight-line distance to the nearest tactile paving location. Dark cells are the furthest from any feature — the access gaps. Straight-line (not routed), so it is an optimistic lower bound; it needs no routing service.\n\nProvenance: OpenStreetMap data as of 2026-06-19 · indicator: tactile_paving · reachability: straight-line distance."
+        },
+        {
+          "name": "Data currentness",
+          "modality": "VECTOR_MAP_LAYER",
+          "filename": "currentness.geojson",
+          "summary": "How recently each tactile paving location was last edited in OpenStreetMap (median 1 yr ago). Darker = longer since the last edit. Results depend on OpenStreetMap data completeness. If you can, contribute to OSM.",
+          "description": "Each point is a feature, shaded by the number of years since its last OpenStreetMap edit (measured against the data snapshot). Clusters of dark points mark areas where the OSM picture is ageing and may warrant a re-survey — a spatial companion to the data-quality note.\n\nProvenance: OpenStreetMap data as of 2026-06-19 · indicator: tactile_paving · reachability: straight-line distance."
+        },
+        {
+          "name": "OpenStreetMap data quality",
+          "modality": "MARKDOWN",
+          "filename": "data_quality.md",
+          "summary": "OpenStreetMap data as of 2026-06-19. How complete is the OpenStreetMap data behind these results?",
+          "description": "Provenance: OpenStreetMap data as of 2026-06-19 · indicator: tactile_paving · reachability: straight-line distance."
+        }
+      ],
+      "errors": {}
+    },
+    {
+      "aoi": "dar_es_salaam",
+      "feature_count": 1,
+      "relevance": "sparse (demo/test)",
+      "artifacts": [
+        {
+          "name": "About this indicator",
+          "modality": "MARKDOWN",
+          "filename": "about.md"
+        },
+        {
+          "name": "Tactile paving locations explorer",
+          "modality": "VECTOR_MAP_LAYER",
+          "filename": "feature_layer.geojson"
+        },
+        {
+          "name": "Tactile paving locations map",
+          "modality": "VECTOR_MAP_LAYER",
+          "filename": "category_map.geojson"
+        },
+        {
+          "name": "Category composition",
+          "modality": "CHART_PLOTLY",
+          "filename": "composition.json"
+        },
+        {
+          "name": "Summary",
+          "modality": "TABLE",
+          "filename": "summary.csv"
+        },
+        {
+          "name": "At a glance",
+          "modality": "MARKDOWN",
+          "filename": "headline.md"
+        },
+        {
+          "name": "Tactile paving locations over time",
+          "modality": "CHART_PLOTLY",
+          "filename": "trend.json"
+        },
+        {
+          "name": "Density distribution",
+          "modality": "CHART_PLOTLY",
+          "filename": "distribution.json"
+        },
+        {
+          "name": "Statistics",
+          "modality": "MARKDOWN",
+          "filename": "statistics.md"
+        },
+        {
+          "name": "Hot-spots & cold-spots",
+          "modality": "VECTOR_MAP_LAYER",
+          "filename": "hotspots.geojson"
+        },
+        {
+          "name": "Density by sub-area",
+          "modality": "VECTOR_MAP_LAYER",
+          "filename": "subareas.geojson"
+        },
+        {
+          "name": "Sub-area ranking",
+          "modality": "CHART_PLOTLY",
+          "filename": "subarea_ranking.json"
+        },
+        {
+          "name": "Top sub-areas",
+          "modality": "TABLE",
+          "filename": "subarea_ranking_table.csv"
+        },
+        {
+          "name": "Provision vs population",
+          "modality": "CHART_PLOTLY",
+          "filename": "population_equity.json"
+        },
+        {
+          "name": "Provision per capita",
+          "modality": "VECTOR_MAP_LAYER",
+          "filename": "per_capita.geojson"
+        },
+        {
+          "name": "Coverage on foot",
+          "modality": "VECTOR_MAP_LAYER",
+          "filename": "coverage_foot.geojson"
+        },
+        {
+          "name": "Underserved areas",
+          "modality": "VECTOR_MAP_LAYER",
+          "filename": "underserved.geojson"
+        },
+        {
+          "name": "Most underserved sub-areas",
+          "modality": "TABLE",
+          "filename": "underserved_table.csv"
+        },
+        {
+          "name": "Tactile paving locations heatmap",
+          "modality": "RASTER_MAP_LAYER",
+          "filename": "heatmap.tiff"
+        },
+        {
+          "name": "Tactile paving locations density surface",
+          "modality": "RASTER_MAP_LAYER",
+          "filename": "density_surface.tiff"
+        },
+        {
+          "name": "Distance to nearest tactile paving location",
+          "modality": "RASTER_MAP_LAYER",
+          "filename": "nearest_distance.tiff"
+        },
+        {
+          "name": "Data currentness",
+          "modality": "VECTOR_MAP_LAYER",
+          "filename": "currentness.geojson"
+        },
+        {
+          "name": "OpenStreetMap data quality",
+          "modality": "MARKDOWN",
+          "filename": "data_quality.md"
+        }
+      ],
+      "errors": {}
+    }
+  ]
+}
