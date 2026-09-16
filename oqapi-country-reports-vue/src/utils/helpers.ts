@@ -14,11 +14,6 @@ export function prettifyIndicator(name: string): string {
     .replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
-export interface CountryInfo {
-  code: string;
-  name: string;
-}
-
 export interface TopicConfig {
   comparisonIndicator: string;
   comparisonLabel: string;
@@ -29,34 +24,49 @@ export interface TopicConfig {
 }
 
 export const topicConfig: Record<string, TopicConfig> = {
-  "roads-all-highways": {
-    comparisonIndicator: "road-comparison",
+  "roads": {
+    comparisonIndicator: "roads-thematic-accuracy",
     comparisonLabel: "Road Completeness",
     currentnessLabel: "Road Currentness",
     completenessIndicator: "attribute-completeness_surface",
     completenessLabel: "Attribute Completeness",
     completenessFigure: "attribute-completeness_surface"
   },
-  "building-area": {
+  "buildings": {
     comparisonIndicator: "building-comparison",
     comparisonLabel: "Building Completeness",
     currentnessLabel: "Building Currentness",
     completenessIndicator: "user-activity",
     completenessLabel: "User Activity",
     completenessFigure: "user-activity"
-  }
-};
-
-export const defaultIndicators: Record<string, { tile6: string; tile7: string; tile8: string }> = {
-  "roads-all-highways": {
-    tile6: "road-comparison",
-    tile7: "currentness",
-    tile8: "attribute-completeness_surface"
   },
-  "building-area": {
-    tile6: "building-comparison",
-    tile7: "currentness",
-    tile8: "user-activity"
+  "land-cover": {
+    comparisonIndicator: "land-cover-thematic-accuracy",
+    comparisonLabel: "Land Cover Thematic Accuracy",
+    currentnessLabel: "Land Cover Currentness",
+    completenessIndicator: "land-cover-completeness",
+    completenessLabel: "Land Cover Completeness",
+    completenessFigure: "land-cover-completeness"
+  },
+  // Schools/hospitals have no reference-dataset comparison indicator at all -
+  // mapping-saturation (how mature the mapping is) is the closest available
+  // stand-in, rather than falling back to whatever indicator happens to load
+  // first (which collapsed onto "currentness", showing the same card twice).
+  "schools": {
+    comparisonIndicator: "mapping-saturation",
+    comparisonLabel: "Mapping Saturation",
+    currentnessLabel: "School Currentness",
+    completenessIndicator: "attribute-completeness_name",
+    completenessLabel: "Attribute Completeness",
+    completenessFigure: "attribute-completeness_name"
+  },
+  "hospitals": {
+    comparisonIndicator: "mapping-saturation",
+    comparisonLabel: "Mapping Saturation",
+    currentnessLabel: "Hospital Currentness",
+    completenessIndicator: "attribute-completeness_emergency",
+    completenessLabel: "Attribute Completeness",
+    completenessFigure: "attribute-completeness_emergency"
   }
 };
 
@@ -70,67 +80,89 @@ export function setCurrentSchoolSubTopic(subTopic: string): void {
   currentSchoolSubTopic = subTopic;
 }
 
-export function getTreemapTopic(topic: string): string {
+/**
+ * Which tag-distribution grouping_key to query for a given topic (and, for
+ * schools/hospitals, the currently selected sub-topic toggle). This is a query
+ * parameter now, not a file-naming key - the tag-distribution parquet covers
+ * every topic/grouping_key/measure combination in one file per (country, layer).
+ */
+export function getTagGroupingKey(topic: string): string {
   if (!topic) return "";
   const topicLower = topic.toLowerCase();
 
-  if (topicLower.startsWith("roads")) return "highway";
+  if (topicLower.startsWith("road")) return "highway";
+  if (topicLower.startsWith("building")) return "building";
+  if (topicLower.startsWith("land-cover") || topicLower.startsWith("land")) return "landuse";
 
   if (topicLower.startsWith("school")) {
-    return "school_" + currentSchoolSubTopic;
+    return currentSchoolSubTopic === "isced" ? "isced:level" : "operator:type";
   }
 
-  if (topicLower.startsWith("hospital")) {
-    const sub = currentSchoolSubTopic === "isced" ? "speciality" : "operator";
-    return "hospital_" + sub;
+  if (topicLower.startsWith("hospital") || topicLower.startsWith("healthcare-primary")) {
+    return currentSchoolSubTopic === "isced" ? "healthcare:speciality" : "operator:type";
   }
 
-  if (topicLower.startsWith("healthcare-primary")) {
-    const sub = currentSchoolSubTopic === "isced" ? "speciality" : "operator";
-    return "healthcare-primary_" + sub;
-  }
-
-  const topicMain = topic.split("-")[0].toLowerCase();
-  return topicMain;
+  return "";
 }
 
-export function getFigureTopic(topic: string): string {
-  const topicLower = topic.toLowerCase();
-  if (topicLower.startsWith("hospital")) return "hospitals";
-  if (topicLower.startsWith("school")) return "school";
-  return topic || "";
+/**
+ * Per-country layer names. Most countries' boundaries come from geoBoundaries
+ * (adm0/adm1/h3); Germany's come from BKG instead, with its own level names.
+ * "countryLevel" is the single whole-country polygon layer (treemap, tag
+ * coverage, gauge figures, and indicator descriptions all come from here,
+ * independent of whichever grid layer a map is currently showing).
+ * "detailLevel" is the finer sub-national layer used as the default map grid.
+ */
+export interface CountryLayers {
+  countryLevel: string;
+  countryLevelLabel: string;
+  // Optional extra granularity between countryLevel and detailLevel - only
+  // Germany has this today (Bundesländer, between the whole-country and
+  // Kreis layers), so it's undefined everywhere else.
+  stateLevel?: string;
+  stateLevelLabel?: string;
+  detailLevel: string;
+  detailLevelLabel: string;
+  h3Level: string;
+  h3LevelLabel: string;
+}
+
+const DEFAULT_LAYERS: CountryLayers = {
+  countryLevel: "adm0",
+  countryLevelLabel: "Admin 0",
+  detailLevel: "adm1",
+  detailLevelLabel: "Admin 1",
+  h3Level: "h3",
+  h3LevelLabel: "Hexagonal Grid"
+};
+const COUNTRY_LAYER_OVERRIDES: Record<string, CountryLayers> = {
+  DEU: {
+    countryLevel: "vg2500_sta",
+    countryLevelLabel: "Germany",
+    stateLevel: "vg2500_lan",
+    stateLevelLabel: "States",
+    detailLevel: "vg1000_krs",
+    detailLevelLabel: "Districts",
+    h3Level: "h3",
+    h3LevelLabel: "Hexagonal Grid"
+  }
+};
+
+export function getCountryLayers(code: string): CountryLayers {
+  return COUNTRY_LAYER_OVERRIDES[code] || DEFAULT_LAYERS;
 }
 
 export interface BuildUrlsResult {
   pmtilesUrl: string;
   parquetUrl: string;
-  treemapUrl: string;
-  countUrl: string;
-  figureBase: string;
+  tagDistributionUrl: string;
 }
 
-export function buildUrls(code: string, topic: string): BuildUrlsResult {
-  const distributionKey = getTreemapTopic(topic);
-  let countKey = distributionKey;
-
-  const topicLower = topic.toLowerCase();
-  if (topicLower.startsWith("hospital")) {
-    countKey = "hospital_count";
-  } else if (topicLower.startsWith("healthcare-primary")) {
-    countKey = "healthcare-primary_count";
-  } else if (topicLower.startsWith("school")) {
-    countKey = "school_isced";
-  }
-
+/** URLs for one (country, layer) pair - the pmtiles file is shared across all layers of a country. */
+export function buildUrls(code: string, layer: string): BuildUrlsResult {
   return {
     pmtilesUrl: `https://hot.storage.heigit.org/heigit-hdx-public/oqapi_hdx/downloads/${code}/${code}_boundaries.pmtiles`,
-    parquetUrl: `https://hot.storage.heigit.org/heigit-hdx-public/oqapi_hdx/downloads/${code}/${code}_long.parquet`,
-    treemapUrl: `https://hot.storage.heigit.org/heigit-hdx-public/oqapi_hdx/osm_stats/${code}/${code}_${distributionKey}_tag_distribution.json.gz`,
-    countUrl: `https://hot.storage.heigit.org/heigit-hdx-public/oqapi_hdx/osm_stats/${code}/${code}_${countKey}_tag_distribution.json.gz`,
-    figureBase: `https://hot.storage.heigit.org/heigit-hdx-public/oqapi_hdx/figures/${code}`
+    parquetUrl: `https://hot.storage.heigit.org/heigit-hdx-public/oqapi_hdx/downloads/${code}/${code}_${layer}_long.parquet`,
+    tagDistributionUrl: `https://hot.storage.heigit.org/heigit-hdx-public/oqapi_hdx/downloads/${code}/${code}_${layer}_tag_distribution.parquet`
   };
-}
-
-export function getTopicsForQuery(topic: string): string[] {
-  return [topic];
 }

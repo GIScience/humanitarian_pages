@@ -2,15 +2,98 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Self-hosted Archivo (legacy iframe-2col mode) and Lato (redesigned normal
+   mode) - bundled from src/assets/fonts/ instead of Google Fonts, so the app
+   makes no font requests to any third party. Only the Latin subset is kept
+   (covers every character actually used, including accented country names
+   like "Côte d'Ivoire" or "São Tomé"), matching what Google's own CSS served
+   for these weights. */
+@font-face {
+  font-family: 'Archivo';
+  font-style: normal;
+  font-weight: 300 800;
+  font-display: swap;
+  src: url('./fonts/archivo-latin-var.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Lato';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('./fonts/lato-400.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Lato';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: url('./fonts/lato-400italic.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Lato';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('./fonts/lato-700.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Lato';
+  font-style: italic;
+  font-weight: 700;
+  font-display: swap;
+  src: url('./fonts/lato-700italic.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Lato';
+  font-style: normal;
+  font-weight: 900;
+  font-display: swap;
+  src: url('./fonts/lato-900.woff2') format('woff2');
+}
+
 :root {
+  /* Legacy tokens, kept so the still-untouched embed/iframe-2col layout
+     renders exactly as before. */
   --font-sans: 'Archivo', sans-serif;
   --color-bg: #F3F3F3;
   --color-card-bg: #fff;
   --color-border: #E1E0E1;
   --color-text: #2C3038;
   --spacing: 0.5rem;
-  --border-radius: 0.5rem;
+  --border-radius: 4px;
   --font-size-text: 0.75rem;
+
+  /* Redesign tokens - matched to HeiGIT's actual ohsome-dashboard product
+     (ohsome-dashboard.heigit.org), not an invented palette: Lato throughout
+     (its only font, no separate display face), the same primary blue used
+     for all interactive/accent UI there, brand red reserved for the logo
+     mark the way the real dashboard does, white cards on a light gray page
+     (matching this app's own pre-redesign look), modest 4px corners and a
+     subtle card shadow instead of a heavier one. */
+  --paper: #F3F3F3;
+  --paper-raised: #FFFFFF;
+  --ink: #1B1C1D;
+  --ink-soft: #767676;
+  --ink-faint: #9B9B9B;
+  --line: #E1E0E1;
+  --line-strong: #C8C8C8;
+  --accent: #2185D0;
+  --accent-ink: #ffffff;
+  --accent-soft: #DFF0FF;
+  --brand: #CA2334;
+  --good: #21BA45;
+  --good-soft: rgba(33,186,69,0.12);
+  --warn: #F2C037;
+  --warn-soft: rgba(242,192,55,0.16);
+  --bad: #DB2828;
+  --bad-soft: rgba(219,40,40,0.12);
+  --disabled: #C7CFCE;
+  --shadow: 0 1px 3px 0 rgba(0,0,0,0.1), 0 0 0 1px rgba(0,0,0,0.06);
+  --radius: 8px;
+
+  --font-display: 'Lato', 'Helvetica Neue', Arial, Helvetica, sans-serif;
+  --font-body: 'Lato', 'Helvetica Neue', Arial, Helvetica, sans-serif;
+  --font-mono: 'Lato', 'Helvetica Neue', Arial, Helvetica, sans-serif;
 }
 
 html,
@@ -28,11 +111,33 @@ body {
   }
 }
 
+/* Embed mode - when dashboard is inside HDX iframe */
+body.embed-mode {
+  padding: 0;
+  height: 100%;
+  overflow: hidden; /* Main scrolling handled by .page-content.flexible */
+}
+
+body.embed-mode #app {
+  height: 100%;
+  overflow: hidden;
+}
+
+/* Ensure smooth scrolling in embed mode */
+.embed-mode .page-content.flexible {
+  scroll-behavior: smooth;
+}
+
+/* Scale down fonts and spacing for embed mode */
+.embed-mode {
+  font-size: 0.9rem;
+}
+
 body {
   padding: var(--spacing);
-  font-family: var(--font-sans);
-  background: var(--color-bg);
-  color: var(--color-text);
+  font-family: var(--font-body);
+  background: var(--paper);
+  color: var(--ink);
   box-sizing: border-box;
   display: flex;
   flex-direction: column;

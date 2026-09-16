@@ -1,8 +1,25 @@
-import { initDuckDB, registerParquetFile } from "../utils/duckdb";
+import { initDuckDB, registerParquetFile, runQuery } from "../utils/duckdb";
+import { PMTiles } from "pmtiles";
+import { CANDIDATE_COUNTRIES } from "../config/countries";
 
 export interface Country {
   code: string;
   name: string;
+}
+
+/** Cheap existence check for any file this app reads from S3 - a plain HEAD
+ * request, no listing permission needed. Used both for one layer's parquet
+ * file (not every grid layer has been processed for every country yet, and
+ * selecting one that isn't just leaves the map flat gray with no indication
+ * why) and, in fetchAvailableCountries() below, for a candidate country's
+ * boundaries file. */
+export async function checkParquetExists(url: string): Promise<boolean> {
+  try {
+    const resp = await fetch(url, { method: "HEAD" });
+    return resp.ok;
+  } catch {
+    return false;
+  }
 }
 
 export async function fetchAvailableCountries(): Promise<Country[]> {
@@ -39,16 +56,18 @@ export async function fetchAvailableCountries(): Promise<Country[]> {
       .join(" ");
   }
 
-  const urlS3 = "https://hot.storage.heigit.org/heigit-hdx-public?list-type=2&delimiter=/&prefix=oqapi_hdx/downloads/";
-  const resS3 = await fetch(urlS3);
-  const textS3 = await resS3.text();
-  const xml = new DOMParser().parseFromString(textS3, "application/xml");
+  // Checking each maintained candidate directly (see config/countries.ts)
+  // instead of listing the bucket: a HEAD request needs no special S3
+  // permission, unlike the ListBucket call a bucket listing would need.
+  const existenceChecks = await Promise.all(
+    CANDIDATE_COUNTRIES.map(async (code) => {
+      const url = `https://hot.storage.heigit.org/heigit-hdx-public/oqapi_hdx/downloads/${code}/${code}_boundaries.pmtiles`;
+      return (await checkParquetExists(url)) ? code : null;
+    })
+  );
 
-  const prefixes = [...xml.querySelectorAll("CommonPrefixes > Prefix")]
-    .map((el) => el.textContent?.replace("oqapi_hdx/downloads/", "").replace("/", "") || "")
-    .filter(Boolean);
-
-  const countries = prefixes
+  const countries = existenceChecks
+    .filter((code): code is string => code !== null)
     .map((code) => {
       const rawSlug = countryYamlData[code]?.slug || code;
       return { code, name: prettifySlug(rawSlug) };
@@ -71,7 +90,7 @@ export async function loadAvailableTopics(parquetUrl: string): Promise<string[]>
   try {
     const tableName = await registerParquetFile(parquetUrl, db);
 
-    const schema = await conn.query(`DESCRIBE SELECT * FROM read_parquet('${tableName}')`);
+    const schema = await runQuery(conn,`DESCRIBE SELECT * FROM read_parquet('${tableName}')`);
     const schemaArray = toArray(schema);
     const cols = schemaArray.map((r: any) => r.column_name);
 
@@ -83,7 +102,7 @@ export async function loadAvailableTopics(parquetUrl: string): Promise<string[]>
 
     if (!topicCol) return [];
 
-    const result = await conn.query(`
+    const result = await runQuery(conn,`
       SELECT DISTINCT ${topicCol} AS topic
       FROM read_parquet('${tableName}')
       ORDER BY ${topicCol}
@@ -103,7 +122,7 @@ export async function loadIndicators(parquetUrl: string, topicName: string): Pro
   try {
     const tableName = await registerParquetFile(parquetUrl, db);
 
-    const schema = await conn.query(`DESCRIBE SELECT * FROM read_parquet('${tableName}')`);
+    const schema = await runQuery(conn,`DESCRIBE SELECT * FROM read_parquet('${tableName}')`);
     const schemaArray = toArray(schema);
     const cols = schemaArray.map((r: any) => r.column_name);
 
@@ -130,7 +149,7 @@ export async function loadIndicators(parquetUrl: string, topicName: string): Pro
       .map((t) => `lower(trim(${topicCol})) = '${t.toLowerCase()}'`)
       .join(" OR ");
 
-    const result = await conn.query(`
+    const result = await runQuery(conn,`
       SELECT DISTINCT ${indicatorCol} AS indicator
       FROM read_parquet('${tableName}')
       WHERE ${topicFilter}
@@ -151,63 +170,124 @@ export interface IndicatorLookup {
   description: string;
 }
 
-export async function loadIndicatorLookup(
+export interface RegionIndicatorValue {
+  value: number;
+  description: string;
+}
+
+/**
+ * Same (topic, indicator) values loadIndicatorLookups reads for the whole
+ * layer, but scoped down to one region's own row - used to make the
+ * indicator cards/chips, attribute-completeness bars and hero band reflect
+ * a clicked map polygon instead of the country-wide average.
+ */
+export async function loadRegionIndicatorValues(
+  parquetUrl: string,
+  topic: string,
+  geomId: string,
+  indicatorNames: string[]
+): Promise<Record<string, RegionIndicatorValue>> {
+  if (indicatorNames.length === 0) return {};
+
+  const { db, conn } = await initDuckDB();
+
+  try {
+    const tableName = await registerParquetFile(parquetUrl, db);
+    const indicatorFilter = indicatorNames.map(n => `'${n}'`).join(", ");
+
+    const result = await runQuery(conn, `
+      SELECT indicator, value, description
+      FROM read_parquet('${tableName}')
+      WHERE topic = '${topic}' AND geomID = '${geomId}' AND indicator IN (${indicatorFilter})
+    `);
+
+    const resultArray = toArray(result);
+    const out: Record<string, RegionIndicatorValue> = {};
+    resultArray.forEach((r: any) => {
+      out[String(r.indicator)] = {
+        value: r.value != null ? Number(r.value) : 0,
+        description: r.description || ''
+      };
+    });
+    return out;
+  } catch (e) {
+    console.error("Failed to load region indicator values:", e);
+    return {};
+  }
+}
+
+export async function loadIndicatorLookups(
   parquetUrl: string,
   topicName: string,
-  indicatorName: string
-): Promise<IndicatorLookup> {
+  indicatorNames: string[]
+): Promise<IndicatorLookup[]> {
+  if (indicatorNames.length === 0) return [];
+
   const { db, conn } = await initDuckDB();
 
   try {
     const tableName = await registerParquetFile(parquetUrl, db);
 
-    const topics = [topicName];
+    const topicFilter = `topic = '${topicName}'`;
+    const indicatorFilter = indicatorNames.map(n => `'${n}'`).join(", ");
 
-    const topicFilter = topics.map((t) => `topic = '${t}'`).join(" OR ");
-
-    const result = await conn.query(`
-      SELECT *
+    const result = await runQuery(conn,`
+      SELECT indicator, geomID, value, description
       FROM read_parquet('${tableName}')
-      WHERE (${topicFilter})
-        AND indicator = '${indicatorName}'
+      WHERE ${topicFilter}
+        AND indicator IN (${indicatorFilter})
     `);
 
     const resultArray = toArray(result);
-    const lookup: Record<string, number> = {};
-    let sum = 0;
-    let count = 0;
-    let adm0Description = "";
+
+    const groups: Record<string, { sum: number; count: number; description: string; lookup: Record<string, number> }> = {};
+    for (const name of indicatorNames) {
+      groups[name] = { sum: 0, count: 0, description: "", lookup: {} };
+    }
 
     resultArray.forEach((r: any) => {
-      const value = Number(r.value);
-      const geomID = String(r.geomID);
+      const indicator = String(r.indicator);
+      if (!groups[indicator]) return;
 
-      lookup[geomID] = value;
+      // Every row in a country-level (single-feature) parquet already represents
+      // country level, so any non-empty description is the one we want - no more
+      // "is this the adm0 row" substring check needed (that heuristic assumed one
+      // combined file with every layer's rows mixed together; layers are now
+      // separate files).
+      if (r.description) {
+        groups[indicator].description = r.description;
+      }
+
+      if (r.value == null) return;
+      const value = Number(r.value);
+      if (isNaN(value)) return;
+
+      const geomID = String(r.geomID);
+      groups[indicator].lookup[geomID] = value;
 
       if (geomID.includes("_")) {
         const parts = geomID.split("_");
         const suffix = parts[parts.length - 1];
         if (suffix && suffix.length > 0) {
-          lookup[suffix] = value;
+          groups[indicator].lookup[suffix] = value;
         }
       }
 
-      if (!isNaN(value)) {
-        sum += value;
-        count++;
-      }
-
-      if (geomID.toLowerCase().includes("adm0") && r.description) {
-        adm0Description = r.description;
-      }
+      groups[indicator].sum += value;
+      groups[indicator].count++;
     });
 
-    const avg = count > 0 ? sum / count : 0;
-
-    return { lookup, avg, description: adm0Description };
+    return indicatorNames.map(name => {
+      const g = groups[name];
+      return {
+        lookup: g.lookup,
+        avg: g.count > 0 ? g.sum / g.count : 0,
+        description: g.description
+      };
+    });
   } catch (e) {
-    console.error("Failed to load indicator lookup:", e);
-    return { lookup: {}, avg: 0, description: "" };
+    console.error("Failed to load indicator lookups:", e);
+    return indicatorNames.map(() => ({ lookup: {}, avg: 0, description: "" }));
   }
 }
 
@@ -220,12 +300,8 @@ export interface PMTilesBounds {
 
 export async function getPMTilesBounds(url: string): Promise<PMTilesBounds | null> {
   try {
-    if (typeof window.pmtiles === 'undefined') {
-      console.error('PMTiles not loaded');
-      return null;
-    }
-    const pmtilesFile = new window.pmtiles.PMTiles(url);
-    const metadata = await pmtilesFile.getMetadata();
+    const pmtilesFile = new PMTiles(url);
+    const metadata = await pmtilesFile.getMetadata() as any;
     const boundsStr = metadata.bounds || metadata.antimeridian_adjusted_bounds;
     if (!boundsStr) return null;
     const [minLon, minLat, maxLon, maxLat] = boundsStr.split(",").map(Number);
@@ -250,11 +326,10 @@ export async function loadTagCoverage(parquetUrl: string): Promise<TagCoverageIt
     const query = `
       SELECT indicator, value
       FROM read_parquet('${tableName}')
-      WHERE geomID LIKE '%adm0%'
-        AND indicator LIKE 'attribute-completeness_%'
+      WHERE indicator LIKE 'attribute-completeness_%'
     `;
 
-    const result = await conn.query(query);
+    const result = await runQuery(conn,query);
     const resultArray = toArray(result);
 
     const lookup: Record<string, number> = {};
@@ -269,5 +344,165 @@ export async function loadTagCoverage(parquetUrl: string): Promise<TagCoverageIt
   } catch (e) {
     console.error("Failed to load tag coverage:", e);
     return [];
+  }
+}
+
+export interface TagDistributionMeasure {
+  treemap: any | null;
+  sumValue: number | null;
+}
+
+// The pipeline's treemap figures always label values "km" regardless of the
+// actual measure - "count" isn't a distance at all, and "length"/"area" are
+// raw meters/m² (ohsome-api's default units), not km/km². Correct both the
+// displayed unit and the underlying values (dividing every value by the same
+// factor doesn't change a treemap's proportions, only the number shown).
+const TREEMAP_UNIT_BY_MEASURE: Record<string, { divisor: number; unit: string } | null> = {
+  count: null,
+  length: { divisor: 1000, unit: "km" },
+  area: { divisor: 1_000_000, unit: "km²" }
+};
+
+// Plotly sometimes serializes a numeric array as a compact
+// { dtype, bdata: base64 } object instead of a plain array - decode it so
+// the values can be rescaled, same as if it were already a plain array.
+function decodeTreemapValues(values: any): number[] | null {
+  if (Array.isArray(values)) return values;
+  if (!values || typeof values.bdata !== "string") return null;
+
+  const binary = atob(values.bdata);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+
+  switch (values.dtype) {
+    case "f8": return Array.from(new Float64Array(bytes.buffer));
+    case "f4": return Array.from(new Float32Array(bytes.buffer));
+    case "i1": return Array.from(new Int8Array(bytes.buffer));
+    case "u1": return Array.from(new Uint8Array(bytes.buffer));
+    case "i2": return Array.from(new Int16Array(bytes.buffer));
+    case "u2": return Array.from(new Uint16Array(bytes.buffer));
+    case "i4": return Array.from(new Int32Array(bytes.buffer));
+    case "u4": return Array.from(new Uint32Array(bytes.buffer));
+    default: return null;
+  }
+}
+
+function fixTreemapUnits(fig: any, measure: string): any {
+  if (!fig?.data) return fig;
+  const conversion = TREEMAP_UNIT_BY_MEASURE[measure] ?? null;
+
+  fig.data.forEach((trace: any) => {
+    if (typeof trace.texttemplate === "string") {
+      trace.texttemplate = trace.texttemplate.replace(
+        "%{value:,.0f} km",
+        conversion ? `%{value:,.0f} ${conversion.unit}` : "%{value:,.0f}"
+      );
+    }
+    if (typeof trace.hovertemplate === "string") {
+      trace.hovertemplate = trace.hovertemplate.replace(
+        "value=%{value}<br>",
+        conversion ? `value=%{value} ${conversion.unit}<br>` : "value=%{value}<br>"
+      );
+    }
+    if (conversion) {
+      const values = decodeTreemapValues(trace.values);
+      if (values) {
+        trace.values = values.map((v: number) => v / conversion.divisor);
+      }
+    }
+  });
+
+  return fig;
+}
+
+/**
+ * Reads the pre-rendered per-measure treemap + total for one (topic, groupingKey)
+ * pair from a country's tag-distribution parquet, keyed by measure ("count",
+ * "area", "length" - whichever the topic has).
+ */
+export async function loadTagDistribution(
+  parquetUrl: string,
+  topic: string,
+  groupingKey: string,
+  // When given, scopes the treemap to one region's own row - parquetUrl must
+  // then point at that region's grid layer file, same convention as
+  // loadIndicatorFigure's geomId.
+  geomId?: string | null
+): Promise<Record<string, TagDistributionMeasure>> {
+  const { db, conn } = await initDuckDB();
+
+  try {
+    const tableName = await registerParquetFile(parquetUrl, db);
+    const geomFilter = geomId ? ` AND geomID = '${geomId}'` : '';
+
+    const result = await runQuery(conn,`
+      SELECT measure, treemap, sum_value
+      FROM read_parquet('${tableName}')
+      WHERE topic = '${topic}' AND grouping_key = '${groupingKey}'${geomFilter}
+    `);
+
+    const resultArray = toArray(result);
+    const byMeasure: Record<string, TagDistributionMeasure> = {};
+
+    resultArray.forEach((r: any) => {
+      let treemap: any = null;
+      if (r.treemap) {
+        try {
+          treemap = fixTreemapUnits(JSON.parse(r.treemap), String(r.measure));
+        } catch {
+          treemap = null;
+        }
+      }
+      byMeasure[String(r.measure)] = {
+        treemap,
+        sumValue: r.sum_value != null ? Number(r.sum_value) : null
+      };
+    });
+
+    return byMeasure;
+  } catch (e) {
+    console.error("Failed to load tag distribution:", e);
+    return {};
+  }
+}
+
+/**
+ * Reads one indicator's pre-rendered gauge-chart Plotly figure (the "figure"
+ * column) for a given topic from the country-level indicator parquet.
+ */
+export async function loadIndicatorFigure(
+  parquetUrl: string,
+  topic: string,
+  indicator: string,
+  // When given, scopes the figure to one region's row instead of the file's
+  // single whole-area row - parquetUrl must then point at the same grid
+  // layer's file the geomID actually belongs to (the country-level file
+  // only ever has the one country-wide row).
+  geomId?: string | null
+): Promise<any | null> {
+  const { db, conn } = await initDuckDB();
+
+  try {
+    const tableName = await registerParquetFile(parquetUrl, db);
+    const geomFilter = geomId ? ` AND geomID = '${geomId}'` : '';
+
+    const result = await runQuery(conn,`
+      SELECT figure
+      FROM read_parquet('${tableName}')
+      WHERE topic = '${topic}' AND indicator = '${indicator}' AND figure IS NOT NULL${geomFilter}
+      LIMIT 1
+    `);
+
+    const resultArray = toArray(result);
+    if (resultArray.length === 0 || !resultArray[0].figure) return null;
+
+    try {
+      return JSON.parse(resultArray[0].figure);
+    } catch {
+      return null;
+    }
+  } catch (e) {
+    console.error("Failed to load indicator figure:", e);
+    return null;
   }
 }

@@ -1,0 +1,1094 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quality Atlas Internals</title>
+<style>
+  :root {
+    --paper: #f6f7f9;
+    --paper-raised: #ffffff;
+    --paper-sunken: #eef1f5;
+    --ink: #17212b;
+    --ink-soft: #4b5768;
+    --ink-faint: #8592a3;
+    --line: #e3e7ed;
+    --line-strong: #c7cfda;
+    --accent: #0b7285;
+    --accent-ink: #ffffff;
+    --accent-soft: #e3f4f6;
+    --warn: #9a5b0a;
+    --warn-soft: #fdf3e7;
+    --warn-line: #f0d9b5;
+    --danger: #b42318;
+    --danger-soft: #fbeae9;
+    --danger-line: #f0c4bf;
+    --good: #12704f;
+    --good-soft: #e6f5ef;
+    --shadow: 0 1px 2px rgba(23,33,43,0.06), 0 1px 12px rgba(23,33,43,0.05);
+    --font-display: 'IBM Plex Sans', 'Segoe UI', Arial, sans-serif;
+    --font-body: 'IBM Plex Sans', 'Segoe UI', Arial, sans-serif;
+    --font-mono: 'IBM Plex Mono', 'SFMono-Regular', Consolas, monospace;
+    --sidebar-w: 280px;
+    --content-max: 780px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper: #12181f;
+      --paper-raised: #1a222c;
+      --paper-sunken: #0f151b;
+      --ink: #e7ecf1;
+      --ink-soft: #a8b4c2;
+      --ink-faint: #74818f;
+      --line: #2a3540;
+      --line-strong: #3a4552;
+      --accent: #4fc3d9;
+      --accent-ink: #06232a;
+      --accent-soft: #163038;
+      --warn: #e3a24a;
+      --warn-soft: #2e2311;
+      --warn-line: #4a3618;
+      --danger: #e5786e;
+      --danger-soft: #2e1815;
+      --danger-line: #4a2622;
+      --good: #5cc79a;
+      --good-soft: #12261f;
+      --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 1px 16px rgba(0,0,0,0.28);
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper: #12181f;
+    --paper-raised: #1a222c;
+    --paper-sunken: #0f151b;
+    --ink: #e7ecf1;
+    --ink-soft: #a8b4c2;
+    --ink-faint: #74818f;
+    --line: #2a3540;
+    --line-strong: #3a4552;
+    --accent: #4fc3d9;
+    --accent-ink: #06232a;
+    --accent-soft: #163038;
+    --warn: #e3a24a;
+    --warn-soft: #2e2311;
+    --warn-line: #4a3618;
+    --danger: #e5786e;
+    --danger-soft: #2e1815;
+    --danger-line: #4a2622;
+    --good: #5cc79a;
+    --good-soft: #12261f;
+    --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 1px 16px rgba(0,0,0,0.28);
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--font-body);
+    font-size: 16px;
+    line-height: 1.65;
+  }
+  ::selection { background: var(--accent-soft); }
+
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  code, pre, kbd { font-family: var(--font-mono); }
+  code {
+    background: var(--paper-sunken);
+    border: 1px solid var(--line);
+    padding: 0.1rem 0.35rem;
+    font-size: 0.86em;
+    border-radius: 3px;
+    color: var(--ink);
+    white-space: nowrap;
+  }
+  pre {
+    background: var(--paper-sunken);
+    border: 1px solid var(--line);
+    padding: 0.9rem 1.05rem;
+    overflow-x: auto;
+    font-size: 0.82rem;
+    line-height: 1.55;
+    border-radius: 6px;
+  }
+  pre code { background: none; border: none; padding: 0; white-space: pre; font-size: 1em; }
+
+  h1, h2, h3, h4 { font-family: var(--font-display); font-weight: 700; text-wrap: balance; color: var(--ink); }
+  h2 { font-size: 1.5rem; margin: 0 0 0.9rem; padding-top: 0.2rem; }
+  h3 { font-size: 1.12rem; margin: 1.7rem 0 0.6rem; color: var(--ink); }
+  h4 { font-size: 0.98rem; margin: 1.3rem 0 0.4rem; color: var(--ink-soft); text-transform: uppercase; letter-spacing: 0.03em; font-size: 0.78rem; }
+  p { margin: 0 0 1rem; }
+  ul, ol { margin: 0 0 1rem; padding-left: 1.3rem; }
+  li { margin-bottom: 0.35rem; }
+  strong { color: var(--ink); }
+
+  .layout { display: flex; min-height: 100vh; background: var(--paper); }
+
+  .sidebar {
+    width: var(--sidebar-w); flex: none;
+    background: var(--paper-raised);
+    border-right: 1px solid var(--line);
+    position: sticky; top: 0; height: 100vh; overflow-y: auto;
+    padding: 1.4rem 1.1rem 2rem;
+  }
+  .sidebar-brand {
+    display: flex; align-items: center; gap: 0.55rem;
+    margin-bottom: 1.3rem; padding-bottom: 1.1rem; border-bottom: 1px solid var(--line);
+  }
+  .sidebar-brand .mark {
+    width: 2rem; height: 2rem; flex: none; display: flex; align-items: center; justify-content: center;
+    background: var(--accent); color: var(--accent-ink); border-radius: 6px; font-size: 1.05rem;
+  }
+  .sidebar-brand strong { font-family: var(--font-display); font-size: 0.98rem; display: block; line-height: 1.2; }
+  .sidebar-brand span { font-size: 0.72rem; color: var(--ink-faint); }
+
+  .toc-group { margin-bottom: 1.15rem; }
+  .toc-group-label {
+    font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 700;
+    color: var(--ink-faint); margin: 0 0 0.4rem 0.5rem;
+  }
+  .toc-group a {
+    display: block; padding: 0.32rem 0.5rem; border-radius: 5px;
+    color: var(--ink-soft); font-size: 0.86rem; font-weight: 500;
+  }
+  .toc-group a:hover { background: var(--accent-soft); color: var(--accent); text-decoration: none; }
+  .toc-group a.current { background: var(--accent-soft); color: var(--accent); font-weight: 700; }
+
+  .sidebar-toggle {
+    display: none; position: fixed; top: 0.9rem; left: 0.9rem; z-index: 30;
+    background: var(--paper-raised); border: 1px solid var(--line-strong); color: var(--ink);
+    padding: 0.5rem 0.7rem; font-family: var(--font-body); font-weight: 600; font-size: 0.82rem;
+    box-shadow: var(--shadow); border-radius: 6px;
+  }
+
+  .content { flex: 1; min-width: 0; display: flex; justify-content: center; }
+  .content-inner { max-width: var(--content-max); width: 100%; padding: 3.2rem 2rem 6rem; }
+
+  .doc-header { margin-bottom: 2.6rem; }
+  .doc-kicker {
+    font-family: var(--font-mono); font-size: 0.74rem; letter-spacing: 0.08em; text-transform: uppercase;
+    color: var(--accent); font-weight: 700; margin-bottom: 0.6rem;
+  }
+  .doc-header h1 { font-size: 2.15rem; margin: 0 0 0.7rem; line-height: 1.15; }
+  .doc-header .lede { font-size: 1.05rem; color: var(--ink-soft); max-width: 62ch; }
+
+  section.doc-section { margin-bottom: 3.2rem; padding-top: 0.4rem; scroll-margin-top: 1.5rem; }
+  section.doc-section > h2 {
+    display: flex; align-items: baseline; gap: 0.6rem;
+    border-bottom: 2px solid var(--line); padding-bottom: 0.6rem;
+  }
+  section.doc-section > h2 .num { color: var(--accent); font-family: var(--font-mono); font-size: 1rem; }
+
+  .callout {
+    border: 1px solid var(--line); border-left: 4px solid var(--line-strong);
+    background: var(--paper-raised); padding: 0.9rem 1.1rem; margin: 1.1rem 0;
+    border-radius: 4px; box-shadow: var(--shadow);
+  }
+  .callout p:last-child { margin-bottom: 0; }
+  .callout-label { font-weight: 700; font-size: 0.76rem; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.35rem; display: flex; align-items: center; gap: 0.4rem; }
+  .callout.info { border-left-color: var(--accent); }
+  .callout.info .callout-label { color: var(--accent); }
+  .callout.warn { border-left-color: var(--warn); background: var(--warn-soft); border-color: var(--warn-line); }
+  .callout.warn .callout-label { color: var(--warn); }
+  .callout.danger { border-left-color: var(--danger); background: var(--danger-soft); border-color: var(--danger-line); }
+  .callout.danger .callout-label { color: var(--danger); }
+
+  .filechip {
+    font-family: var(--font-mono); font-size: 0.82rem; background: var(--paper-sunken);
+    border: 1px solid var(--line); padding: 0.05rem 0.4rem; border-radius: 4px; color: var(--ink);
+  }
+
+  table { border-collapse: collapse; width: 100%; margin: 1rem 0 1.4rem; font-size: 0.92rem; }
+  th, td { text-align: left; padding: 0.55rem 0.7rem; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--ink-faint); font-weight: 700; }
+  tr:last-child td { border-bottom: none; }
+
+  .tree { font-family: var(--font-mono); font-size: 0.84rem; background: var(--paper-sunken); border: 1px solid var(--line); border-radius: 6px; padding: 1rem 1.2rem; overflow-x: auto; line-height: 1.75; }
+  .tree .d { color: var(--accent); font-weight: 700; }
+  .tree .c { color: var(--ink-faint); }
+
+  .steps { counter-reset: step; list-style: none; padding-left: 0; margin: 1.2rem 0; }
+  .steps > li {
+    counter-increment: step; position: relative; padding-left: 2.6rem; margin-bottom: 1.3rem;
+  }
+  .steps > li::before {
+    content: counter(step); position: absolute; left: 0; top: 0;
+    width: 1.8rem; height: 1.8rem; border-radius: 50%; background: var(--accent); color: var(--accent-ink);
+    display: flex; align-items: center; justify-content: center; font-family: var(--font-mono); font-weight: 700; font-size: 0.85rem;
+  }
+  .steps > li > strong { display: block; margin-bottom: 0.2rem; color: var(--ink); }
+
+  .recipe {
+    border: 1px solid var(--line); border-radius: 6px; margin: 1.4rem 0; overflow: hidden; background: var(--paper-raised); box-shadow: var(--shadow);
+  }
+  .recipe-head {
+    background: var(--paper-sunken); padding: 0.75rem 1.1rem; border-bottom: 1px solid var(--line);
+    font-family: var(--font-display); font-weight: 700; font-size: 0.98rem; display: flex; align-items: center; gap: 0.5rem;
+  }
+  .recipe-body { padding: 1rem 1.1rem 1.2rem; }
+  .recipe-body ol { margin-bottom: 0.4rem; }
+
+  .glossary dt { font-family: var(--font-mono); font-weight: 700; color: var(--ink); margin-top: 0.9rem; }
+  .glossary dd { margin: 0.2rem 0 0; color: var(--ink-soft); }
+
+  .badge {
+    display: inline-block; font-family: var(--font-mono); font-size: 0.68rem; font-weight: 700;
+    padding: 0.1rem 0.4rem; border-radius: 3px; letter-spacing: 0.03em; text-transform: uppercase;
+  }
+  .badge.legacy { background: var(--warn-soft); color: var(--warn); border: 1px solid var(--warn-line); }
+  .badge.new { background: var(--good-soft); color: var(--good); }
+
+  hr.divider { border: none; border-top: 1px solid var(--line); margin: 2.6rem 0; }
+
+  .end-note { margin-top: 3.5rem; padding-top: 1.6rem; border-top: 1px solid var(--line); color: var(--ink-faint); font-size: 0.88rem; }
+
+  @media print {
+    .sidebar, .sidebar-toggle { display: none !important; }
+    .content { display: block; }
+    .content-inner { max-width: none; padding: 0; }
+    a { color: var(--ink); text-decoration: underline; }
+  }
+
+  @media (max-width: 920px) {
+    .sidebar { position: fixed; left: 0; top: 0; z-index: 20; transform: translateX(-100%); transition: transform 0.2s ease; box-shadow: var(--shadow); }
+    .sidebar.open { transform: translateX(0); }
+    .sidebar-toggle { display: block; }
+    .content-inner { padding: 4.2rem 1.2rem 4rem; }
+  }
+</style>
+
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap">
+
+</head>
+<body>
+<button class="sidebar-toggle" id="sidebarToggle" type="button">☰ Contents</button>
+
+<div class="layout">
+  <nav class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+      <span class="mark">🧭</span>
+      <div>
+        <strong>Quality Atlas</strong>
+        <span>Internals &amp; maintenance guide</span>
+      </div>
+    </div>
+
+    <div class="toc-group">
+      <div class="toc-group-label">Orientation</div>
+      <a href="#start-here">1. Start here</a>
+      <a href="#before-you-touch">2. Before you touch anything</a>
+      <a href="#project-structure">3. Project structure</a>
+      <a href="#running-locally">4. Running it locally</a>
+    </div>
+    <div class="toc-group">
+      <div class="toc-group-label">How it works</div>
+      <a href="#booting">5. How the app boots</a>
+      <a href="#two-faces">6. The two faces of MainView.vue</a>
+      <a href="#data-layer">7. Where the data comes from</a>
+      <a href="#view-panel">8. State &amp; the ViewPanel model</a>
+      <a href="#life-of-a-click">9. Life of a click</a>
+      <a href="#components">10. Components reference</a>
+      <a href="#design-system">11. The design system</a>
+      <a href="#build-deploy">12. Build, deploy &amp; hosting</a>
+    </div>
+    <div class="toc-group">
+      <div class="toc-group-label">Doing things</div>
+      <a href="#recipes">13. Recipes: common changes</a>
+      <a href="#rough-edges">14. Known rough edges</a>
+      <a href="#glossary">15. Glossary</a>
+      <a href="#next">16. Where to go from here</a>
+    </div>
+  </nav>
+
+  <div class="content">
+    <div class="content-inner">
+
+      <header class="doc-header">
+        <div class="doc-kicker">Maintainer's guide · oqapi-country-reports-vue</div>
+        <h1>Quality Atlas Internals</h1>
+        <p class="lede">
+          This is a ground-up walkthrough of the Vue 3 app behind HeiGIT's OSM data-quality
+          country reports. It covers how the app boots, where the data actually comes from, how
+          the state is organized, and how to change any of it without breaking something else.
+          Read it once and you should be able to open this repository cold and start making real
+          changes.
+        </p>
+      </header>
+
+      <section class="doc-section" id="start-here">
+        <h2><span class="num">01</span> Start here</h2>
+        <p>
+          This project is the frontend half of a two-repository system. A separate Python
+          pipeline, built on Dagster, computes OpenStreetMap data-quality indicators for
+          countries and administrative regions, calling HeiGIT's <code>ohsome-quality-api</code>
+          and <code>ohsome-api</code> along the way. That pipeline isn't covered in this guide;
+          it's a different codebase with a different job. Its only output is files, uploaded to
+          a public S3-compatible bucket. This repository,
+          <span class="filechip">oqapi-country-reports-vue</span>, is a single-page Vue 3 app
+          that reads those files directly in the visitor's browser and turns them into an
+          interactive dashboard: a map, some charts, a stack of indicator cards.
+        </p>
+        <p>
+          There's no backend server for this app at runtime. No API keys, no database, no Node
+          process keeping anything alive. Once built, it's just a folder of static HTML, JS and
+          CSS files that could be hosted anywhere, and today that's GitHub Pages. Every number
+          and shape on screen was fetched, at that moment, from a public URL on
+          <code>hot.storage.heigit.org</code> and parsed in the browser, either as a vector tile
+          for the map or as a small analytical database file for everything else. That one fact,
+          that this is a fully static site whose "backend" is a pile of files on S3, explains
+          most of the unusual choices in this codebase. Most notably: an in-browser SQL engine
+          (DuckDB-WASM) standing in for a normal REST API.
+        </p>
+        <div class="callout info">
+          <div class="callout-label">The one-sentence mental model</div>
+          <p>
+            Pick a country and a topic. The app builds a handful of S3 URLs, downloads a
+            vector-tile file for the shapes and one or two small analytical files for the
+            numbers, queries those files with SQL entirely client-side, and draws a map, some
+            gauges and some charts from whatever comes back. Everything else in this guide fills
+            in the detail behind that one sentence.
+          </p>
+        </div>
+      </section>
+
+      <section class="doc-section" id="before-you-touch">
+        <h2><span class="num">02</span> Before you touch anything</h2>
+        <p>
+          Three things in this codebase will actively mislead you if you don't know about them
+          first. Read this section before you edit a single line. It will save you real time.
+        </p>
+
+        <div class="callout danger">
+          <div class="callout-label">There are two Vite config files, and the wrong one wins</div>
+          <p>
+            The project root has both <span class="filechip">vite.config.ts</span> (the file a
+            human actually maintains) and a stray <span class="filechip">vite.config.js</span>
+            plus <span class="filechip">vite.config.d.ts</span>: leftover compiled output from a
+            <code>tsc</code> build that got run once, by accident, and then committed to git.
+            Vite's config search checks <code>vite.config.js</code> before
+            <code>vite.config.ts</code>, so the stale <code>.js</code> file is what actually
+            runs, for both <code>vite dev</code> and <code>vite build</code>. I confirmed this
+            directly: a marker statement dropped into <span class="filechip">vite.config.js</span>
+            fires; the <code>.ts</code> file never loads at all.
+          </p>
+          <p>
+            Today the two files hold the same logic, so nothing is actually broken by this. But
+            if you edit <span class="filechip">vite.config.ts</span> expecting a change to take
+            effect, a new plugin, a new alias, a proxy rule, it silently won't. Fix this the
+            first time you need to touch Vite config: delete
+            <span class="filechip">vite.config.js</span> and
+            <span class="filechip">vite.config.d.ts</span>, keep only the <code>.ts</code> file,
+            and drop the now-pointless <span class="filechip">tsconfig.node.json</span>
+            reference that was compiling it in the first place. Exact steps are in
+            <a href="#recipes">Recipes</a>.
+          </p>
+        </div>
+
+        <div class="callout danger">
+          <div class="callout-label">The real country list is switched off</div>
+          <p>
+            Open <span class="filechip">src/views/MainView.vue</span> and look inside
+            <code>onMounted()</code>. You'll find this:
+          </p>
+          <pre><code>// TEMPORARY local test-only bypass: the S3 ListBucket call this depends on is
+// currently 403ing (pre-existing bucket-policy issue, unrelated to the new
+// pipeline). Hardcoding DEU here so the dropdown isn't stuck empty while
+// testing the new pmtiles/parquet integration. Revert this block once that's
+// fixed for real.
+countries.value = [{ value: 'DEU', label: 'Germany' }];
+selectedCountry.value = 'DEU';
+/*
+const fetchedCountries = await fetchAvailableCountries();
+countries.value = fetchedCountries.map(c =&gt; ({ value: c.code, label: c.name }));
+...
+*/</code></pre>
+          <p>
+            The real implementation, <code>fetchAvailableCountries()</code> in
+            <span class="filechip">src/services/dataService.ts</span>, lists the S3 bucket's
+            <code>downloads/</code> prefix to discover every country that's actually been
+            processed. It's written, it works, and it's simply commented out. Right now the
+            country dropdown shows Germany and nothing else, no matter how many countries have
+            real data sitting on S3. This is almost certainly the first thing worth fixing once
+            the S3 bucket-policy issue behind it (a 403 on the <code>ListBucket</code> call) gets
+            resolved on the infrastructure side. At that point the fix is two lines: delete the
+            hardcoded block, uncomment the real call.
+          </p>
+        </div>
+
+        <div class="callout warn">
+          <div class="callout-label">Two completely different UIs live in one file, on purpose</div>
+          <p>
+            <span class="filechip">MainView.vue</span> renders either the modern Single View /
+            Split View dashboard, or a much older, visually different "iframe-2col" layout,
+            depending on how the page was loaded. They share one Vue component and a few pieces
+            of state, but otherwise run as two independent code paths inside the same template.
+            Section <a href="#two-faces">6</a> covers this in full. For now: if you're editing
+            the map or the indicator cards and your change doesn't show up, check which of the
+            two branches you're actually looking at in the browser.
+          </p>
+        </div>
+
+        <div class="callout info">
+          <div class="callout-label">There is no test suite</div>
+          <p>
+            There are no unit tests, no component tests, no end-to-end tests. The only automated
+            safety net is TypeScript itself, through <code>vue-tsc</code>, wired into
+            <code>npm run build</code>. In practice that means your review process is: run
+            <code>npx vue-tsc --noEmit -p tsconfig.json</code> to catch type errors, then
+            actually open the app and click through what changed. Don't skip the second part. A
+            type checker has no opinion on whether a map legend is misaligned or a chart failed
+            to render.
+          </p>
+        </div>
+      </section>
+
+      <section class="doc-section" id="project-structure">
+        <h2><span class="num">03</span> Project structure</h2>
+        <p>Every source file in the project, and what it does. Nothing here has been left out.</p>
+        <div class="tree">
+oqapi-country-reports-vue/
+├── index.html<span class="c">                    entry HTML - fonts, MapLibre CSS, pmtiles.js, mounts #app</span>
+├── package.json<span class="c">                  scripts + dependencies (see §4)</span>
+├── vite.config.ts<span class="c">                the config you should edit …</span>
+├── vite.config.js<span class="c">                … but this stale copy is what actually runs (see §2)</span>
+├── vite.config.d.ts<span class="c">              stale compiled type declarations, same story</span>
+├── tsconfig.json<span class="c">                 TypeScript config for src/ (strict mode is on)</span>
+├── tsconfig.node.json<span class="c">            TypeScript config that (accidentally) compiles vite.config.ts</span>
+├── tailwind.config.js<span class="c">            Tailwind setup - present, but barely used (see §11)</span>
+├── postcss.config.js<span class="c">             wires Tailwind + autoprefixer into the CSS build</span>
+├── test-iframe.html<span class="c">              manual test harness: loads the app in a real &lt;iframe&gt;</span>
+│                                    to exercise the legacy iframe-2col path (see §6)
+└── src/
+    ├── main.ts<span class="c">                   creates the Vue app, the router, mounts to #app</span>
+    ├── App.vue<span class="c">                   just a &lt;router-view /&gt; - there is exactly one route</span>
+    ├── vite-env.d.ts<span class="c">              one-line Vite type reference, never needs editing</span>
+    ├── assets/
+    │   └── main.css<span class="c">              global styles + every design token (see §11)</span>
+    ├── views/
+    │   └── MainView.vue<span class="c">          the whole app. ~2,600 lines. see §6-9</span>
+    ├── components/
+    │   ├── ReportHeader.vue<span class="c">      top bar: brand, view toggle, country/topic pickers</span>
+    │   ├── ReportFooter.vue<span class="c">      bottom bar: legal links + ohsome dashboard badge</span>
+    │   ├── MetricMap.vue<span class="c">         one MapLibre GL map instance (reused per panel)</span>
+    │   ├── IndicatorGaugeCard.vue<span class="c"> one round gauge + description card (Single View)</span>
+    │   └── AttributeCompletenessCard.vue<span class="c"> gauge card with a built-in attribute dropdown</span>
+    ├── services/
+    │   └── dataService.ts<span class="c">        every function that fetches or queries remote data</span>
+    └── utils/
+        ├── duckdb.ts<span class="c">              the DuckDB-WASM engine: init, queueing, parquet registration</span>
+        └── helpers.ts<span class="c">             topic/label formatting, per-country layer config, URL builder</span>
+        </div>
+        <p>
+          That's the whole <code>src/</code> tree. There's no <code>router/</code> folder (the
+          one route is declared inline in <code>main.ts</code>), no state-management library (no
+          Pinia, no Vuex; <a href="#view-panel">§8</a> explains why), and no
+          <code>public/</code> folder either. Every external asset, fonts, the MapLibre
+          stylesheet, the ohsome logo, loads from a full URL instead of getting bundled.
+        </p>
+      </section>
+
+      <section class="doc-section" id="running-locally">
+        <h2><span class="num">04</span> Running it locally</h2>
+        <p>Three npm scripts, defined in <span class="filechip">package.json</span>:</p>
+        <table>
+          <tr><th>Command</th><th>What it does</th></tr>
+          <tr><td><code>npm run dev</code></td><td>Starts the Vite dev server with hot-reload. Sets <code>VITE_BASE_URL=/</code> inline so the app runs at the site root locally, instead of the <code>/osm-quality-country-reports/</code> sub-path GitHub Pages needs (see §12).</td></tr>
+          <tr><td><code>npm run build</code></td><td>Runs <code>vue-tsc -b</code> (type-checks everything, fails the build on type errors) and then <code>vite build</code>, emitting static files to <span class="filechip">dist/</span>.</td></tr>
+          <tr><td><code>npm run preview</code></td><td>Serves the built <span class="filechip">dist/</span> folder locally, so you can sanity-check a production build before pushing.</td></tr>
+        </table>
+        <p>
+          There's no <code>.env</code> file anywhere in this project, and none is needed. The
+          only environment variable in play is <code>VITE_BASE_URL</code>, and it's set inline
+          in the <code>dev</code> script itself rather than read from a dotfile. Everything else
+          the app needs, country data, map tiles, is a public URL already baked into
+          <span class="filechip">helpers.ts</span>. There's nothing to configure.
+        </p>
+        <p>To get started from a clean checkout:</p>
+        <pre><code>cd oqapi-country-reports-vue
+npm install
+npm run dev
+# open the printed http://localhost:5173/... URL</code></pre>
+        <p>
+          Before you see anything interesting, remember <a href="#before-you-touch">§2</a>: the
+          country dropdown is hardcoded to Germany only, regardless of what's really on S3.
+          That's expected, not a setup problem on your end.
+        </p>
+      </section>
+
+      <section class="doc-section" id="booting">
+        <h2><span class="num">05</span> How the app boots</h2>
+        <p>Five files, in order, from the moment the page loads to the moment a map shows up:</p>
+        <ol class="steps">
+          <li>
+            <strong><span class="filechip">index.html</span></strong>
+            Loads two Google font families, the MapLibre GL CSS stylesheet, and
+            <code>pmtiles.js</code> (a small script that teaches MapLibre how to read the
+            <code>.pmtiles</code> vector-tile format) from CDNs, then mounts
+            <code>&lt;div id="app"&gt;</code> and hands off to <code>src/main.ts</code>.
+          </li>
+          <li>
+            <strong><span class="filechip">src/main.ts</span></strong>
+            Creates the Vue app, creates a Vue Router instance with exactly one route
+            (<code>"/"</code> → <code>MainView.vue</code>), and mounts everything to
+            <code>#app</code>. It also imports <span class="filechip">assets/main.css</span>
+            globally; that's where every CSS custom property (design token) in the app gets
+            defined.
+          </li>
+          <li>
+            <strong><span class="filechip">src/App.vue</span></strong>
+            Eleven lines. Its whole template is <code>&lt;router-view /&gt;</code>. There's
+            currently no reason for this app to have more than one route, everything lives on
+            one page, so don't expect to find anything else here.
+          </li>
+          <li>
+            <strong><span class="filechip">src/views/MainView.vue</span></strong>
+            Vue Router renders this for the <code>"/"</code> path. This one component is the
+            application: all the state, all the data-fetching orchestration, and, through
+            <code>v-if</code>/<code>v-else</code> at the top of its template, both possible
+            layouts. From here on, this guide is really an explanation of how MainView.vue works.
+          </li>
+          <li>
+            <strong>MainView's own <code>onMounted()</code></strong>
+            Detects whether the page is embedded in an iframe (§6), sets a hardcoded country
+            (§2), wires up hash-based routing so a URL like <code>#/DEU/roads</code> restores a
+            country and topic on load, and starts a <code>ResizeObserver</code> that keeps
+            MapLibre and Plotly canvases sized correctly as their containers change.
+          </li>
+        </ol>
+      </section>
+
+      <section class="doc-section" id="two-faces">
+        <h2><span class="num">06</span> The two faces of MainView.vue</h2>
+        <p>
+          Near the top of <code>onMounted()</code>, the app decides which of two entirely
+          different UIs to show:
+        </p>
+        <pre><code>const inIframe = window.self !== window.top;
+const hasEmbedParam = new URLSearchParams(window.location.search).has('embed');
+const hasIframe2ColParam = new URLSearchParams(window.location.search).has('iframe-2col');
+...
+isEmbed.value = inIframe || hasEmbedParam;
+isIframe2Col.value = inIframe || hasIframe2ColParam;</code></pre>
+        <p>
+          In plain terms: if this page ever loads inside a real <code>&lt;iframe&gt;</code>
+          (from anywhere), or the URL carries <code>?iframe-2col</code>,
+          <code>isIframe2Col</code> becomes <code>true</code> and stays true for the rest of the
+          session. <span class="filechip">test-iframe.html</span> in the project root exists
+          purely to trigger this path during local development.
+        </p>
+        <table>
+          <tr><th></th><th>Normal mode <span class="badge new">current</span></th><th>iframe-2col mode <span class="badge legacy">legacy</span></th></tr>
+          <tr><td>Who sees it</td><td>Anyone visiting the site directly (the GitHub Pages URL)</td><td>HeiGIT's HDX platform, which embeds this app in an <code>&lt;iframe&gt;</code> on their own pages</td></tr>
+          <tr><td>Layout</td><td>Single View (one map + one stack of gauge cards) or Split View (two independent columns side by side)</td><td>A fixed two-tile grid: one tile with a treemap + tag-coverage bars, one tile with a single map + a small comparison plot</td></tr>
+          <tr><td>State it reads/writes</td><td>The <code>panels</code> array, see <a href="#view-panel">§8</a></td><td>Older, flat refs: <code>selectedTopic</code>, <code>indicators</code>, <code>map1Indicator</code>/<code>map1Layer</code>/<code>map1Lookup</code>, <code>banner1Level</code>, <code>tagCoverage</code>, <code>schoolSwitchVisible</code>, and so on</td></tr>
+          <tr><td>Topic/indicator picking</td><td>Per-column pill rows above each map</td><td>One shared indicator/grid <code>&lt;select&gt;</code> dropdown</td></tr>
+        </table>
+        <p>
+          This split runs all the way down through the template with
+          <code>v-if="!isIframe2Col"</code> / <code>v-else</code>, and through the script with
+          functions that only make sense in one mode.
+          <code>loadPanelTopicData(panelIdx)</code> belongs to Normal mode;
+          <code>loadMapData()</code> and <code>loadTreemap()</code> belong to iframe-2col. Both
+          branches lean on some shared helpers (<code>buildUrls</code>,
+          <code>getTagGroupingKey</code>, the DuckDB query functions), but they don't share UI
+          state.
+        </p>
+        <div class="callout warn">
+          <div class="callout-label">Why keep two modes in one file at all?</div>
+          <p>
+            HeiGIT's HDX platform embeds this exact app by URL, and that embed's layout
+            (<code>id="tile5"</code> / <code>id="tile6"</code>, specific CSS classes) is a
+            contract with that other system. Rebuilding Single/Split View this year didn't
+            change what HDX embeds, so the old layout was left alone on purpose instead of
+            migrated, and the two now sit side by side in the same file. If you're not working
+            on the HDX embed, treat everything under <code>v-else</code> as off-limits, and
+            everything under <code>v-if="!isIframe2Col"</code> as "the app."
+          </p>
+        </div>
+      </section>
+
+      <section class="doc-section" id="data-layer">
+        <h2><span class="num">07</span> Where the data comes from</h2>
+
+        <h3>The S3 bucket layout</h3>
+        <p>
+          Every file this app ever reads lives under one public bucket root:
+          <code>https://hot.storage.heigit.org/heigit-hdx-public/oqapi_hdx/</code>. Two kinds of
+          files matter, and both come from <code>buildUrls(code, layer)</code> in
+          <span class="filechip">src/utils/helpers.ts</span>:
+        </p>
+        <table>
+          <tr><th>File</th><th>URL pattern</th><th>Format</th><th>What it's for</th></tr>
+          <tr><td>Boundaries</td><td><code>downloads/&lt;CODE&gt;/&lt;CODE&gt;_boundaries.pmtiles</code></td><td>PMTiles (vector tiles)</td><td>The map shapes themselves, one file per country, shared by every grid layer</td></tr>
+          <tr><td>Indicator data</td><td><code>downloads/&lt;CODE&gt;/&lt;CODE&gt;_&lt;layer&gt;_long.parquet</code></td><td>Apache Parquet</td><td>One row per region, topic and indicator: the value, its description, its pre-rendered Plotly figure</td></tr>
+          <tr><td>Tag distribution</td><td><code>downloads/&lt;CODE&gt;/&lt;CODE&gt;_&lt;layer&gt;_tag_distribution.parquet</code></td><td>Apache Parquet</td><td>Pre-rendered treemap figures per topic, grouping tag and measure</td></tr>
+        </table>
+        <p>
+          <code>&lt;CODE&gt;</code> is a 3-letter country code (<code>DEU</code>,
+          <code>RWA</code>, and so on). <code>&lt;layer&gt;</code> is a grid or admin level,
+          <code>adm0</code>, <code>adm1</code>, <code>h3</code> by default, or a
+          country-specific override (Germany uses BKG's own <code>vg2500_sta</code> /
+          <code>vg2500_lan</code> / <code>vg1000_krs</code> names, see
+          <code>getCountryLayers()</code> in <span class="filechip">helpers.ts</span>). Not
+          every layer exists for every country yet. <code>checkParquetExists()</code> does a
+          cheap <code>HEAD</code> request before offering a layer as selectable, so picking one
+          that hasn't been processed doesn't just render a blank gray map with no explanation.
+        </p>
+
+        <h3>PMTiles: the map shapes</h3>
+        <p>
+          <a href="https://github.com/protomaps/PMTiles" target="_blank">PMTiles</a> packs an
+          entire vector-tile pyramid into one file that supports HTTP range requests, so MapLibre
+          GL can fetch only the tiles it needs for the current view, from one static file, with
+          no tile server involved. <span class="filechip">MetricMap.vue</span> registers the
+          <code>pmtiles://</code> protocol once per map instance and adds it as a normal MapLibre
+          vector source. Every region in the tiles carries a stable <code>id</code> (through
+          <code>promoteId: "id"</code>), and that's what lets the app attach a numeric quality
+          value to each shape through <code>setFeatureState()</code> and recolor it without
+          re-fetching or re-parsing the tiles.
+        </p>
+
+        <h3>Parquet + DuckDB-WASM: everything else</h3>
+        <p>
+          This is the part that looks unfamiliar if you've mostly built apps that call a REST
+          API. There is no API here. Instead:
+        </p>
+        <ol class="steps">
+          <li><strong>DuckDB-WASM boots once.</strong> <code>initDuckDB()</code> in <span class="filechip">src/utils/duckdb.ts</span> downloads DuckDB's own WebAssembly engine, from a jsDelivr CDN bundle, spins it up in a Web Worker, and opens one connection. It's memoized as a module-level singleton with retry-on-failure, so every part of the app shares the same running database engine.</li>
+          <li><strong>A parquet file gets fetched and registered.</strong> <code>registerParquetFile(url, db)</code> downloads the raw bytes with <code>fetch()</code> and hands them to DuckDB as an in-memory virtual file (<code>data_&lt;n&gt;.parquet</code>). Registered files stay cached by URL for the rest of the session (<code>parquetFileCache</code>), and two concurrent requests for the same URL share one in-flight fetch (<code>pendingRegistrations</code>) instead of racing each other.</li>
+          <li><strong>A plain SQL query runs against it.</strong> Every function in <span class="filechip">dataService.ts</span>, <code>loadIndicators</code>, <code>loadIndicatorLookups</code>, <code>loadTagDistribution</code>, and the rest, is a small <code>SELECT ... FROM read_parquet('...')</code> string, run through <code>runQuery(conn, sql)</code>.</li>
+          <li><strong>Results feed Vue state and MapLibre or Plotly directly.</strong> There's no normalization layer and no store in between. The query result gets shaped into exactly what the template or a chart library needs, right there in the calling function.</li>
+        </ol>
+        <div class="callout danger">
+          <div class="callout-label">DuckDB-WASM's one hard rule: never run two queries at once</div>
+          <p>
+            I confirmed this the hard way during development: dispatching two
+            <code>conn.query()</code> calls at the same time against DuckDB-WASM's single shared
+            connection corrupts both. You'll see errors like <code>"No magic bytes found"</code>
+            on a file that's completely fine on its own. <code>runQuery()</code> in
+            <span class="filechip">duckdb.ts</span> exists specifically to prevent this: every
+            query, from anywhere in the app, funnels through one <code>enqueue()</code> promise
+            chain that runs strictly one operation at a time. If you ever add a new
+            data-loading function, call the query through <code>runQuery()</code>, never
+            <code>conn.query()</code> directly, or you'll reintroduce this bug the moment two
+            things load at once. Split View's two columns loading together is exactly that
+            moment.
+          </p>
+        </div>
+
+        <h3>The <code>dataService.ts</code> function reference</h3>
+        <table>
+          <tr><th>Function</th><th>Returns</th></tr>
+          <tr><td><code>fetchAvailableCountries()</code></td><td>Every country with a <code>downloads/&lt;CODE&gt;/</code> prefix on S3, prettified from a slug (<code>countries.yaml</code>) into a display name. Currently disabled, see §2.</td></tr>
+          <tr><td><code>checkParquetExists(url)</code></td><td><code>boolean</code>, a cheap HEAD-request existence check, used to decide which grid layers are selectable.</td></tr>
+          <tr><td><code>loadAvailableTopics(parquetUrl)</code></td><td>Every distinct <code>topic</code> value in a country-level parquet file (e.g. <code>["roads","buildings","schools",...]</code>).</td></tr>
+          <tr><td><code>loadIndicators(parquetUrl, topic)</code></td><td>Every distinct <code>indicator</code> name for one topic (e.g. <code>currentness</code>, <code>attribute-completeness_surface</code>).</td></tr>
+          <tr><td><code>loadIndicatorLookups(parquetUrl, topic, indicatorNames[])</code></td><td>For each indicator: a <code>{regionId → value}</code> lookup for map coloring, a country-wide average, and its description text.</td></tr>
+          <tr><td><code>getPMTilesBounds(url)</code></td><td>The <code>[minLon, minLat, maxLon, maxLat]</code> bounding box baked into a PMTiles file's own metadata, used to fly the map to the right place.</td></tr>
+          <tr><td><code>loadTagCoverage(parquetUrl)</code></td><td>Every <code>attribute-completeness_*</code> indicator's value, sorted highest first, feeds the "Attribute completeness" bar list.</td></tr>
+          <tr><td><code>loadTagDistribution(parquetUrl, topic, groupingKey)</code></td><td>One pre-rendered Plotly treemap figure (plus a raw total) per measure (<code>count</code>/<code>area</code>/<code>length</code>), feeds the "Tag distribution" box.</td></tr>
+          <tr><td><code>loadIndicatorFigure(parquetUrl, topic, indicator)</code></td><td>One indicator's pre-rendered Plotly gauge/bar figure, the small chart under the map.</td></tr>
+        </table>
+        <p>
+          Two more things worth knowing about this file. The pipeline's treemap figures always
+          label values "km" no matter what the actual measure is, so
+          <code>loadTagDistribution</code> quietly rewrites the unit label and rescales the
+          underlying numbers (<code>fixTreemapUnits</code>) for <code>area</code> (into km²) and
+          <code>length</code> (into km) measures. And Plotly sometimes serializes a numeric
+          array as a compact <code>{dtype, bdata}</code> base64 blob instead of a plain array;
+          <code>decodeTreemapValues()</code> decodes that before any of the rescaling can happen.
+        </p>
+      </section>
+
+      <section class="doc-section" id="view-panel">
+        <h2><span class="num">08</span> State &amp; the <code>ViewPanel</code> model</h2>
+        <p>
+          There's no Pinia or Vuex store in this app, even though Pinia is the usual choice for a
+          Vue 3 project this size. The reason is structural. Single View shows one independent
+          map/topic/indicator combination. Split View shows two, side by side, each fully
+          independent of the other. Rather than model that as two parallel sets of global refs,
+          which is exactly what the legacy iframe-2col code does, and exactly why that code
+          resists extension, Normal mode represents each visible column as one plain object:
+        </p>
+        <pre><code>interface ViewPanel {
+  id: string;                          // 'a' or 'b' - used to build unique DOM ids
+  selectedTopic: string;               // e.g. "roads"
+  topicId: number;                     // bumped on every topic change, forces map re-render
+  indicators: string[];                // every indicator name for this topic
+  mapLayer: string;                    // e.g. "h3", "adm1", "vg1000_krs"
+  activeIndicatorKey: string;          // which indicator is currently shown on map+plot
+  indicatorCards: IndicatorCard[];     // one card per non-attribute indicator
+  attributeOptions: AttributeOption[]; // one entry per attribute-completeness_* indicator
+  selectedAttributeIndicator: string;
+  mapLookup: Record&lt;string, number&gt;;  // {regionId → value} driving the map's colors
+  mapAvg: number;
+  activePlotAvailable: boolean;
+  featureCount: string;
+  totalLength: string;
+  tile1Label: string;
+  tagCoverage: TagCoverageItem[];
+  showTagCoverage: boolean;
+  schoolSwitchVisible: boolean;        // schools/hospitals only: operator:type vs isced:level toggle
+  schoolSubTopic: string;
+}</code></pre>
+        <p>
+          <code>const panels = ref&lt;ViewPanel[]&gt;([...])</code> holds one or two of these.
+          <code>viewMode</code> (<code>'single' | 'split'</code>) controls how many.
+          <code>setViewMode('split')</code> keeps the existing first panel and adds a second one,
+          defaulting to a different topic than the first so the two columns don't start out
+          identical. <code>setViewMode('single')</code> just truncates the array back to one.
+        </p>
+        <p>
+          Everything that would otherwise be a single global ref becomes one of two things
+          instead: a function that takes a <code>panelIdx: number</code> as its first argument,
+          for anything that mutates a panel (<code>loadIndicatorCards(panelIdx, topicName)</code>,
+          <code>selectIndicatorCard(panelIdx, indicator)</code>,
+          <code>handleMapLayerChange(panelIdx, layer)</code>), or a function that takes a
+          <code>panel: ViewPanel</code> object directly, for read-only helpers called straight
+          from the template (<code>getActiveCard(panel)</code>,
+          <code>getMapLookupRange(panel)</code>, <code>getChipItems(panel)</code>). The template
+          then just runs <code>v-for="(panel, idx) in panels"</code> and every child element
+          renders once per panel automatically. Single View and Split View are the same
+          template, rendered against an array of length one or two.
+        </p>
+        <div class="callout info">
+          <div class="callout-label">Why this instead of Pinia?</div>
+          <p>
+            With a store, two independent copies of the same feature usually mean either two
+            separate store modules (duplicated logic) or one module keyed by an id (extra
+            indirection for a fairly small app). Given there are only ever one or two panels, and
+            nothing outside <code>MainView.vue</code> needs this state, a local
+            <code>ref&lt;ViewPanel[]&gt;</code> plus plain functions is the simpler option, and
+            this project's own guidance favors simple when simple is enough. If a third,
+            genuinely independent page ever needs this same data, that's the moment to reach for
+            Pinia instead.
+          </p>
+        </div>
+      </section>
+
+      <section class="doc-section" id="life-of-a-click">
+        <h2><span class="num">09</span> Life of a click: choosing a topic</h2>
+        <p>
+          The clearest way to see how the pieces fit together is to trace one concrete action
+          from start to finish: clicking "Schools" in a Split View column's Topic row.
+        </p>
+        <ol class="steps">
+          <li><strong>The click handler fires.</strong> The Topic pill's <code>@click</code> calls <code>handlePanelTopicChange(idx, 'schools')</code>.</li>
+          <li><strong>The panel's topic and id update.</strong> <code>panel.selectedTopic = 'schools'</code>; <code>panel.topicId++</code>. That increment is what makes <code>&lt;MetricMap :key="...+ panel.topicId"&gt;</code> change, which forces Vue to tear down and recreate the map instance cleanly for the new topic instead of trying to patch it in place.</li>
+          <li><strong><code>loadPanelTopicData(idx)</code> runs.</strong> This is the one per-panel pipeline function, and it does, roughly in parallel where it can:
+            <ul>
+              <li><code>loadIndicators()</code> and <code>loadTagCoverage()</code>: what indicators exist for "schools", and which of them are attribute-completeness bars</li>
+              <li><code>loadIndicatorCards(idx, 'schools')</code>: turns each indicator into a card, its display value, its gauge-ring percentage, its good/warn/bad/neutral level, and, through <code>isNoQualityDescription()</code>, whether it's a raw count like <code>user-activity</code> rather than a quality percentage</li>
+              <li><code>refreshActiveIndicator(idx, 'schools')</code>: loads the map-coloring lookup and the small detail plot for whichever indicator ends up active</li>
+              <li><code>loadPanelTreemap(idx)</code>: the "Tag distribution" treemap for schools' grouping key, <code>operator:type</code>, or <code>isced:level</code> if that sub-toggle is on</li>
+              <li>updates <code>schoolSwitchVisible</code> so the operator/isced toggle only shows up for schools and hospitals</li>
+            </ul>
+          </li>
+          <li><strong>Vue re-renders on its own.</strong> None of the above touches the DOM directly. Every one of those calls just assigns new values onto <code>panel.*</code> properties (or the <code>ChipItem[]</code> a computed helper derives from them), and Vue's reactivity re-renders whatever template expression reads them: the hero band's headline number, the indicator chip row, the map's <code>:lookup</code> prop, the plot container.</li>
+          <li><strong><code>MetricMap.vue</code> reacts to its own prop changes</strong> through <code>watch()</code>. A new <code>topicId</code> triggers <code>updateMapData()</code> (rebuild the colored layer, re-fit the map to bounds). A new <code>lookup</code> object patches each shape's <code>feature-state</code> without a full rebuild, unless it's a count-type indicator, whose color scale depends on the lookup's own min and max and has to rebuild regardless.</li>
+          <li><strong>Plotly draws the plot.</strong> <code>loadActiveIndicatorPlot(idx)</code> and <code>loadPanelTreemap(idx)</code> both end in a <code>Plotly.react(containerId, fig.data, fig.layout, {...})</code> call against a uniquely-id'd <code>&lt;div&gt;</code> (<code>active-indicator-plot-a</code>, <code>tag-treemap-b</code>, and so on). <code>Plotly.react</code>, not <code>Plotly.newPlot</code>, runs everywhere, so re-rendering the same chart with new data updates it instead of tearing the whole thing down and rebuilding it.</li>
+        </ol>
+        <p>
+          Switching countries (<code>loadCountry()</code>) is the same idea, one level up.
+          Re-derive the available layers and topics, reset every panel to a fresh default topic,
+          and call <code>loadPanelTopicData(idx)</code> for each one.
+        </p>
+      </section>
+
+      <section class="doc-section" id="components">
+        <h2><span class="num">10</span> Components reference</h2>
+
+        <h3><code>ReportHeader.vue</code></h3>
+        <p>The top bar. Purely presentational: it owns no data of its own, only props and emits.</p>
+        <table>
+          <tr><th>Prop</th><th>Purpose</th></tr>
+          <tr><td><code>selectedCountry</code>, <code>countries</code></td><td>Drives the country <code>&lt;select&gt;</code>. Emits <code>update:selectedCountry</code>.</td></tr>
+          <tr><td><code>selectedTopic</code>, <code>topics</code>, <code>showTopicSelector</code></td><td>The Topic pill row, only shown in Single View and the legacy iframe-2col mode (Split View moves topic-picking into each column instead).</td></tr>
+          <tr><td><code>viewMode</code>, <code>showViewModeToggle</code></td><td>The Single View / Split View pill toggle. Emits <code>update:viewMode</code>.</td></tr>
+        </table>
+
+        <h3><code>MetricMap.vue</code></h3>
+        <p>
+          One MapLibre GL instance. It gets used three times in the codebase: once per
+          Single/Split View panel, dynamically through <code>v-for</code>, and once more,
+          statically, inside the legacy iframe-2col template. Rebuilding the colored layer is
+          driven entirely by prop watchers, see the walkthrough in §9. Two more things worth
+          knowing:
+        </p>
+        <ul>
+          <li><strong>Count versus percentage coloring.</strong> <code>isCountIndicator</code> switches the fill-color logic from a fixed red/amber/green quality scale to a continuous blue gradient stretched to the current data's own min and max. A raw count like "4,077 active users" has no universal good/bad threshold the way a 0 to 100% score does.</li>
+          <li><strong>Split View's synchronized pan and zoom.</strong> Each map emits a <code>move</code> event, but only for a genuine user gesture. The handler latches a flag on <code>movestart</code>, checking <code>e.originalEvent</code> (only set for real mouse, touch or wheel input, never for a programmatic <code>fitBounds</code> or <code>easeTo</code>), and holds it until <code>moveend</code>. That way a whole animated gesture, including inertial wheel-zoom, which fires many <code>move</code> events but only tags the first, gets treated as one unit. <code>MainView.vue</code> listens for this and calls the other panel's exposed <code>setView()</code> (through <code>defineExpose</code>), which applies the camera instantly with <code>jumpTo</code> under an <code>isSyncingView</code> guard, so the sync can never trigger itself.</li>
+        </ul>
+
+        <h3><code>IndicatorGaugeCard.vue</code> &amp; <code>AttributeCompletenessCard.vue</code></h3>
+        <p>
+          Used only in Single View's indicator stack. Split View replaced this with the compact
+          chip row described in §11, a deliberate difference, not an oversight.
+          <code>IndicatorGaugeCard</code> shows one indicator as a gauge ring plus a description,
+          or, for a count-type indicator, a plain number badge instead of a ring (a percentage
+          ring would imply a graded score that a raw count doesn't have).
+          <code>AttributeCompletenessCard</code> is the same shape but bundles a
+          <code>&lt;select&gt;</code>, so one card can represent several attribute-completeness
+          indicators, surface, maxspeed, name, switching which one shows without needing a
+          separate card per attribute.
+        </p>
+
+        <h3><code>ReportFooter.vue</code></h3>
+        <p>Static legal links (Contact, Privacy, Imprint) and the ohsome dashboard badge. No props, no state. Safe to edit freely.</p>
+      </section>
+
+      <section class="doc-section" id="design-system">
+        <h2><span class="num">11</span> The design system</h2>
+        <p>
+          Every color, font and shadow in the redesigned Normal-mode UI is a CSS custom property,
+          defined once in <span class="filechip">src/assets/main.css</span> and consumed with
+          <code>var(--token-name)</code> everywhere else, mostly inside <code>MainView.vue</code>'s
+          own <code>&lt;style scoped&gt;</code> block, plus each component's own scoped styles.
+          There's exactly one palette. No dark mode toggle exists in this app today.
+        </p>
+        <table>
+          <tr><th>Token</th><th>Value</th><th>Used for</th></tr>
+          <tr><td><code>--paper</code> / <code>--paper-raised</code></td><td>#F3F3F3 / #FFFFFF</td><td>Page background / card background</td></tr>
+          <tr><td><code>--ink</code> / <code>--ink-soft</code> / <code>--ink-faint</code></td><td>near-black / gray / lighter gray</td><td>Primary / secondary / caption text</td></tr>
+          <tr><td><code>--accent</code></td><td>#2185D0</td><td>Links, active pills, focus rings, matches HeiGIT's real ohsome-dashboard product on purpose, not an invented brand color</td></tr>
+          <tr><td><code>--brand</code></td><td>#CA2334</td><td>The logo mark only, never used for interactive UI</td></tr>
+          <tr><td><code>--good</code> / <code>--warn</code> / <code>--bad</code></td><td>green / amber / red</td><td>Quality levels, matches the map's own 0 to 25% / 25 to 75% / 75 to 100% legend exactly, so a color always means the same thing everywhere on the page</td></tr>
+          <tr><td><code>--font-display</code> / <code>--font-body</code> / <code>--font-mono</code></td><td>all set to Lato</td><td>The whole redesigned UI uses one typeface family (loaded through a <code>&lt;link&gt;</code> in <code>index.html</code>), there's no separate mono/code font in the product UI itself</td></tr>
+        </table>
+        <div class="callout warn">
+          <div class="callout-label">A legacy set of tokens still exists too</div>
+          <p>
+            <code>--font-sans</code>, <code>--color-bg</code>, <code>--color-card-bg</code> and a
+            few others near the top of <code>main.css</code> exist only so the untouched
+            iframe-2col layout keeps rendering exactly as it always has (it uses the Archivo
+            font, not Lato). If you're styling something in Normal mode, ignore these. If you're
+            carefully touching the iframe-2col template, these are the tokens it actually reads.
+          </p>
+        </div>
+        <p>A few visual patterns repeat across the whole redesigned UI, and it helps to know them by name.</p>
+        <p>
+          The <strong>pill</strong> is a bordered, rounded button that turns solid
+          <code>--accent</code> when active. It shows up for topic selection, the view-mode
+          toggle, and layer switching, and it's defined slightly differently in a couple of
+          separate scoped <code>&lt;style&gt;</code> blocks: <code>ReportHeader.vue</code>'s
+          <code>.pill</code>, <code>MainView.vue</code>'s <code>.topic-pills-row .pill</code>.
+          That's not really a choice, it's unavoidable: Vue's <code>&lt;style scoped&gt;</code>
+          doesn't share CSS between components even when the class name matches. If a pill
+          somewhere looks unstyled, this is almost always why. The component rendering it never
+          defined its own copy of the rule.
+        </p>
+        <p>
+          The <strong>chip</strong> is Split View's compact indicator and attribute picker: a
+          small dot colored by quality level, plus a label, no ring, no description text (that's
+          kept for Single View, where there's room for it). Look at
+          <code>getChipItems(panel)</code> and <code>.chip</code> / <code>.chip-dot</code> in
+          <code>MainView.vue</code>.
+        </p>
+        <p>
+          <strong>CSS Subgrid</strong> handles Split View's row alignment.
+          <code>.view-columns--split &gt; .view-column</code> uses
+          <code>grid-template-rows: subgrid</code>, so column A's "mainview" section and column
+          B's "mainview" section always start at the same height and take up the same height
+          (whichever one is taller sets it), with zero JavaScript height-measuring involved. It
+          degrades gracefully too: browsers without subgrid support just fall back to
+          independent flex stacking per column, slightly misaligned but never broken.
+        </p>
+        <h3>Tailwind: present, but mostly unused</h3>
+        <p>
+          Tailwind is installed and configured (<span class="filechip">tailwind.config.js</span>,
+          <span class="filechip">postcss.config.js</span>), and its <code>@tailwind</code>
+          directives sit at the top of <code>main.css</code>. In practice, almost none of the
+          redesigned UI actually uses Tailwind utility classes. The design system above,
+          hand-written CSS custom properties plus scoped <code>&lt;style&gt;</code> blocks, is
+          what you'll be editing most of the time. Tailwind is effectively legacy plumbing at
+          this point. Use its utility classes for something new if you want to, but don't expect
+          much precedent for it in the existing code.
+        </p>
+      </section>
+
+      <section class="doc-section" id="build-deploy">
+        <h2><span class="num">12</span> Build, deploy &amp; hosting</h2>
+        <p>
+          Deployment is fully automated through
+          <span class="filechip">.github/workflows/deploy.yml</span> at the
+          <strong>repository root</strong>, one level above this Vue project, since this repo
+          also holds the separate Python pipeline:
+        </p>
+        <pre><code>on:
+  push:
+    branches: [main]
+
+jobs:
+  build-and-deploy:
+    steps:
+      - checkout
+      - cd oqapi-country-reports-vue &amp;&amp; npm install &amp;&amp; npm run build
+      - deploy ./oqapi-country-reports-vue/dist to the gh-pages branch</code></pre>
+        <p>
+          In other words: every push to <code>main</code> rebuilds and redeploys the live site
+          automatically, with no manual step and no staging environment. Test locally before
+          merging to <code>main</code>. There's no safety net after that point besides GitHub
+          Pages' own rollback, which just means redeploying an older commit by hand.
+        </p>
+        <p>
+          The built app is served at
+          <code>https://&lt;org&gt;.github.io/osm-quality-country-reports/</code>, note the
+          sub-path. That's why <code>vite.config.ts</code>/<code>.js</code> hardcode
+          <code>base: '/osm-quality-country-reports/'</code> as the default, overridden to
+          <code>/</code> only for local dev through the <code>VITE_BASE_URL</code> env var in
+          the <code>dev</code> script. If this app ever moves to a different host or a custom
+          domain, this base path is the first thing to change. Get it wrong and every asset URL
+          in the built <code>dist/</code> output 404s.
+        </p>
+      </section>
+
+      <section class="doc-section" id="recipes">
+        <h2><span class="num">13</span> Recipes: common changes</h2>
+        <p>Concrete steps for the changes you're most likely to want to make.</p>
+
+        <div class="recipe">
+          <div class="recipe-head">Fix the duplicate Vite config problem</div>
+          <div class="recipe-body">
+            <ol>
+              <li>Delete <span class="filechip">vite.config.js</span> and <span class="filechip">vite.config.d.ts</span>.</li>
+              <li>In <span class="filechip">tsconfig.json</span>, remove the <code>"references": [{ "path": "./tsconfig.node.json" }]</code> line. That's what caused <code>vite.config.ts</code> to get compiled into <code>.js</code> in the first place, through <code>vue-tsc -b</code>'s project-reference build.</li>
+              <li>Delete <span class="filechip">tsconfig.node.json</span> itself, now unused.</li>
+              <li>Run <code>npm run build</code> once to confirm nothing else depended on it, then run <code>npm run dev</code> and confirm the app still starts.</li>
+            </ol>
+          </div>
+        </div>
+
+        <div class="recipe">
+          <div class="recipe-head">Restore the real country list</div>
+          <div class="recipe-body">
+            <ol>
+              <li>Confirm the underlying S3 bucket-policy 403 on the <code>ListBucket</code> call is actually fixed. Ask whoever owns HeiGIT's storage infrastructure; that part is outside this repo.</li>
+              <li>In <code>onMounted()</code> in <span class="filechip">MainView.vue</span>, delete the hardcoded <code>countries.value = [{ value: 'DEU', label: 'Germany' }]; selectedCountry.value = 'DEU';</code> block.</li>
+              <li>Uncomment the real block right below it, the one calling <code>fetchAvailableCountries()</code>, and check whether <code>'RWA'</code> is still the right default country or pick a different one.</li>
+              <li>Test with a country other than Germany. It's also the only way to notice whether Germany's special-cased BKG layer names in <code>getCountryLayers()</code> have quietly leaked into code paths that were supposed to be country-agnostic.</li>
+            </ol>
+          </div>
+        </div>
+
+        <div class="recipe">
+          <div class="recipe-head">Change the map's quality color scale</div>
+          <div class="recipe-body">
+            <ol>
+              <li>The colors live in two places that have to stay in sync: <code>buildFillColorExpression()</code> in <span class="filechip">MetricMap.vue</span> (the actual MapLibre paint expression) and every <code>.map-legend</code> block in <span class="filechip">MainView.vue</span>'s template (the on-screen key, currently hardcoded inline as <code>style="background:#F44336"</code> and so on, once per map instance).</li>
+              <li>The three quality-band colors also exist as design tokens, <code>--good</code> / <code>--warn</code> / <code>--bad</code> in <span class="filechip">main.css</span>, used by the indicator gauge rings and chip dots. Change the map's colors without changing these too, and the map will visibly disagree with the cards describing the same data.</li>
+            </ol>
+          </div>
+        </div>
+
+        <div class="recipe">
+          <div class="recipe-head">Add a brand-new topic-specific config (like schools/hospitals have)</div>
+          <div class="recipe-body">
+            <ol>
+              <li>Add an entry to <code>topicConfig</code> in <span class="filechip">helpers.ts</span> if the legacy iframe-2col mode needs to know this topic's default comparison and completeness indicators.</li>
+              <li>If the new topic needs its own tag-distribution grouping key, add a branch to <code>getTagGroupingKey()</code> in the same file.</li>
+              <li>Normal mode mostly doesn't need topic-specific code at all. <code>loadIndicatorCards</code> and <code>getChipItems</code> already work generically off whatever indicators the parquet file actually contains for that topic. Special-case only genuinely special behavior, like the schools/hospitals operator-type / isced-level sub-toggle. Search for <code>schoolSwitchVisible</code> to see everywhere that toggle reaches.</li>
+            </ol>
+          </div>
+        </div>
+
+        <div class="recipe">
+          <div class="recipe-head">Add a second real page/route</div>
+          <div class="recipe-body">
+            <ol>
+              <li>Create a new file under <span class="filechip">src/views/</span>, say <code>AboutView.vue</code>.</li>
+              <li>In <span class="filechip">src/main.ts</span>, add a second entry to the <code>routes</code> array passed to <code>createRouter()</code>: <code>{ path: '/about', component: AboutView }</code>.</li>
+              <li>Nothing else needs to change. <code>App.vue</code>'s <code>&lt;router-view /&gt;</code> already renders whatever route matches.</li>
+              <li>GitHub Pages serves this as a static site with one entry point, so a hard refresh on <code>/about</code> directly can 404 without an SPA-fallback trick (a duplicated <code>404.html</code>). Worth testing once real deep-linkable routes exist.</li>
+            </ol>
+          </div>
+        </div>
+      </section>
+
+      <section class="doc-section" id="rough-edges">
+        <h2><span class="num">14</span> Known rough edges</h2>
+        <p>A punch list, in one place. Nothing here is broken today, but all of it is worth knowing before you assume the surrounding code behaves normally.</p>
+        <ul>
+          <li>Two Vite config files, wrong one active. §2 and the first recipe above.</li>
+          <li>Country list hardcoded to Germany. §2 and the second recipe above.</li>
+          <li>No automated tests of any kind. Type-checking (<code>vue-tsc</code>) is the only automated gate; manual browser verification is mandatory for every change.</li>
+          <li>No ESLint or Prettier configuration. Code style is whatever the existing file already looks like. Match it by hand.</li>
+          <li>Two UI modes sharing one file. §6. Easy to edit the wrong branch, or to couple them by accident.</li>
+          <li><code>MainView.vue</code> is a single ~2,600-line file. There's no enforced component boundary between map controls, the hero band, indicator picking, and so on. If this file keeps growing, pulling some of that out into dedicated components, the way <code>MetricMap.vue</code> and the two indicator card components already are, is a reasonable next step.</li>
+          <li>Tailwind is installed but mostly dead weight. §11. Not harmful, just don't expect to find conventions for using it.</li>
+        </ul>
+      </section>
+
+      <section class="doc-section" id="glossary">
+        <h2><span class="num">15</span> Glossary</h2>
+        <dl class="glossary">
+          <dt>Topic</dt><dd>A category of OSM features this app reports on: roads, buildings, land cover, schools, hospitals. Each topic has its own set of relevant indicators.</dd>
+          <dt>Indicator</dt><dd>One specific quality metric within a topic, <code>currentness</code>, <code>mapping-saturation</code>, <code>attribute-completeness_surface</code>, and so on. Computed upstream by the ohsome-quality-api pipeline, not by this app.</dd>
+          <dt>Layer / grid layer</dt><dd>The geographic granularity a map currently shows: a whole country (<code>adm0</code>), a state or region (<code>adm1</code>), or a hexagonal grid (<code>h3</code>). Chosen per panel through the "Layer" pill row.</dd>
+          <dt>Grouping key / grouping tag</dt><dd>The OSM tag a topic's "Tag distribution" treemap breaks down by: <code>highway</code> for roads, <code>building</code> for buildings, <code>operator:type</code> for schools/hospitals by default.</dd>
+          <dt>PMTiles</dt><dd>A single-file vector-tile format that supports HTTP range requests, so a map can be served from one static file with no tile server. See §7.</dd>
+          <dt>Parquet</dt><dd>A compact, columnar binary file format for tabular data. This app treats every parquet file as a small queryable database through DuckDB-WASM, instead of parsing it into JSON up front.</dd>
+          <dt>DuckDB-WASM</dt><dd>A full SQL database engine compiled to WebAssembly, running entirely in the visitor's browser inside a Web Worker. It lets this app run real SQL queries against remote parquet files with no server-side query API. See §7.</dd>
+          <dt>ohsome-quality-api / ohsome-api</dt><dd>HeiGIT's separate backend services, not part of this repository, that the Dagster pipeline calls to actually compute quality indicators from OpenStreetMap history data. This app only ever reads their pre-computed output files from S3.</dd>
+          <dt>Panel</dt><dd>One independent map, topic and indicator combination in Normal mode. See <code>ViewPanel</code>, §8. Single View has one; Split View has two.</dd>
+          <dt>Single View / Split View</dt><dd>The two Normal-mode layouts, toggled in the header: one column, or two independent side-by-side columns.</dd>
+          <dt>iframe-2col</dt><dd>The legacy layout used when this app is embedded in an <code>&lt;iframe&gt;</code> by HeiGIT's HDX platform. See §6.</dd>
+          <dt>Hero band</dt><dd>The large "Medium 72%"-style headline box at the top of each panel, summarizing whichever indicator is currently active.</dd>
+        </dl>
+      </section>
+
+      <section class="doc-section" id="next">
+        <h2><span class="num">16</span> Where to go from here</h2>
+        <p>Suggested reading order if you're starting from zero, in one sitting:</p>
+        <ol>
+          <li>Read this whole document once, top to bottom, without touching code.</li>
+          <li><code>npm run dev</code> the app and click through Single View and Split View for a few minutes, watching the Network tab to see the pmtiles and parquet requests happen live.</li>
+          <li>Open <span class="filechip">src/views/MainView.vue</span> side by side with §6 through §9 of this guide and trace one topic switch by hand, matching what you read here to the actual lines.</li>
+          <li>Check whatever project instructions live in <span class="filechip">CLAUDE.md</span> at the repo root for house rules on how changes should be made (small, surgical, verified in a real browser). Those apply to this project just as much as to any AI assistant working on it.</li>
+          <li>Pick one item from <a href="#rough-edges">§14</a> and fix it, as practice, before attempting a real feature.</li>
+        </ol>
+        <p class="end-note">
+          This document describes the codebase as of the redesign that introduced Single View,
+          Split View, and the CSS-subgrid row alignment. It will drift out of date as the app
+          keeps changing. Treat it as a map of the territory on the day it was written, not a
+          promise about the future. When in doubt, the source code is the final authority. This
+          guide's only job is to make that source code fast to understand.
+        </p>
+      </section>
+
+    </div>
+  </div>
+</div>
+
+<script>
+  (function () {
+    var sidebar = document.getElementById('sidebar');
+    var toggle = document.getElementById('sidebarToggle');
+    toggle.addEventListener('click', function () {
+      sidebar.classList.toggle('open');
+    });
+    sidebar.querySelectorAll('a').forEach(function (a) {
+      a.addEventListener('click', function () { sidebar.classList.remove('open'); });
+    });
+
+    var links = Array.prototype.slice.call(sidebar.querySelectorAll('a'));
+    var sections = links.map(function (a) {
+      return document.getElementById(a.getAttribute('href').slice(1));
+    });
+
+    function onScroll() {
+      var y = window.scrollY + 120;
+      var currentIdx = 0;
+      for (var i = 0; i < sections.length; i++) {
+        if (sections[i] && sections[i].offsetTop <= y) currentIdx = i;
+      }
+      links.forEach(function (a, i) {
+        a.classList.toggle('current', i === currentIdx);
+      });
+    }
+    document.addEventListener('scroll', onScroll, { passive: true });
+    onScroll();
+  })();
+</script>
+
+</body>
+</html>

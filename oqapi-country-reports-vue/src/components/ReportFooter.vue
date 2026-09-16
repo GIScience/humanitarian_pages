@@ -28,10 +28,11 @@
 
 <style scoped>
 .footer {
-  padding: 0.25rem 1rem;
-  background: #fff;
-  border: 1px solid var(--color-border);
-  border-radius: var(--border-radius);
+  padding: 0.6rem 1.1rem;
+  background: var(--paper-raised);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+  border-radius: var(--radius);
 
   display: flex;
   align-items: center;
@@ -39,7 +40,8 @@
   flex-wrap: wrap;
   gap: 0.5rem;
 
-  font-size: 0.8rem;
+  font-size: 0.78rem;
+  font-family: var(--font-body);
 }
 
 .footer-left {
@@ -48,37 +50,42 @@
 }
 
 .footer-btn {
-  padding: 0.5rem 0.5rem;
-  border-radius: 6px;
-  border: 1px solid var(--color-border);
-  background: #f7f7f7;
+  padding: 0.4rem 0.6rem;
+  border: 1px solid var(--line-strong);
+  background: transparent;
   text-decoration: none;
-  color: var(--color-text);
+  color: var(--ink-soft);
   font-weight: 600;
+  border-radius: var(--radius);
 }
 
 .footer-btn:hover {
-  background: #eee;
+  border-color: var(--accent);
+  color: var(--ink);
+}
+
+.footer-right {
+  color: var(--ink-faint);
 }
 
 .footer-center {
-  color: #555;
+  color: var(--ink-faint);
   text-align: center;
-  flex: 1;
+  flex:1;
 }
 
 .ohsome-link {
   padding: 0.2rem 0.5rem;
-  border-radius: 6px;
-  border: 1px solid var(--color-border);
-  background: #fff;
+  border: 1px solid var(--line-strong);
+  background: var(--paper-raised);
+  border-radius: var(--radius);
 
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
 
   text-decoration: none;
-  color: var(--color-text);
+  color: var(--ink-soft);
   font-weight: 700;
   font-size: 0.6rem;
   letter-spacing: 0.04em;
@@ -90,15 +97,11 @@
 }
 
 .ohsome-link:hover {
-  background: #f3f3f3;
+  background: var(--paper);
 }
 
 .ohsome-text {
   white-space: nowrap;
-}
-
-.footer-right {
-  color: #555;
 }
 
 @media (max-width: 768px) {

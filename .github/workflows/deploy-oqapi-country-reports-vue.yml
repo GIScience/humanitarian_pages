@@ -1,0 +1,30 @@
+name: Deploy oqapi Country Reports
+on:
+  push:
+    branches: [main]
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install and Build
+        run: |
+          cd oqapi-country-reports-vue
+          npm install
+          npm run build
+
+      - name: Prep staging folder
+        run: |
+          mkdir _site
+          rsync -av --exclude='oqapi-country-reports-vue' --exclude='_site' --exclude='.git' --exclude='.github' ./ ./_site/
+          mkdir -p ./_site/oqapi-country-report
+          cp -r ./oqapi-country-reports-vue/dist/* ./_site/oqapi-country-report/
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./_site
