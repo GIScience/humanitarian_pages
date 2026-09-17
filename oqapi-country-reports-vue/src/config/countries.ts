@@ -16,4 +16,6 @@
  */
 export const CANDIDATE_COUNTRIES: string[] = [
   "DEU",
+  "KEN",
+  "NPL",
 ];

@@ -161,8 +161,8 @@ export interface BuildUrlsResult {
 /** URLs for one (country, layer) pair - the pmtiles file is shared across all layers of a country. */
 export function buildUrls(code: string, layer: string): BuildUrlsResult {
   return {
-    pmtilesUrl: `https://hot.storage.heigit.org/heigit-hdx-public/oqapi_hdx/downloads/${code}/${code}_boundaries.pmtiles`,
-    parquetUrl: `https://hot.storage.heigit.org/heigit-hdx-public/oqapi_hdx/downloads/${code}/${code}_${layer}_long.parquet`,
-    tagDistributionUrl: `https://hot.storage.heigit.org/heigit-hdx-public/oqapi_hdx/downloads/${code}/${code}_${layer}_tag_distribution.parquet`
+    pmtilesUrl: `https://hot.storage.heigit.org/heigit-hdx-public/ohsome-quality-country-reports/${code}/${code}_boundaries.pmtiles`,
+    parquetUrl: `https://hot.storage.heigit.org/heigit-hdx-public/ohsome-quality-country-reports/${code}/${code}_${layer}_long.parquet`,
+    tagDistributionUrl: `https://hot.storage.heigit.org/heigit-hdx-public/ohsome-quality-country-reports/${code}/${code}_${layer}_tag_distribution.parquet`
   };
 }

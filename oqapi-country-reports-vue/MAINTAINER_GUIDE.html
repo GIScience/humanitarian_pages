@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Quality Atlas Internals</title>
+<title>ohsome Country Quality Report Internals</title>
 <style>
   :root {
     --paper: #f6f7f9;
@@ -268,7 +268,7 @@
     <div class="sidebar-brand">
       <span class="mark">🧭</span>
       <div>
-        <strong>Quality Atlas</strong>
+        <strong>ohsome Country Quality Report</strong>
         <span>Internals &amp; maintenance guide</span>
       </div>
     </div>
@@ -305,7 +305,7 @@
 
       <header class="doc-header">
         <div class="doc-kicker">Maintainer's guide · oqapi-country-reports-vue</div>
-        <h1>Quality Atlas Internals</h1>
+        <h1>ohsome Country Quality Report Internals</h1>
         <p class="lede">
           This is a ground-up walkthrough of the Vue 3 app behind HeiGIT's OSM data-quality
           country reports. It covers how the app boots, where the data actually comes from, how
@@ -384,34 +384,27 @@
           </p>
         </div>
 
-        <div class="callout danger">
-          <div class="callout-label">The real country list is switched off</div>
+        <div class="callout info">
+          <div class="callout-label">The country list is a hand-maintained candidate list, not a bucket listing</div>
           <p>
-            Open <span class="filechip">src/views/MainView.vue</span> and look inside
-            <code>onMounted()</code>. You'll find this:
+            <code>onMounted()</code> in <span class="filechip">src/views/MainView.vue</span> calls
+            <code>fetchAvailableCountries()</code> for real, no shortcuts. What's worth knowing is
+            how that function decides what's available. It doesn't ask S3 which countries exist,
+            that would need a <code>ListBucket</code> call against the bucket root, and that's
+            still blocked by a bucket-policy issue on the infrastructure side. Instead,
+            <span class="filechip">src/config/countries.ts</span> exports a plain array,
+            <code>CANDIDATE_COUNTRIES</code>, today <code>["DEU", "KEN", "NPL"]</code>.
+            <code>fetchAvailableCountries()</code> sends a cheap <code>HEAD</code> request at each
+            candidate's boundaries file and keeps only the ones that actually respond, so listing
+            a country a little early, before its data has finished processing, is harmless. It
+            just won't show up until the file exists.
           </p>
-          <pre><code>// TEMPORARY local test-only bypass: the S3 ListBucket call this depends on is
-// currently 403ing (pre-existing bucket-policy issue, unrelated to the new
-// pipeline). Hardcoding DEU here so the dropdown isn't stuck empty while
-// testing the new pmtiles/parquet integration. Revert this block once that's
-// fixed for real.
-countries.value = [{ value: 'DEU', label: 'Germany' }];
-selectedCountry.value = 'DEU';
-/*
-const fetchedCountries = await fetchAvailableCountries();
-countries.value = fetchedCountries.map(c =&gt; ({ value: c.code, label: c.name }));
-...
-*/</code></pre>
           <p>
-            The real implementation, <code>fetchAvailableCountries()</code> in
-            <span class="filechip">src/services/dataService.ts</span>, lists the S3 bucket's
-            <code>downloads/</code> prefix to discover every country that's actually been
-            processed. It's written, it works, and it's simply commented out. Right now the
-            country dropdown shows Germany and nothing else, no matter how many countries have
-            real data sitting on S3. This is almost certainly the first thing worth fixing once
-            the S3 bucket-policy issue behind it (a 403 on the <code>ListBucket</code> call) gets
-            resolved on the infrastructure side. At that point the fix is two lines: delete the
-            hardcoded block, uncomment the real call.
+            This means adding a new country to the dropdown is a two-part job, and it's easy to
+            do only half of it: the pipeline has to actually upload that country's files to S3,
+            <em>and</em> its code has to be added to <code>CANDIDATE_COUNTRIES</code>. Forget the
+            second part and a fully-processed country will just never appear, with nothing in the
+            UI telling you why. See the recipe in <a href="#recipes">§13</a>.
           </p>
         </div>
 
@@ -509,9 +502,11 @@ npm install
 npm run dev
 # open the printed http://localhost:5173/... URL</code></pre>
         <p>
-          Before you see anything interesting, remember <a href="#before-you-touch">§2</a>: the
-          country dropdown is hardcoded to Germany only, regardless of what's really on S3.
-          That's expected, not a setup problem on your end.
+          The country dropdown will only show whichever countries in
+          <code>CANDIDATE_COUNTRIES</code> actually have data live on S3 right now, today that's
+          Germany, Kenya and Nepal (see <a href="#before-you-touch">§2</a>). If you add a country
+          there yourself and it doesn't show up, that's a missing S3 upload, not a bug in your
+          checkout.
         </p>
       </section>
 
@@ -521,18 +516,20 @@ npm run dev
         <ol class="steps">
           <li>
             <strong><span class="filechip">index.html</span></strong>
-            Loads two Google font families, the MapLibre GL CSS stylesheet, and
-            <code>pmtiles.js</code> (a small script that teaches MapLibre how to read the
-            <code>.pmtiles</code> vector-tile format) from CDNs, then mounts
-            <code>&lt;div id="app"&gt;</code> and hands off to <code>src/main.ts</code>.
+            Just mounts <code>&lt;div id="app"&gt;</code> and hands off to
+            <code>src/main.ts</code>. Nothing here reaches out to a CDN. Fonts, MapLibre's CSS
+            and the pmtiles protocol handler all come from npm packages instead, see the callout
+            right after this list.
           </li>
           <li>
             <strong><span class="filechip">src/main.ts</span></strong>
             Creates the Vue app, creates a Vue Router instance with exactly one route
             (<code>"/"</code> → <code>MainView.vue</code>), and mounts everything to
             <code>#app</code>. It also imports <span class="filechip">assets/main.css</span>
-            globally; that's where every CSS custom property (design token) in the app gets
-            defined.
+            globally (every CSS custom property in the app is defined there) and
+            <code>maplibre-gl/dist/maplibre-gl.css</code> from the <code>maplibre-gl</code>
+            package itself, rather than a <code>&lt;link&gt;</code> tag in
+            <span class="filechip">index.html</span>.
           </li>
           <li>
             <strong><span class="filechip">src/App.vue</span></strong>
@@ -549,12 +546,30 @@ npm run dev
           </li>
           <li>
             <strong>MainView's own <code>onMounted()</code></strong>
-            Detects whether the page is embedded in an iframe (§6), sets a hardcoded country
-            (§2), wires up hash-based routing so a URL like <code>#/DEU/roads</code> restores a
-            country and topic on load, and starts a <code>ResizeObserver</code> that keeps
-            MapLibre and Plotly canvases sized correctly as their containers change.
+            Detects whether the page is embedded in an iframe (§6), calls
+            <code>fetchAvailableCountries()</code> to build the real country list (§2), wires up
+            hash-based routing so a URL like <code>#/DEU/roads</code> restores a country and
+            topic on load, and starts a <code>ResizeObserver</code> that keeps MapLibre and
+            Plotly canvases sized correctly as their containers change.
           </li>
         </ol>
+        <div class="callout info">
+          <div class="callout-label">Nothing in this app loads from a third-party CDN</div>
+          <p>
+            That wasn't always true. Fonts used to come from Google Fonts, and MapLibre's CSS and
+            the pmtiles protocol handler used to load as global <code>&lt;script&gt;</code> tags
+            from a CDN with a <code>window.pmtiles</code> global. All three are gone now.
+            <span class="filechip">src/assets/fonts/</span> holds the actual woff2 files (Archivo
+            for the legacy iframe-2col layout, Lato for everything else), declared through plain
+            <code>@font-face</code> rules at the top of <span class="filechip">main.css</span>.
+            <code>pmtiles</code> and <code>maplibre-gl</code> are regular npm dependencies now,
+            imported directly (<code>import { PMTiles, Protocol } from "pmtiles"</code>), so
+            there's no <code>window.pmtiles</code> global left to declare or depend on. If you're
+            adding a new external asset, font, icon set, script, think twice before reaching for
+            a CDN link; self-hosting it through npm or a bundled file is the pattern this
+            codebase has settled on.
+          </p>
+        </div>
       </section>
 
       <section class="doc-section" id="two-faces">
@@ -612,21 +627,25 @@ isIframe2Col.value = inIframe || hasIframe2ColParam;</code></pre>
 
         <h3>The S3 bucket layout</h3>
         <p>
-          Every file this app ever reads lives under one public bucket root:
-          <code>https://hot.storage.heigit.org/heigit-hdx-public/oqapi_hdx/</code>. Two kinds of
-          files matter, and both come from <code>buildUrls(code, layer)</code> in
-          <span class="filechip">src/utils/helpers.ts</span>:
+          Boundaries and indicator data live under
+          <code>https://hot.storage.heigit.org/heigit-hdx-public/ohsome-quality-country-reports/</code>,
+          one folder per country code. That path moved at least once already, an earlier version
+          of this app read from a <code>oqapi_hdx/downloads/</code> prefix on the same bucket, so
+          don't be surprised if you find that old path mentioned in a stale comment, an old
+          screenshot, or someone's memory of how this used to work. The current path is whatever
+          <code>buildUrls(code, layer)</code> in <span class="filechip">src/utils/helpers.ts</span>
+          actually builds, treat that function as the one source of truth, not this guide.
         </p>
         <table>
           <tr><th>File</th><th>URL pattern</th><th>Format</th><th>What it's for</th></tr>
-          <tr><td>Boundaries</td><td><code>downloads/&lt;CODE&gt;/&lt;CODE&gt;_boundaries.pmtiles</code></td><td>PMTiles (vector tiles)</td><td>The map shapes themselves, one file per country, shared by every grid layer</td></tr>
-          <tr><td>Indicator data</td><td><code>downloads/&lt;CODE&gt;/&lt;CODE&gt;_&lt;layer&gt;_long.parquet</code></td><td>Apache Parquet</td><td>One row per region, topic and indicator: the value, its description, its pre-rendered Plotly figure</td></tr>
-          <tr><td>Tag distribution</td><td><code>downloads/&lt;CODE&gt;/&lt;CODE&gt;_&lt;layer&gt;_tag_distribution.parquet</code></td><td>Apache Parquet</td><td>Pre-rendered treemap figures per topic, grouping tag and measure</td></tr>
+          <tr><td>Boundaries</td><td><code>&lt;CODE&gt;/&lt;CODE&gt;_boundaries.pmtiles</code></td><td>PMTiles (vector tiles)</td><td>The map shapes themselves, one file per country, shared by every grid layer</td></tr>
+          <tr><td>Indicator data</td><td><code>&lt;CODE&gt;/&lt;CODE&gt;_&lt;layer&gt;_long.parquet</code></td><td>Apache Parquet</td><td>One row per region, topic and indicator: the value, its description, its pre-rendered Plotly figure</td></tr>
+          <tr><td>Tag distribution</td><td><code>&lt;CODE&gt;/&lt;CODE&gt;_&lt;layer&gt;_tag_distribution.parquet</code></td><td>Apache Parquet</td><td>Pre-rendered treemap figures per topic, grouping tag and measure</td></tr>
         </table>
         <p>
           <code>&lt;CODE&gt;</code> is a 3-letter country code (<code>DEU</code>,
-          <code>RWA</code>, and so on). <code>&lt;layer&gt;</code> is a grid or admin level,
-          <code>adm0</code>, <code>adm1</code>, <code>h3</code> by default, or a
+          <code>KEN</code>, <code>NPL</code>, and so on). <code>&lt;layer&gt;</code> is a grid or
+          admin level, <code>adm0</code>, <code>adm1</code>, <code>h3</code> by default, or a
           country-specific override (Germany uses BKG's own <code>vg2500_sta</code> /
           <code>vg2500_lan</code> / <code>vg1000_krs</code> names, see
           <code>getCountryLayers()</code> in <span class="filechip">helpers.ts</span>). Not
@@ -634,6 +653,19 @@ isIframe2Col.value = inIframe || hasIframe2ColParam;</code></pre>
           cheap <code>HEAD</code> request before offering a layer as selectable, so picking one
           that hasn't been processed doesn't just render a blank gray map with no explanation.
         </p>
+        <div class="callout warn">
+          <div class="callout-label">countries.yaml lives at a different prefix, on purpose</div>
+          <p>
+            <code>fetchAvailableCountries()</code> also fetches one more file, purely to turn a
+            country code into a readable display name: <code>countries.yaml</code>, at
+            <code>.../heigit-hdx-public/oqapi_hdx/countries/countries.yaml</code>. That's the
+            <em>old</em> bucket prefix, not the one above, and that's correct, not a leftover
+            bug. When the boundaries/parquet path moved to
+            <code>ohsome-quality-country-reports/</code>, this particular file didn't move with
+            it. Confirm with a direct request before ever "fixing" this path to match the other
+            one; the last time this got checked, the old path was the one that actually resolved.
+          </p>
+        </div>
 
         <h3>PMTiles: the map shapes</h3>
         <p>
@@ -679,15 +711,16 @@ isIframe2Col.value = inIframe || hasIframe2ColParam;</code></pre>
         <h3>The <code>dataService.ts</code> function reference</h3>
         <table>
           <tr><th>Function</th><th>Returns</th></tr>
-          <tr><td><code>fetchAvailableCountries()</code></td><td>Every country with a <code>downloads/&lt;CODE&gt;/</code> prefix on S3, prettified from a slug (<code>countries.yaml</code>) into a display name. Currently disabled, see §2.</td></tr>
-          <tr><td><code>checkParquetExists(url)</code></td><td><code>boolean</code>, a cheap HEAD-request existence check, used to decide which grid layers are selectable.</td></tr>
+          <tr><td><code>fetchAvailableCountries()</code></td><td>Every code in <code>CANDIDATE_COUNTRIES</code> (§2) whose boundaries file actually exists on S3, prettified into a display name via <code>countries.yaml</code>.</td></tr>
+          <tr><td><code>checkParquetExists(url)</code></td><td><code>boolean</code>, a cheap HEAD-request existence check, used to decide which grid layers, and which candidate countries, are selectable.</td></tr>
           <tr><td><code>loadAvailableTopics(parquetUrl)</code></td><td>Every distinct <code>topic</code> value in a country-level parquet file (e.g. <code>["roads","buildings","schools",...]</code>).</td></tr>
           <tr><td><code>loadIndicators(parquetUrl, topic)</code></td><td>Every distinct <code>indicator</code> name for one topic (e.g. <code>currentness</code>, <code>attribute-completeness_surface</code>).</td></tr>
           <tr><td><code>loadIndicatorLookups(parquetUrl, topic, indicatorNames[])</code></td><td>For each indicator: a <code>{regionId → value}</code> lookup for map coloring, a country-wide average, and its description text.</td></tr>
+          <tr><td><code>loadRegionIndicatorValues(parquetUrl, topic, geomId, indicatorNames[])</code></td><td>The same shape as <code>loadIndicatorLookups</code>, but scoped to one selected region's own row instead of the whole country. Backs the region drill-down feature, see §9.</td></tr>
           <tr><td><code>getPMTilesBounds(url)</code></td><td>The <code>[minLon, minLat, maxLon, maxLat]</code> bounding box baked into a PMTiles file's own metadata, used to fly the map to the right place.</td></tr>
           <tr><td><code>loadTagCoverage(parquetUrl)</code></td><td>Every <code>attribute-completeness_*</code> indicator's value, sorted highest first, feeds the "Attribute completeness" bar list.</td></tr>
-          <tr><td><code>loadTagDistribution(parquetUrl, topic, groupingKey)</code></td><td>One pre-rendered Plotly treemap figure (plus a raw total) per measure (<code>count</code>/<code>area</code>/<code>length</code>), feeds the "Tag distribution" box.</td></tr>
-          <tr><td><code>loadIndicatorFigure(parquetUrl, topic, indicator)</code></td><td>One indicator's pre-rendered Plotly gauge/bar figure, the small chart under the map.</td></tr>
+          <tr><td><code>loadTagDistribution(parquetUrl, topic, groupingKey, geomId?)</code></td><td>One pre-rendered Plotly treemap figure (plus a raw total) per measure (<code>count</code>/<code>area</code>/<code>length</code>), feeds the "Tag distribution" box. Pass a <code>geomId</code> to scope it to one selected region instead of the whole country.</td></tr>
+          <tr><td><code>loadIndicatorFigure(parquetUrl, topic, indicator, geomId?)</code></td><td>One indicator's pre-rendered Plotly gauge/bar figure, the small chart under the map. Same optional region scoping as above.</td></tr>
         </table>
         <p>
           Two more things worth knowing about this file. The pipeline's treemap figures always
@@ -721,7 +754,7 @@ isIframe2Col.value = inIframe || hasIframe2ColParam;</code></pre>
   attributeOptions: AttributeOption[]; // one entry per attribute-completeness_* indicator
   selectedAttributeIndicator: string;
   mapLookup: Record&lt;string, number&gt;;  // {regionId → value} driving the map's colors
-  mapAvg: number;
+  selectedGeomId: string | null;       // set when a single region is clicked on the map
   activePlotAvailable: boolean;
   featureCount: string;
   totalLength: string;
@@ -733,7 +766,10 @@ isIframe2Col.value = inIframe || hasIframe2ColParam;</code></pre>
 }</code></pre>
         <p>
           <code>const panels = ref&lt;ViewPanel[]&gt;([...])</code> holds one or two of these.
-          <code>viewMode</code> (<code>'single' | 'split'</code>) controls how many.
+          <code>selectedGeomId</code> is what makes clicking a single district on the map narrow
+          every box in that panel down to that one region instead of the whole country; §9 walks
+          through that flow end to end. <code>viewMode</code> (<code>'single' | 'split'</code>)
+          controls how many panels there are.
           <code>setViewMode('split')</code> keeps the existing first panel and adds a second one,
           defaulting to a different topic than the first so the two columns don't start out
           identical. <code>setViewMode('single')</code> just truncates the array back to one.
@@ -774,7 +810,7 @@ isIframe2Col.value = inIframe || hasIframe2ColParam;</code></pre>
         </p>
         <ol class="steps">
           <li><strong>The click handler fires.</strong> The Topic pill's <code>@click</code> calls <code>handlePanelTopicChange(idx, 'schools')</code>.</li>
-          <li><strong>The panel's topic and id update.</strong> <code>panel.selectedTopic = 'schools'</code>; <code>panel.topicId++</code>. That increment is what makes <code>&lt;MetricMap :key="...+ panel.topicId"&gt;</code> change, which forces Vue to tear down and recreate the map instance cleanly for the new topic instead of trying to patch it in place.</li>
+          <li><strong>The panel's topic and id update.</strong> <code>panel.selectedTopic = 'schools'</code>; <code>panel.topicId++</code>. <code>&lt;MetricMap&gt;</code> is keyed only on <code>panel.id</code> ('a' or 'b'), not on <code>topicId</code>, so the map instance is <em>not</em> torn down and recreated on a topic change, it stays mounted and just receives <code>topicId</code> as a normal reactive prop. <code>MetricMap.vue</code>'s own <code>watch()</code> on that prop calls <code>updateMapData()</code> to rebuild the colored layer in place. Keeping the same instance across a topic change is what let map-sync and click-to-select-a-region keep working without resetting every time you pick a different topic.</li>
           <li><strong><code>loadPanelTopicData(idx)</code> runs.</strong> This is the one per-panel pipeline function, and it does, roughly in parallel where it can:
             <ul>
               <li><code>loadIndicators()</code> and <code>loadTagCoverage()</code>: what indicators exist for "schools", and which of them are attribute-completeness bars</li>
@@ -785,7 +821,7 @@ isIframe2Col.value = inIframe || hasIframe2ColParam;</code></pre>
             </ul>
           </li>
           <li><strong>Vue re-renders on its own.</strong> None of the above touches the DOM directly. Every one of those calls just assigns new values onto <code>panel.*</code> properties (or the <code>ChipItem[]</code> a computed helper derives from them), and Vue's reactivity re-renders whatever template expression reads them: the hero band's headline number, the indicator chip row, the map's <code>:lookup</code> prop, the plot container.</li>
-          <li><strong><code>MetricMap.vue</code> reacts to its own prop changes</strong> through <code>watch()</code>. A new <code>topicId</code> triggers <code>updateMapData()</code> (rebuild the colored layer, re-fit the map to bounds). A new <code>lookup</code> object patches each shape's <code>feature-state</code> without a full rebuild, unless it's a count-type indicator, whose color scale depends on the lookup's own min and max and has to rebuild regardless.</li>
+          <li><strong><code>MetricMap.vue</code> reacts to its own prop changes</strong> through <code>watch()</code>. A new <code>topicId</code> triggers <code>updateMapData()</code>, which rebuilds the colored layer, but does <em>not</em> re-fit the camera to the country's bounds; a <code>lastFittedBoundsKey</code> guard makes sure <code>fitBounds()</code> only fires when the <code>bounds</code> prop itself actually changes, which only happens on a real country switch. A new <code>lookup</code> object patches each shape's <code>feature-state</code> without a full rebuild, unless it's a count-type indicator, whose color scale depends on the lookup's own min and max and has to rebuild regardless.</li>
           <li><strong>Plotly draws the plot.</strong> <code>loadActiveIndicatorPlot(idx)</code> and <code>loadPanelTreemap(idx)</code> both end in a <code>Plotly.react(containerId, fig.data, fig.layout, {...})</code> call against a uniquely-id'd <code>&lt;div&gt;</code> (<code>active-indicator-plot-a</code>, <code>tag-treemap-b</code>, and so on). <code>Plotly.react</code>, not <code>Plotly.newPlot</code>, runs everywhere, so re-rendering the same chart with new data updates it instead of tearing the whole thing down and rebuilding it.</li>
         </ol>
         <p>
@@ -793,18 +829,40 @@ isIframe2Col.value = inIframe || hasIframe2ColParam;</code></pre>
           Re-derive the available layers and topics, reset every panel to a fresh default topic,
           and call <code>loadPanelTopicData(idx)</code> for each one.
         </p>
+
+        <h3>Life of a click: selecting one district on the map</h3>
+        <p>
+          The other click worth tracing is a click directly on a shape in the map, drilling every
+          box in that panel down to just that one region. This entire feature post-dates the
+          redesign that the rest of this guide describes, so it's easy to miss if you're skimming.
+        </p>
+        <ol class="steps">
+          <li><strong>MapLibre reports the click.</strong> <code>MetricMap.vue</code>'s own click handler runs <code>queryRenderedFeatures</code> against the currently active fill layer at the click point. Clicking the region that's already selected clears the selection instead of re-selecting it, so the same click acts as a toggle.</li>
+          <li><strong>The map emits, it doesn't decide.</strong> <code>MetricMap.vue</code> has no idea what "selected" means to the rest of the app. It just emits <code>regionClick</code> with the clicked feature's id, or <code>null</code> on a toggle-off, and separately draws an outline layer for whichever id its own <code>selectedGeomId</code> prop currently holds.</li>
+          <li><strong><code>handleRegionClick(panelIdx, geomId)</code> owns the actual state change.</strong> It sets <code>panel.selectedGeomId</code>, then reloads <code>loadIndicatorCards</code>, <code>loadActiveIndicatorPlot</code> and <code>loadPanelTreemap</code> for that one panel, each now pointed at the region, not the country.</li>
+          <li><strong>Every box narrows to that region.</strong> The hero band, the indicator cards or chips, the attribute-completeness bars and the tag-distribution treemap all read from the same <code>panel.selectedGeomId</code>, so there's exactly one flag to check if you're adding a new box and want it to respect the current selection too.</li>
+          <li><strong>A banner makes the scoping obvious.</strong> Whenever <code>panel.selectedGeomId</code> is set, a <code>.region-banner</code> appears at the top of the panel with a "← Back to all of {country}" button, so it's never ambiguous whether you're looking at a country-wide number or one district's.</li>
+          <li><strong>The selection clears itself when it would stop making sense.</strong> Switching the map layer (Kreise → Länder, say) resets <code>selectedGeomId</code> to <code>null</code>, because a region id from one layer means nothing in another. Switching country does the same.</li>
+        </ol>
       </section>
 
       <section class="doc-section" id="components">
         <h2><span class="num">10</span> Components reference</h2>
 
         <h3><code>ReportHeader.vue</code></h3>
-        <p>The top bar. Purely presentational: it owns no data of its own, only props and emits.</p>
+        <p>
+          The top bar. Purely presentational: it owns no data of its own, only props and emits.
+          Left to right, it's brand mark, then Country, then Topic, then View: the ohsome
+          quality-api logo plus the "ohsome Country Quality Report" title
+          (<span class="filechip">src/assets/images/ohsome-quality-api_2000px.png</span>,
+          imported like any other module asset, not loaded from a URL), followed by the three
+          selector fields below.
+        </p>
         <table>
           <tr><th>Prop</th><th>Purpose</th></tr>
           <tr><td><code>selectedCountry</code>, <code>countries</code></td><td>Drives the country <code>&lt;select&gt;</code>. Emits <code>update:selectedCountry</code>.</td></tr>
           <tr><td><code>selectedTopic</code>, <code>topics</code>, <code>showTopicSelector</code></td><td>The Topic pill row, only shown in Single View and the legacy iframe-2col mode (Split View moves topic-picking into each column instead).</td></tr>
-          <tr><td><code>viewMode</code>, <code>showViewModeToggle</code></td><td>The Single View / Split View pill toggle. Emits <code>update:viewMode</code>.</td></tr>
+          <tr><td><code>viewMode</code>, <code>showViewModeToggle</code></td><td>The Single View / Split View pill toggle. Emits <code>update:viewMode</code>, and renders last, on the right.</td></tr>
         </table>
 
         <h3><code>MetricMap.vue</code></h3>
@@ -818,19 +876,30 @@ isIframe2Col.value = inIframe || hasIframe2ColParam;</code></pre>
         <ul>
           <li><strong>Count versus percentage coloring.</strong> <code>isCountIndicator</code> switches the fill-color logic from a fixed red/amber/green quality scale to a continuous blue gradient stretched to the current data's own min and max. A raw count like "4,077 active users" has no universal good/bad threshold the way a 0 to 100% score does.</li>
           <li><strong>Split View's synchronized pan and zoom.</strong> Each map emits a <code>move</code> event, but only for a genuine user gesture. The handler latches a flag on <code>movestart</code>, checking <code>e.originalEvent</code> (only set for real mouse, touch or wheel input, never for a programmatic <code>fitBounds</code> or <code>easeTo</code>), and holds it until <code>moveend</code>. That way a whole animated gesture, including inertial wheel-zoom, which fires many <code>move</code> events but only tags the first, gets treated as one unit. <code>MainView.vue</code> listens for this and calls the other panel's exposed <code>setView()</code> (through <code>defineExpose</code>), which applies the camera instantly with <code>jumpTo</code> under an <code>isSyncingView</code> guard, so the sync can never trigger itself.</li>
+          <li><strong>Re-fitting only happens on a real country change.</strong> A <code>lastFittedBoundsKey</code> ref remembers the last bounds the map actually flew to. <code>updateMapData()</code> runs on every topic, indicator and layer change, but only calls <code>fitBounds()</code> when the incoming <code>bounds</code> prop's key differs from that remembered one. Without this guard, picking a new topic re-ran the same fly-to animation for no reason, even though the view didn't need to move.</li>
+          <li><strong>Clicking a shape selects a region.</strong> A <code>selectedGeomId</code> prop and a <code>regionClick</code> emit drive the drill-down feature walked through in <a href="#life-of-a-click">§9</a>. The component itself just reports clicks and draws the outline for whatever id it's told is selected; it doesn't decide what "selected" means to the rest of the app.</li>
         </ul>
 
         <h3><code>IndicatorGaugeCard.vue</code> &amp; <code>AttributeCompletenessCard.vue</code></h3>
         <p>
           Used only in Single View's indicator stack. Split View replaced this with the compact
-          chip row described in §11, a deliberate difference, not an oversight.
-          <code>IndicatorGaugeCard</code> shows one indicator as a gauge ring plus a description,
-          or, for a count-type indicator, a plain number badge instead of a ring (a percentage
-          ring would imply a graded score that a raw count doesn't have).
+          topic/indicator/layer cluster described in §11, a deliberate difference, not an
+          oversight. <code>IndicatorGaugeCard</code> shows one indicator as a gauge ring plus a
+          description, or, for a count-type indicator, a plain number badge instead of a ring (a
+          percentage ring would imply a graded score that a raw count doesn't have).
           <code>AttributeCompletenessCard</code> is the same shape but bundles a
           <code>&lt;select&gt;</code>, so one card can represent several attribute-completeness
           indicators, surface, maxspeed, name, switching which one shows without needing a
           separate card per attribute.
+        </p>
+        <p>
+          Both cards fold shut by default (<code>const expanded = ref(false)</code> in each), and
+          each card tracks its own fold state independently, expanding one doesn't touch the
+          others. A chevron button toggles it, the description fades in and out through a
+          <code>&lt;Transition&gt;</code>, and <code>.indicator-stack</code> stays a fixed
+          two-column CSS grid the whole time, an expanded card grows taller in its own column
+          rather than spanning both. Whatever free space that leaves next to a short, folded card
+          is intentional, not a layout bug to fix.
         </p>
 
         <h3><code>ReportFooter.vue</code></h3>
@@ -853,7 +922,8 @@ isIframe2Col.value = inIframe || hasIframe2ColParam;</code></pre>
           <tr><td><code>--accent</code></td><td>#2185D0</td><td>Links, active pills, focus rings, matches HeiGIT's real ohsome-dashboard product on purpose, not an invented brand color</td></tr>
           <tr><td><code>--brand</code></td><td>#CA2334</td><td>The logo mark only, never used for interactive UI</td></tr>
           <tr><td><code>--good</code> / <code>--warn</code> / <code>--bad</code></td><td>green / amber / red</td><td>Quality levels, matches the map's own 0 to 25% / 25 to 75% / 75 to 100% legend exactly, so a color always means the same thing everywhere on the page</td></tr>
-          <tr><td><code>--font-display</code> / <code>--font-body</code> / <code>--font-mono</code></td><td>all set to Lato</td><td>The whole redesigned UI uses one typeface family (loaded through a <code>&lt;link&gt;</code> in <code>index.html</code>), there's no separate mono/code font in the product UI itself</td></tr>
+          <tr><td><code>--font-display</code> / <code>--font-body</code> / <code>--font-mono</code></td><td>all set to Lato</td><td>The whole redesigned UI uses one typeface family, self-hosted as a local woff2 file rather than loaded from Google Fonts, there's no separate mono/code font in the product UI itself</td></tr>
+          <tr><td><code>--radius</code></td><td>8px</td><td>Corner radius for cards, pills and chips across the redesigned UI. Deliberately small and consistent, not the older, sharper 4px the legacy iframe-2col layout still uses</td></tr>
         </table>
         <div class="callout warn">
           <div class="callout-label">A legacy set of tokens still exists too</div>
@@ -878,11 +948,14 @@ isIframe2Col.value = inIframe || hasIframe2ColParam;</code></pre>
           defined its own copy of the rule.
         </p>
         <p>
-          The <strong>chip</strong> is Split View's compact indicator and attribute picker: a
-          small dot colored by quality level, plus a label, no ring, no description text (that's
-          kept for Single View, where there's room for it). Look at
-          <code>getChipItems(panel)</code> and <code>.chip</code> / <code>.chip-dot</code> in
-          <code>MainView.vue</code>.
+          The <strong>chip</strong> is Split View's compact indicator picker: a small dot colored
+          by quality level, plus a label, no ring, no description text (that's kept for Single
+          View, where there's room for it). Look at <code>getChipItems(panel)</code> and
+          <code>.chip</code> / <code>.chip-dot</code> in <code>MainView.vue</code>. In Split View
+          this chip row sits directly above the map, stacked with a Topic pill row above it and
+          the Layer switch below it, one control cluster for everything that changes what a given
+          map shows, rather than Topic living far away at the top of the column the way it did
+          before this redesign.
         </p>
         <p>
           <strong>CSS Subgrid</strong> handles Split View's row alignment.
@@ -955,17 +1028,24 @@ jobs:
               <li>Delete <span class="filechip">tsconfig.node.json</span> itself, now unused.</li>
               <li>Run <code>npm run build</code> once to confirm nothing else depended on it, then run <code>npm run dev</code> and confirm the app still starts.</li>
             </ol>
+            <p>
+              Worth checking after you do this: <span class="filechip">vite.config.js</span> has
+              been seen regenerating itself with a newer timestamp than the <code>.ts</code> file
+              it's supposed to be a stale copy of, which points at some other build step still
+              running <code>tsc</code> against the project root. Track that down before assuming
+              this fix stuck.
+            </p>
           </div>
         </div>
 
         <div class="recipe">
-          <div class="recipe-head">Restore the real country list</div>
+          <div class="recipe-head">Add a country to the picker</div>
           <div class="recipe-body">
             <ol>
-              <li>Confirm the underlying S3 bucket-policy 403 on the <code>ListBucket</code> call is actually fixed. Ask whoever owns HeiGIT's storage infrastructure; that part is outside this repo.</li>
-              <li>In <code>onMounted()</code> in <span class="filechip">MainView.vue</span>, delete the hardcoded <code>countries.value = [{ value: 'DEU', label: 'Germany' }]; selectedCountry.value = 'DEU';</code> block.</li>
-              <li>Uncomment the real block right below it, the one calling <code>fetchAvailableCountries()</code>, and check whether <code>'RWA'</code> is still the right default country or pick a different one.</li>
-              <li>Test with a country other than Germany. It's also the only way to notice whether Germany's special-cased BKG layer names in <code>getCountryLayers()</code> have quietly leaked into code paths that were supposed to be country-agnostic.</li>
+              <li>Confirm the pipeline has actually uploaded that country's files: at minimum <code>&lt;CODE&gt;/&lt;CODE&gt;_boundaries.pmtiles</code> under the S3 path in §7. A quick <code>curl -I</code> against that URL is enough.</li>
+              <li>Add the 3-letter code to <code>CANDIDATE_COUNTRIES</code> in <span class="filechip">src/config/countries.ts</span>.</li>
+              <li>Check <code>countries.yaml</code> knows a display name for the code; if not, add an entry to the <code>countryExceptions</code> map in <code>fetchAvailableCountries()</code> (<span class="filechip">dataService.ts</span>) instead of waiting on that file to be updated.</li>
+              <li>Reload the app and confirm the country appears and actually loads data. It's also the only real way to notice whether Germany's special-cased BKG layer names in <code>getCountryLayers()</code> have quietly leaked into code paths that were supposed to be country-agnostic.</li>
             </ol>
           </div>
         </div>
@@ -1009,11 +1089,11 @@ jobs:
         <p>A punch list, in one place. Nothing here is broken today, but all of it is worth knowing before you assume the surrounding code behaves normally.</p>
         <ul>
           <li>Two Vite config files, wrong one active. §2 and the first recipe above.</li>
-          <li>Country list hardcoded to Germany. §2 and the second recipe above.</li>
+          <li>Country list needs manual maintenance. Adding a country means editing <code>CANDIDATE_COUNTRIES</code> by hand, because the S3 <code>ListBucket</code> permission this could otherwise be automated with is still blocked. §2.</li>
           <li>No automated tests of any kind. Type-checking (<code>vue-tsc</code>) is the only automated gate; manual browser verification is mandatory for every change.</li>
           <li>No ESLint or Prettier configuration. Code style is whatever the existing file already looks like. Match it by hand.</li>
           <li>Two UI modes sharing one file. §6. Easy to edit the wrong branch, or to couple them by accident.</li>
-          <li><code>MainView.vue</code> is a single ~2,600-line file. There's no enforced component boundary between map controls, the hero band, indicator picking, and so on. If this file keeps growing, pulling some of that out into dedicated components, the way <code>MetricMap.vue</code> and the two indicator card components already are, is a reasonable next step.</li>
+          <li><code>MainView.vue</code> is a single file, past 2,800 lines and still growing. There's no enforced component boundary between map controls, the hero band, indicator picking, the region drill-down, and so on. If this file keeps growing, pulling some of that out into dedicated components, the way <code>MetricMap.vue</code> and the two indicator card components already are, is a reasonable next step.</li>
           <li>Tailwind is installed but mostly dead weight. §11. Not harmful, just don't expect to find conventions for using it.</li>
         </ul>
       </section>
@@ -1033,6 +1113,8 @@ jobs:
           <dt>Single View / Split View</dt><dd>The two Normal-mode layouts, toggled in the header: one column, or two independent side-by-side columns.</dd>
           <dt>iframe-2col</dt><dd>The legacy layout used when this app is embedded in an <code>&lt;iframe&gt;</code> by HeiGIT's HDX platform. See §6.</dd>
           <dt>Hero band</dt><dd>The large "Medium 72%"-style headline box at the top of each panel, summarizing whichever indicator is currently active.</dd>
+          <dt>Region drill-down</dt><dd>Clicking a single district (or state, or hex cell) on the map to scope every box in that panel to just that region. Backed by <code>panel.selectedGeomId</code>. See §9.</dd>
+          <dt>Candidate country list</dt><dd><code>CANDIDATE_COUNTRIES</code> in <span class="filechip">src/config/countries.ts</span>, the hand-maintained array of country codes the dropdown checks against S3. See §2.</dd>
         </dl>
       </section>
 
@@ -1048,10 +1130,13 @@ jobs:
         </ol>
         <p class="end-note">
           This document describes the codebase as of the redesign that introduced Single View,
-          Split View, and the CSS-subgrid row alignment. It will drift out of date as the app
-          keeps changing. Treat it as a map of the territory on the day it was written, not a
-          promise about the future. When in doubt, the source code is the final authority. This
-          guide's only job is to make that source code fast to understand.
+          Split View, the CSS-subgrid row alignment, the region drill-down feature, the
+          self-hosted fonts and logo, and the current S3 path and candidate-country-list
+          mechanism. It will drift out of date again as the app keeps changing, that's normal, not
+          a sign this guide was written carelessly. Treat it as a map of the territory on the day
+          it was last updated, not a promise about the future. When in doubt, the source code is
+          the final authority. This guide's only job is to make that source code fast to
+          understand.
         </p>
       </section>
 

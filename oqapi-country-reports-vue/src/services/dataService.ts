@@ -61,7 +61,7 @@ export async function fetchAvailableCountries(): Promise<Country[]> {
   // permission, unlike the ListBucket call a bucket listing would need.
   const existenceChecks = await Promise.all(
     CANDIDATE_COUNTRIES.map(async (code) => {
-      const url = `https://hot.storage.heigit.org/heigit-hdx-public/oqapi_hdx/downloads/${code}/${code}_boundaries.pmtiles`;
+      const url = `https://hot.storage.heigit.org/heigit-hdx-public/ohsome-quality-country-reports/${code}/${code}_boundaries.pmtiles`;
       return (await checkParquetExists(url)) ? code : null;
     })
   );
