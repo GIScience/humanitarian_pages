@@ -19,6 +19,20 @@ const props = defineProps<{
   // and formats e.g. 4077 as "407700%". Default false preserves the exact
   // prior behavior for every other indicator.
   isCountIndicator?: boolean;
+  // Some isCountIndicator indicators (e.g. roads-thematic-accuracy) still
+  // store a genuine 0-1 ratio - they're colored/badged like a count by
+  // product decision (it's a match rate, not a quality verdict), but the
+  // hover value itself should still read as a percentage, not a bare
+  // fraction ("0.95" instead of "95%").
+  showAsPercent?: boolean;
+  // For isCountIndicator indicators whose value is a known, comparable
+  // scale (e.g. roads-thematic-accuracy's 0-1 match rate) rather than an
+  // open-ended count - fixes the color gradient's min/max instead of
+  // stretching it to whatever this specific country/layer's own values
+  // happen to span, so e.g. a 90% match rate always reads as "fairly
+  // saturated", not "the single darkest color" just because no region in
+  // the current view happens to score higher.
+  fixedColorRange?: [number, number];
   // Which region (by the same id used for lookup/feature-state) should be
   // drawn with the "selected" outline - the parent owns this (it's what
   // decides which polygon's plot to show), this component only visualizes it.
@@ -142,11 +156,17 @@ function buildFillColorExpression(): any {
     ];
   }
 
-  const values = Object.values(props.lookup).filter((v) => typeof v === "number" && !isNaN(v));
-  const min = values.length ? Math.min(...values) : 0;
-  const max = values.length ? Math.max(...values) : 1;
+  let min: number, max: number;
+  if (props.fixedColorRange) {
+    [min, max] = props.fixedColorRange;
+  } else {
+    const values = Object.values(props.lookup).filter((v) => typeof v === "number" && !isNaN(v));
+    min = values.length ? Math.min(...values) : 0;
+    max = values.length ? Math.max(...values) : 1;
+  }
+  const hasValues = Object.values(props.lookup).some((v) => typeof v === "number" && !isNaN(v));
 
-  if (values.length === 0 || min === max) {
+  if ((!props.fixedColorRange && !hasValues) || min === max) {
     return [
       "case",
       ["==", ["coalesce", ["feature-state", "value"], -1], -1], "#bab8b8",
@@ -289,7 +309,7 @@ function setupHoverHandlers(sourceName: string, layerName: string, indicatorName
     const val = state.value;
     if (val !== undefined && val !== null) {
       mapInstance!.getCanvas().style.cursor = 'pointer';
-      const displayValue = props.isCountIndicator
+      const displayValue = props.isCountIndicator && !props.showAsPercent
         ? Number(val).toLocaleString('en-US')
         : (Number(val) * 100).toFixed(2) + '%';
       popupInstance!.setLngLat(e.lngLat)

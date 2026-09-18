@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed } from 'vue';
 
 export interface AttributeOption {
   indicator: string;
@@ -29,15 +29,12 @@ const dashOffset = computed(() => {
   return CIRCUMFERENCE * (1 - pct / 100);
 });
 
-// Same per-card fold state as IndicatorGaugeCard - folded by default, kept
-// independent per card instance.
-const expanded = ref(false);
 </script>
 
 <template>
   <article
     class="indicator-card attribute-card"
-    :class="{ active, expanded }"
+    :class="{ active }"
     role="button"
     tabindex="0"
     @click="emit('select', current?.indicator || selected)"
@@ -69,22 +66,7 @@ const expanded = ref(false);
         >
           <option v-for="opt in options" :key="opt.indicator" :value="opt.indicator">{{ opt.label }}</option>
         </select>
-        <button
-          type="button"
-          class="fold-toggle"
-          :class="{ expanded }"
-          :aria-expanded="expanded"
-          title="Show or hide the explanation"
-          @click.stop="expanded = !expanded"
-        >
-          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-            <path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-          </svg>
-        </button>
       </div>
-      <Transition name="fade">
-        <div v-if="expanded" class="indicator-desc">{{ current?.description || '' }}</div>
-      </Transition>
     </div>
   </article>
 </template>
@@ -138,19 +120,4 @@ const expanded = ref(false);
   padding: 0.2rem 0.45rem;
   border-radius: var(--radius);
 }
-.indicator-desc { font-size: 0.8rem; color: var(--ink-soft); line-height: 1.4; }
-
-.fold-toggle {
-  flex: none; width: 1.6rem; height: 1.6rem; padding: 0;
-  border: none; background: transparent; color: var(--ink-faint);
-  display: flex; align-items: center; justify-content: center;
-  cursor: pointer; border-radius: var(--radius);
-}
-.fold-toggle:hover { background: var(--paper); color: var(--ink); }
-.fold-toggle svg { width: 1rem; height: 1rem; transition: transform 0.15s ease; }
-.fold-toggle.expanded svg { transform: rotate(180deg); }
-
-.fade-enter-active { transition: opacity 0.18s ease 0.05s; }
-.fade-leave-active { transition: opacity 0.1s ease; }
-.fade-enter-from, .fade-leave-to { opacity: 0; }
 </style>

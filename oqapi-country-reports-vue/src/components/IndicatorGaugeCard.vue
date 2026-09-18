@@ -1,14 +1,19 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed } from 'vue';
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   title: string;
   displayValue: string;
   ringPct: number;
   level: 'good' | 'warn' | 'bad' | 'neutral';
-  description: string;
   active: boolean;
-}>();
+  // 'people' (default) is the raw-count badge (e.g. User Activity) - shows
+  // the count value inside the circle. 'tag' is for indicators that aren't
+  // a count at all (e.g. Tag Distribution) - a plain icon, no number.
+  icon?: 'people' | 'tag';
+}>(), {
+  icon: 'people'
+});
 
 defineEmits<{
   (e: 'click'): void;
@@ -18,18 +23,12 @@ const RADIUS = 30;
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 
 const dashOffset = computed(() => CIRCUMFERENCE * (1 - Math.max(0, Math.min(100, props.ringPct)) / 100));
-
-// Folded by default; each card remembers its own fold state independently.
-// Keyed by the same v-for :key as the indicator itself in MainView.vue, so a
-// data refresh for the same indicator (switching region, say) reuses this
-// component instance and doesn't reset the fold state a user already chose.
-const expanded = ref(false);
 </script>
 
 <template>
   <article
     class="indicator-card"
-    :class="{ active, expanded }"
+    :class="{ active }"
     role="button"
     tabindex="0"
     @click="$emit('click')"
@@ -41,13 +40,17 @@ const expanded = ref(false);
          people icon plus the number reads as "a count of something",
          not "a score out of 100" that happens to be empty. -->
     <div v-if="level === 'neutral'" class="count-badge">
-      <svg class="count-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <svg v-if="icon === 'tag'" class="count-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d="M20.59 13.41 11.83 4.65A2 2 0 0 0 10.41 4.06L4 4a1 1 0 0 0-1 1l.06 6.41a2 2 0 0 0 .59 1.42l8.76 8.76a2 2 0 0 0 2.82 0l5.36-5.36a2 2 0 0 0 0-2.82Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" />
+        <circle cx="7.5" cy="8.5" r="1.15" fill="currentColor" />
+      </svg>
+      <svg v-else class="count-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
         <circle cx="9" cy="8.5" r="3" stroke="currentColor" stroke-width="1.6" />
         <path d="M3.5 19c0-3.3 2.5-5.5 5.5-5.5s5.5 2.2 5.5 5.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
         <circle cx="16.5" cy="8" r="2.4" stroke="currentColor" stroke-width="1.6" />
         <path d="M14.7 13.7c2.7.4 4.8 2.4 4.8 5.3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
       </svg>
-      <div class="count-value">{{ displayValue }}</div>
+      <div v-if="icon !== 'tag'" class="count-value">{{ displayValue }}</div>
     </div>
     <div v-else class="gaugewrap">
       <svg viewBox="0 0 72 72">
@@ -65,22 +68,7 @@ const expanded = ref(false);
     <div class="indicator-body">
       <div class="indicator-title-row">
         <div class="indicator-title">{{ title }}</div>
-        <button
-          type="button"
-          class="fold-toggle"
-          :class="{ expanded }"
-          :aria-expanded="expanded"
-          title="Show or hide the explanation"
-          @click.stop="expanded = !expanded"
-        >
-          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-            <path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-          </svg>
-        </button>
       </div>
-      <Transition name="fade">
-        <div v-if="expanded" class="indicator-desc">{{ description }}</div>
-      </Transition>
     </div>
   </article>
 </template>
@@ -136,19 +124,4 @@ const expanded = ref(false);
 .indicator-body { flex: 1; min-width: 0; }
 .indicator-title-row { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; }
 .indicator-title { font-size: 0.9rem; font-weight: 700; color: var(--ink); }
-.indicator-desc { font-size: 0.8rem; color: var(--ink-soft); line-height: 1.4; margin-top: 0.25rem; }
-
-.fold-toggle {
-  flex: none; width: 1.6rem; height: 1.6rem; padding: 0;
-  border: none; background: transparent; color: var(--ink-faint);
-  display: flex; align-items: center; justify-content: center;
-  cursor: pointer; border-radius: var(--radius);
-}
-.fold-toggle:hover { background: var(--paper); color: var(--ink); }
-.fold-toggle svg { width: 1rem; height: 1rem; transition: transform 0.15s ease; }
-.fold-toggle.expanded svg { transform: rotate(180deg); }
-
-.fade-enter-active { transition: opacity 0.18s ease 0.05s; }
-.fade-leave-active { transition: opacity 0.1s ease; }
-.fade-enter-from, .fade-leave-to { opacity: 0; }
 </style>

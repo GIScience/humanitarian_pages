@@ -298,6 +298,40 @@ export interface PMTilesBounds {
   maxLat: number;
 }
 
+/**
+ * The tag-distribution parquet carries an ISO-8601 `timestamp` column (a
+ * varchar, one value per pipeline run recorded in that file) - MAX() sorts
+ * correctly on it as-is since ISO-8601 strings compare lexicographically in
+ * chronological order. This is the actual "when was this data computed"
+ * moment, unlike the object storage's HTTP Last-Modified header (which only
+ * reflects when the file was last uploaded/copied, not a same thing).
+ */
+export async function loadLatestTimestamp(tagDistributionUrl: string): Promise<string | null> {
+  const { db, conn } = await initDuckDB();
+
+  try {
+    const tableName = await registerParquetFile(tagDistributionUrl, db);
+    // Deliberately not MAX(timestamp): this duckdb-wasm build silently
+    // truncates a MAX()/MIN() aggregate over a VARCHAR column (confirmed -
+    // it returned "2026-09-" instead of the real "2026-09-11T13:13:51Z",
+    // exactly the kind of corruption an aggregate copying only a DuckDB
+    // string_t's inline prefix, not the full out-of-line data, would
+    // produce). A plain row projection isn't an aggregate and reads
+    // correctly, same as every other varchar column this app already reads.
+    const result = await runQuery(conn, `
+      SELECT timestamp AS latest
+      FROM read_parquet('${tableName}')
+      ORDER BY timestamp DESC
+      LIMIT 1
+    `);
+    const resultArray = toArray(result);
+    return resultArray[0]?.latest ?? null;
+  } catch (e) {
+    console.error("Failed to load latest timestamp:", e);
+    return null;
+  }
+}
+
 export async function getPMTilesBounds(url: string): Promise<PMTilesBounds | null> {
   try {
     const pmtilesFile = new PMTiles(url);
