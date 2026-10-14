@@ -6,15 +6,18 @@
   "scripts": {
     "dev": "VITE_BASE_URL=/ vite",
     "build": "vue-tsc -b && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "i18n:report": "vue-i18n-extract report --vueFiles './src/**/*.?(ts|vue)' --languageFiles './src/locales/*.json'"
   },
   "dependencies": {
     "@duckdb/duckdb-wasm": "^1.33.1-dev20.0",
+    "@versatiles/style": "^5.13.1",
     "js-yaml": "^4.1.1",
-    "maplibre-gl": "^5.20.1",
+    "maplibre-gl": "^5.24.0",
     "plotly.js-dist-min": "^3.4.0",
     "pmtiles": "^4.4.0",
     "vue": "^3.5.30",
+    "vue-i18n": "^11.4.13",
     "vue-router": "^4.3.0"
   },
   "devDependencies": {
@@ -28,6 +31,7 @@
     "tailwindcss": "^3.4.3",
     "typescript": "~5.9.3",
     "vite": "^8.0.0",
+    "vue-i18n-extract": "^2.0.7",
     "vue-tsc": "^3.2.5"
   }
 }

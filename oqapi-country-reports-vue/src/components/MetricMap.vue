@@ -2,7 +2,18 @@
 import { ref, onMounted, onUnmounted, watch, nextTick } from 'vue';
 import maplibregl from "maplibre-gl";
 import { Protocol } from "pmtiles";
-import { prettifyIndicator } from '../utils/helpers';
+import { colorful } from "@versatiles/style";
+import type { StyleSpecification } from "maplibre-gl";
+import { indicatorLabel } from '../utils/helpers';
+import { formatNumber, formatPercent } from '../i18n';
+
+// Same basemap as HeiGIT's Hazard-Risk-Composer and Climate Action Navigator
+// (climate-action.heigit.org): a VersaTiles-hosted OSM vector style, tiles/
+// glyphs/sprites all served from tiles.versatiles.org. Generated in-process
+// by the @versatiles/style package rather than fetched as a style JSON.
+// Replaces the previous OpenFreeMap style (tiles.openfreemap.org) - this
+// app has no other third-party tile dependency left after this change.
+const BASEMAP_STYLE = colorful({ baseUrl: "https://tiles.versatiles.org" }) as StyleSpecification;
 
 const props = defineProps<{
   containerId: string;
@@ -33,10 +44,25 @@ const props = defineProps<{
   // saturated", not "the single darkest color" just because no region in
   // the current view happens to score higher.
   fixedColorRange?: [number, number];
+  // Some indicators (currently mapping-saturation) color the map from a
+  // rescaled/discretized value (see the parent's mapLookup special case)
+  // that isn't the indicator's real value - e.g. quality class 3 rescaled
+  // to 0.5 for coloring purposes, when the actual saturation ratio might be
+  // 0.92. Without this, the hover popup read that same rescaled number
+  // (showing "50.00%" instead of the real "92.00%"). Optional and defaults
+  // to `lookup` so every other indicator (where lookup already is the real
+  // value) is unaffected.
+  valueLookup?: Record<string, number>;
   // Which region (by the same id used for lookup/feature-state) should be
   // drawn with the "selected" outline - the parent owns this (it's what
   // decides which polygon's plot to show), this component only visualizes it.
   selectedGeomId?: string | null;
+  // Credit for whoever the boundary polygons in pmtilesUrl actually come
+  // from (geoBoundaries for most countries, Germany's own BKG - see
+  // getCountryLayers() in helpers.ts) - the parent decides which, since it
+  // already knows the selected country; this component just displays
+  // whatever it's given via the map's attribution control.
+  boundariesAttribution?: string;
 }>();
 
 // For Split View's "mirror the other map's zoom/pan" feature: emits only on
@@ -50,8 +76,9 @@ const emit = defineEmits<{
   // Fired on every click: the clicked region's id, or null when the click
   // missed every polygon (empty map area) or landed back on the already-
   // selected one - both read as "go back to the whole-country view" to the
-  // parent.
-  (e: 'regionClick', geomId: string | null): void;
+  // parent. regionName is the clicked feature's name (see getRegionName), or
+  // null if it has none.
+  (e: 'regionClick', geomId: string | null, regionName: string | null): void;
 }>();
 
 let resizeHandler: (() => void) | null = null;
@@ -77,6 +104,62 @@ function boundsKey(b: typeof props.bounds): string | null {
   return b ? `${b.minLon},${b.minLat},${b.maxLon},${b.maxLat}` : null;
 }
 
+// The pmtiles source (one file, covering every grid layer) only actually
+// needs to change on a real country switch - tracked so updateMapData()
+// can tell that apart from a topic/indicator/layer change, which reuses it.
+let currentSourceUrl: string | null = null;
+// Which region ids currently carry a "value"/"displayValue" feature-state,
+// and under which source-layer - so a lookup update can clear exactly the
+// ids that dropped out of it (e.g. this indicator has no data for a region
+// the previous one did) without clobbering unrelated feature-state keys
+// like "selected", and without needing a full source rebuild to reset
+// everything. Reset whenever the source-layer itself changes, since ids
+// from a previous grid layer (adm1 vs h3) aren't meaningful there anyway.
+let lastFeatureStateLayerName: string | null = null;
+let lastAppliedLookupKeys = new Set<string>();
+
+function applyLookupFeatureStates(
+  sourceName: string,
+  layerName: string,
+  lookup: Record<string, number>,
+  displayLookup: Record<string, number>
+) {
+  if (!mapInstance) return;
+
+  if (lastFeatureStateLayerName !== layerName) {
+    lastAppliedLookupKeys = new Set();
+    lastFeatureStateLayerName = layerName;
+  }
+
+  const newKeys = new Set(Object.keys(lookup));
+
+  // Clear ids that had a value before but don't anymore - otherwise they'd
+  // keep showing the previous indicator's/topic's color and value forever,
+  // since a lookup update alone never removes stale feature-state.
+  lastAppliedLookupKeys.forEach((id) => {
+    if (!newKeys.has(id)) {
+      mapInstance!.removeFeatureState({ source: sourceName, sourceLayer: layerName, id }, 'value');
+      mapInstance!.removeFeatureState({ source: sourceName, sourceLayer: layerName, id }, 'displayValue');
+    }
+  });
+
+  Object.entries(lookup).forEach(([id, val]) => {
+    mapInstance!.setFeatureState(
+      { source: sourceName, sourceLayer: layerName, id },
+      { value: val, displayValue: displayLookup[id] ?? val }
+    );
+  });
+
+  lastAppliedLookupKeys = newKeys;
+}
+
+// With a region selected, every region's base fill fades back - including
+// the selected one's, since a lifted copy of it is drawn on top (see the
+// "-selected-fill" layer). Swapped via setPaintProperty on selection change.
+function fillOpacityExpression(hasSelection: boolean): number {
+  return hasSelection ? 0.2 : 0.6;
+}
+
 function initMap() {
   console.log('[MetricMap] initMap called, container:', !!mapContainer.value, 'pmtilesUrl:', !!props.pmtilesUrl, 'existing map:', !!mapInstance);
 
@@ -86,7 +169,8 @@ function initMap() {
     if (!mapInstance || !currentLayerId) return;
     const hits = mapInstance.queryRenderedFeatures(e.point, { layers: [currentLayerId] });
     const clickedId = hits.length > 0 && hits[0].id != null ? String(hits[0].id) : null;
-    emit('regionClick', clickedId !== null && clickedId === props.selectedGeomId ? null : clickedId);
+    const deselect = clickedId === null || clickedId === props.selectedGeomId;
+    emit('regionClick', deselect ? null : clickedId, deselect ? null : getRegionName(hits[0]));
   };
 
   // Register PMTiles protocol
@@ -98,10 +182,27 @@ function initMap() {
   }
 
   // Create map instance
+  //
+  // The basemap style (@versatiles/style's colorful(), see BASEMAP_STYLE
+  // above) already carries its own OpenStreetMap attribution on its vector
+  // source, so simply leaving the default attribution control enabled
+  // (rather than the attributionControl: false this used to set) is enough
+  // to surface it - required by OSM's license (ODbL) wherever OSM-derived
+  // data is shown, not just a nicety. The boundaries source added in
+  // updateMapData() below carries its own separate `attribution` (passed in
+  // via the boundariesAttribution prop), which the same control picks up
+  // and merges in automatically. customAttribution credits the library
+  // itself - not a license requirement (MapLibre GL JS is BSD-3-Clause, no
+  // on-screen credit obligation), just goodwill toward the project - and is
+  // prepended before every source-derived attribution the control collects,
+  // so it reads "MapLibre | © OpenStreetMap contributors [| ...]".
   mapInstance = new maplibregl.Map({
     container: mapContainer.value,
-    style: "https://tiles.openfreemap.org/styles/liberty",
-    attributionControl: false
+    style: BASEMAP_STYLE,
+    attributionControl: {
+      compact: true,
+      customAttribution: '<a href="https://maplibre.org/" target="_blank" rel="noopener">MapLibre</a>'
+    }
   });
 
   console.log('[MetricMap] Map instance created');
@@ -150,9 +251,13 @@ function buildFillColorExpression(): any {
       "step",
       ["coalesce", ["feature-state", "value"], -1],
       "#bab8b8",
-      0, "#F44336",
-      0.25, "#FFEB3B",
-      0.75, "#4CAF50"
+      // Colorblind-safe triple (see main.css --good/--warn/--bad) instead
+      // of a red/yellow/green traffic light - kept in sync with those
+      // tokens' hex values by hand, since MapLibre paint expressions can't
+      // read CSS custom properties.
+      0, "#D55E00",
+      0.25, "#F0E442",
+      0.75, "#009E73"
     ];
   }
 
@@ -199,16 +304,33 @@ function updateMapData() {
     }
   });
 
-  // Remove and re-add source
-  if (mapInstance.getSource(sourceName)) {
-    mapInstance.removeSource(sourceName);
+  // The pmtiles source is one file covering every grid layer (adm0/adm1/h3),
+  // so only a genuine country switch actually needs a new source - a topic,
+  // indicator or grid-layer change reuses it. Removing and re-adding the
+  // source unconditionally (as this used to do on every one of those
+  // switches) forced MapLibre to re-fetch and re-parse every visible tile
+  // from scratch each time; because that re-parse is async, it could race
+  // with the feature-state update below - a topic switch's new lookup
+  // sometimes finished applying before the freshly re-added source had
+  // finished reloading its tiles, leaving some regions stuck on the default
+  // grey ("no data") until a later switch's timing happened to land the
+  // other way. Confirmed this matches the reported symptom (some adm1
+  // regions greyed out after a topic switch, fixed by switching away and
+  // back). Keeping the same source instance whenever the URL hasn't changed
+  // removes that race, on top of being cheaper.
+  const sourceUrl = `pmtiles://${props.pmtilesUrl}`;
+  if (currentSourceUrl !== sourceUrl || !mapInstance.getSource(sourceName)) {
+    if (mapInstance.getSource(sourceName)) {
+      mapInstance.removeSource(sourceName);
+    }
+    mapInstance.addSource(sourceName, {
+      type: "vector",
+      url: sourceUrl,
+      promoteId: "id",
+      attribution: props.boundariesAttribution
+    });
+    currentSourceUrl = sourceUrl;
   }
-
-  mapInstance.addSource(sourceName, {
-    type: "vector",
-    url: `pmtiles://${props.pmtilesUrl}`,
-    promoteId: "id"
-  });
 
   // Fit bounds - only when they've actually changed (a genuinely new
   // country), not on every indicator/layer/topic switch within the same
@@ -238,41 +360,87 @@ function updateMapData() {
     "source-layer": layerName,
     paint: {
       "fill-color": buildFillColorExpression(),
-      "fill-opacity": 0.6,
+      "fill-opacity": fillOpacityExpression(!!props.selectedGeomId),
+      "fill-opacity-transition": { duration: 250 },
       "fill-outline-color": "#555"
     }
   });
 
-  // A thin, high-contrast outline for whichever region is currently
-  // click-selected. Opacity (not the layer's presence) is driven by the
-  // "selected" feature-state, since MapLibre filter expressions can't read
-  // feature-state - only paint expressions can.
+  // The click-selected region reads as "lifted" above the map, like a
+  // hovered card: its base polygon fades back with every other region (see
+  // fillOpacityExpression), and a solid copy of it is drawn a few pixels up
+  // (fill-translate), with a soft shadow shifted down underneath and a crisp
+  // white edge on top. Translate isn't data-driven, but these layers only
+  // ever show the selected feature anyway - their opacity (not their
+  // presence) is driven by the "selected" feature-state, since MapLibre
+  // filter expressions can't read feature-state, only paint expressions can.
+  // The lift scales with zoom: zoomed out, regions are small and dense and
+  // a big offset/shadow reads as a dark smudge rather than depth.
+  const isSelected = ["boolean", ["feature-state", "selected"], false];
+  const lift = ["interpolate", ["linear"], ["zoom"], 5, ["literal", [0, -1]], 10, ["literal", [0, -3]]];
+  const drop = ["interpolate", ["linear"], ["zoom"], 5, ["literal", [0, 1]], 10, ["literal", [0, 4]]];
+  const glowLayerId = `${layerId}-selected-glow`;
+  const liftedLayerId = `${layerId}-selected-fill`;
   const selectedLayerId = `${layerId}-selected`;
-  if (mapInstance.getLayer(selectedLayerId)) {
-    mapInstance.removeLayer(selectedLayerId);
+  for (const id of [glowLayerId, liftedLayerId, selectedLayerId]) {
+    if (mapInstance.getLayer(id)) mapInstance.removeLayer(id);
   }
+  mapInstance.addLayer({
+    id: glowLayerId,
+    type: "line",
+    source: sourceName,
+    "source-layer": layerName,
+    layout: { "line-join": "round" },
+    paint: {
+      "line-color": "#1a1a1a",
+      "line-width": ["interpolate", ["linear"], ["zoom"], 7, 4, 10, 10] as any,
+      "line-blur": ["interpolate", ["linear"], ["zoom"], 7, 3, 10, 8] as any,
+      "line-translate": drop as any,
+      "line-opacity": ["interpolate", ["linear"], ["zoom"],
+        7, 0,
+        10, ["case", isSelected, 0.3, 0]
+      ] as any
+    }
+  });
+  mapInstance.addLayer({
+    id: liftedLayerId,
+    type: "fill",
+    source: sourceName,
+    "source-layer": layerName,
+    paint: {
+      "fill-color": buildFillColorExpression(),
+      "fill-translate": lift as any,
+      "fill-opacity": ["case", isSelected, 0.9, 0] as any
+    }
+  });
   mapInstance.addLayer({
     id: selectedLayerId,
     type: "line",
     source: sourceName,
     "source-layer": layerName,
+    layout: { "line-join": "round" },
     paint: {
-      "line-color": "#0B7285",
-      "line-width": 3,
-      "line-opacity": ["case", ["boolean", ["feature-state", "selected"], false], 1, 0]
+      "line-color": "#ffffff",
+      "line-width": ["interpolate", ["linear"], ["zoom"], 5, 1.5, 10, 2.5] as any,
+      "line-translate": lift as any,
+      "line-opacity": ["case", isSelected, 1, 0] as any
     }
   });
 
-  // Set feature states
-  Object.entries(props.lookup).forEach(([id, val]) => {
-    mapInstance!.setFeatureState(
-      { source: sourceName, sourceLayer: layerName, id },
-      { value: val }
-    );
-  });
+  // Set feature states. "value" drives the fill color (see
+  // buildFillColorExpression) and may be a rescaled/discretized stand-in
+  // for indicators like mapping-saturation - "displayValue" is always the
+  // real, un-rescaled value and is what the hover popup shows. Also clears
+  // stale entries from whichever indicator/topic was active before (see
+  // applyLookupFeatureStates) - necessary now that the source itself isn't
+  // unconditionally rebuilt above.
+  const displayLookup = props.valueLookup ?? props.lookup;
+  applyLookupFeatureStates(sourceName, layerName, props.lookup, displayLookup);
 
-  // A fresh addSource/addLayer above wipes any previous feature-state, so
-  // re-apply whichever region the parent currently has selected.
+  // A genuinely new source, or a grid-layer switch (see
+  // applyLookupFeatureStates' per-layerName reset), starts with no
+  // feature-state at all, so re-apply whichever region the parent
+  // currently has selected.
   if (props.selectedGeomId) {
     mapInstance.setFeatureState(
       { source: sourceName, sourceLayer: layerName, id: props.selectedGeomId },
@@ -282,6 +450,19 @@ function updateMapData() {
 
   // Setup hover handlers
   setupHoverHandlers(sourceName, layerName, indicatorName);
+}
+
+// Region name straight from the pmtiles feature properties - prefer the
+// English name, fall back to the local one.
+function getRegionName(feature: any): string | null {
+  const name = feature?.properties?.name_en || feature?.properties?.name;
+  return name ? String(name) : null;
+}
+
+// Names come from the boundary data, not from us - escape before they go
+// into the popup's innerHTML.
+function escapeHtml(s: string): string {
+  return s.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!));
 }
 
 function setupHoverHandlers(sourceName: string, layerName: string, indicatorName: string) {
@@ -306,14 +487,21 @@ function setupHoverHandlers(sourceName: string, layerName: string, indicatorName
       id: feature.id
     });
 
-    const val = state.value;
+    // "value" (used for the fill color itself, see buildFillColorExpression)
+    // can be a rescaled stand-in rather than the indicator's real value -
+    // "displayValue" is always the real one, so the popup text and the map
+    // color are allowed to legitimately disagree (see valueLookup prop).
+    const val = state.displayValue ?? state.value;
     if (val !== undefined && val !== null) {
       mapInstance!.getCanvas().style.cursor = 'pointer';
       const displayValue = props.isCountIndicator && !props.showAsPercent
-        ? Number(val).toLocaleString('en-US')
-        : (Number(val) * 100).toFixed(2) + '%';
+        ? formatNumber(Number(val))
+        : formatPercent(Number(val), 2);
+      // Features with no name (e.g. grid cells) just show the value.
+      const regionName = getRegionName(feature);
+      const nameHtml = regionName ? `<div>${escapeHtml(String(regionName))}</div>` : '';
       popupInstance!.setLngLat(e.lngLat)
-        .setHTML(`<strong>${prettifyIndicator(indicatorName)}:</strong> ${displayValue}`)
+        .setHTML(`${nameHtml}<strong>${indicatorLabel(indicatorName)}:</strong> ${displayValue}`)
         .addTo(mapInstance!);
     } else {
       mapInstance!.getCanvas().style.cursor = '';
@@ -400,11 +588,16 @@ watch(
         return;
       }
 
-      // Zoom out first
+      // Zoom out first, then fly in to the new country's bounds. Kept as a
+      // deliberate flourish (a straight fitBounds reads as a jarring jump
+      // for a country switch), but shortened from the original 600+650+1200
+      // (~2.45s, fixed regardless of how fast the data itself loaded) since
+      // that fixed duration was adding to how slow a country switch felt
+      // even when the underlying data was already ready.
       mapInstance.easeTo({
         center: [0, 20],
         zoom: 1,
-        duration: 600,
+        duration: 350,
         easing: (t) => t * (2 - t)
       });
 
@@ -413,10 +606,10 @@ watch(
         if (mapInstance && props.bounds) {
           mapInstance.fitBounds(
             [[props.bounds.minLon, props.bounds.minLat], [props.bounds.maxLon, props.bounds.maxLat]],
-            { padding: 10, duration: 1200 }
+            { padding: 10, duration: 700 }
           );
         }
-      }, 650);
+      }, 380);
     }
   }
 );
@@ -438,17 +631,48 @@ watch(
       return;
     }
 
+    const displayLookup = props.valueLookup ?? newLookup;
+    applyLookupFeatureStates(props.sourceName, props.layerName, newLookup, displayLookup);
+  },
+    // lookup ref is replaced entirely on data load, so identity check is sufficient
+);
+
+// valueLookup can change independently of lookup (e.g. switching indicators
+// where both the color-lookup and the real-value-lookup are replaced
+// together, or a future indicator where they diverge without a color
+// change) - patch displayValue on its own so the popup never shows a value
+// from the indicator that was active before the switch.
+watch(
+  () => props.valueLookup,
+  (newValueLookup) => {
+    if (!isMapInitialized || !mapInstance) return;
     const sourceName = props.sourceName;
     const layerName = props.layerName;
+    const displayLookup = newValueLookup ?? props.lookup;
 
-    Object.entries(newLookup).forEach(([id, val]) => {
+    Object.entries(displayLookup).forEach(([id, val]) => {
       mapInstance!.setFeatureState(
         { source: sourceName, sourceLayer: layerName, id },
-        { value: val }
+        { displayValue: val }
       );
     });
   },
-    // lookup ref is replaced entirely on data load, so identity check is sufficient
+);
+
+// The boundaries credit can change without the source URL changing (e.g. a
+// language switch translates its "Boundaries:" label), and the source is
+// deliberately not rebuilt for that (see updateMapData). Patch the existing
+// source's attribution instead; the attribution control only re-reads
+// sources on style/metadata events, so nudge it with a styledata event.
+watch(
+  () => props.boundariesAttribution,
+  (newAttribution) => {
+    if (!mapInstance || !isMapInitialized) return;
+    const source = mapInstance.getSource(props.sourceName) as { attribution?: string } | undefined;
+    if (!source) return;
+    source.attribution = newAttribution;
+    mapInstance.fire('styledata', { dataType: 'style' });
+  }
 );
 
 watch(
@@ -462,6 +686,9 @@ watch(
     }
     if (newId) {
       mapInstance.setFeatureState({ source: sourceName, sourceLayer: layerName, id: newId }, { selected: true });
+    }
+    if (currentLayerId && mapInstance.getLayer(currentLayerId)) {
+      mapInstance.setPaintProperty(currentLayerId, "fill-opacity", fillOpacityExpression(!!newId));
     }
   }
 );
@@ -512,6 +739,9 @@ onUnmounted(() => {
     mapInstance = null;
     popupInstance = null;
     isMapInitialized = false;
+    currentSourceUrl = null;
+    lastFeatureStateLayerName = null;
+    lastAppliedLookupKeys = new Set();
   }
 });
 </script>

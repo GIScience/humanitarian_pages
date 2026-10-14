@@ -1,0 +1,105 @@
+{
+  "app": {
+    "title": "Country Reports",
+    "language": "Language"
+  },
+  "sidebar": {
+    "selectCountry": "Select a Country",
+    "loadingCountries": "Loading countries…",
+    "selectLayer": "Select a Layer",
+    "layerNotProcessed": "Not processed for this country yet",
+    "selectTopic": "Select a Topic",
+    "selectIndicator": "Select an Indicator"
+  },
+  "region": {
+    "selected": "Selected region",
+    "scopedNote": "— every box below is scoped to this region, not all of {country}",
+    "back": "← Back to all of {country}",
+    "countryFallback": "country"
+  },
+  "hero": {
+    "quality": "Quality",
+    "featuresMapped": "Features mapped",
+    "dataCurrentAsOf": "Data current as of",
+    "regionShown": "Region shown",
+    "adminLevelShown": "Admin level shown",
+    "areaOf": "km² of {topic}",
+    "lengthOf": "km of {topic}"
+  },
+  "legend": {
+    "high": "High",
+    "medium": "Medium",
+    "low": "Low",
+    "featuresMapped": "Features\nMapped",
+    "users": "Users",
+    "featuresMatched": "Features\nMatched",
+    "count": "Count",
+    "qualityClass": "Quality Class"
+  },
+  "plot": {
+    "groupedBy": "grouped by",
+    "notAvailableCountryLevel": "The indicator is not available on country level. Click on the map to get more information for a chosen region.",
+    "noChart": "No chart available for this indicator.",
+    "aboutIndicator": "About this indicator",
+    "tagDistributionDescription": "Distribution of mapped features grouped by tag. The map shows no per-region values for this."
+  },
+  "map": {
+    "boundaries": "Boundaries"
+  },
+  "footer": {
+    "contact": "Contact",
+    "privacy": "Privacy Policy",
+    "imprint": "Imprint"
+  },
+  "tagDistribution": "Tag Distribution",
+  "attributeCompleteness": "Attribute Completeness",
+  "attributeCompletenessWithAttr": "Attribute Completeness: {attr}",
+  "indicators": {
+    "currentness": "Currentness",
+    "mapping-saturation": "Mapping Saturation",
+    "building-comparison": "Building Comparison",
+    "roads-thematic-accuracy": "Roads Thematic Accuracy",
+    "land-cover-thematic-accuracy": "Land Cover Thematic Accuracy",
+    "land-cover-completeness": "Land Cover Completeness",
+    "user-activity": "User Activity"
+  },
+  "attributes": {
+    "building-material": "Building Material",
+    "height": "Height",
+    "emergency": "Emergency",
+    "name": "Name",
+    "opening-hours": "Opening Hours",
+    "speciality": "Speciality",
+    "maxspeed": "Maxspeed",
+    "surface": "Surface",
+    "phone-number": "Phone Number",
+    "website": "Website"
+  },
+  "topics": {
+    "roads": "Roads",
+    "buildings": "Buildings",
+    "land-cover": "Land Cover",
+    "schools": "Schools",
+    "hospitals": "Hospitals"
+  },
+  "topicsInline": {
+    "roads": "roads",
+    "buildings": "buildings",
+    "land-cover": "land cover",
+    "schools": "schools",
+    "hospitals": "hospitals"
+  },
+  "measures": {
+    "area": "Area",
+    "length": "Length",
+    "count": "Count"
+  },
+  "layers": {
+    "adm0": "Admin 0",
+    "adm1": "Admin 1",
+    "h3": "Hexagonal Grid",
+    "deuCountry": "Germany",
+    "deuStates": "States",
+    "deuDistricts": "Districts"
+  }
+}

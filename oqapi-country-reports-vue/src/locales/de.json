@@ -1,0 +1,134 @@
+{
+  "app": {
+    "title": "Länderberichte",
+    "language": "Sprache"
+  },
+  "sidebar": {
+    "selectCountry": "Land auswählen",
+    "loadingCountries": "Länder werden geladen…",
+    "selectLayer": "Ebene auswählen",
+    "layerNotProcessed": "Für dieses Land noch nicht verarbeitet",
+    "selectTopic": "Thema auswählen",
+    "selectIndicator": "Indikator auswählen"
+  },
+  "region": {
+    "selected": "Ausgewählte Region",
+    "scopedNote": "— alle Angaben unten beziehen sich auf diese Region, nicht auf ganz {country}",
+    "back": "← Zurück zu ganz {country}",
+    "countryFallback": "Land"
+  },
+  "hero": {
+    "quality": "Qualität",
+    "featuresMapped": "Kartierte Objekte",
+    "dataCurrentAsOf": "Datenstand",
+    "regionShown": "Angezeigte Region",
+    "adminLevelShown": "Angezeigte Verwaltungsebene",
+    "areaOf": "km² {topic}",
+    "lengthOf": "km {topic}"
+  },
+  "legend": {
+    "high": "Hoch",
+    "medium": "Mittel",
+    "low": "Niedrig",
+    "featuresMapped": "Kartierte\nObjekte",
+    "users": "Nutzende",
+    "featuresMatched": "Übereinstimmende\nObjekte",
+    "count": "Anzahl",
+    "qualityClass": "Qualitäts-\nklasse"
+  },
+  "plot": {
+    "groupedBy": "gruppiert nach",
+    "notAvailableCountryLevel": "Der Indikator ist auf Landesebene nicht verfügbar. Klicken Sie auf die Karte, um mehr Informationen zu einer Region zu erhalten.",
+    "noChart": "Für diesen Indikator ist kein Diagramm verfügbar.",
+    "aboutIndicator": "Über diesen Indikator",
+    "tagDistributionDescription": "Verteilung der kartierten Objekte, gruppiert nach Tag. Die Karte zeigt hierfür keine Werte pro Region."
+  },
+  "map": {
+    "boundaries": "Grenzen"
+  },
+  "footer": {
+    "contact": "Kontakt",
+    "privacy": "Datenschutz",
+    "imprint": "Impressum"
+  },
+  "tagDistribution": "Tag-Verteilung",
+  "attributeCompleteness": "Attributvollständigkeit",
+  "attributeCompletenessWithAttr": "Attributvollständigkeit: {attr}",
+  "indicators": {
+    "currentness": "Aktualität",
+    "mapping-saturation": "Kartierungssättigung",
+    "building-comparison": "Gebäudevergleich",
+    "roads-thematic-accuracy": "Thematische Genauigkeit Straßen",
+    "land-cover-thematic-accuracy": "Thematische Genauigkeit Landbedeckung",
+    "land-cover-completeness": "Vollständigkeit Landbedeckung",
+    "user-activity": "Nutzeraktivität"
+  },
+  "attributes": {
+    "building-material": "Baumaterial",
+    "height": "Höhe",
+    "emergency": "Notaufnahme",
+    "name": "Name",
+    "opening-hours": "Öffnungszeiten",
+    "speciality": "Fachrichtung",
+    "maxspeed": "Höchstgeschwindigkeit",
+    "surface": "Oberfläche",
+    "phone-number": "Telefonnummer",
+    "website": "Webseite"
+  },
+  "topics": {
+    "roads": "Straßen",
+    "buildings": "Gebäude",
+    "land-cover": "Landbedeckung",
+    "schools": "Schulen",
+    "hospitals": "Krankenhäuser"
+  },
+  "topicsInline": {
+    "roads": "Straßen",
+    "buildings": "Gebäude",
+    "land-cover": "Landbedeckung",
+    "schools": "Schulen",
+    "hospitals": "Krankenhäuser"
+  },
+  "measures": {
+    "area": "Fläche",
+    "length": "Länge",
+    "count": "Anzahl"
+  },
+  "layers": {
+    "adm0": "Ebene 0",
+    "adm1": "Ebene 1",
+    "h3": "Hexagonraster",
+    "deuCountry": "Deutschland",
+    "deuStates": "Bundesländer",
+    "deuDistricts": "Kreise"
+  },
+  "countries": {
+    "AFG": "Afghanistan",
+    "BGD": "Bangladesch",
+    "CAF": "Zentralafrikanische Republik",
+    "COD": "Demokratische Republik Kongo",
+    "DEU": "Deutschland",
+    "ETH": "Äthiopien",
+    "GIN": "Guinea",
+    "HTI": "Haiti",
+    "KEN": "Kenia",
+    "LBR": "Liberia",
+    "MDG": "Madagaskar",
+    "MMR": "Myanmar",
+    "MOZ": "Mosambik",
+    "MWI": "Malawi",
+    "NGA": "Nigeria",
+    "NPL": "Nepal",
+    "PHL": "Philippinen",
+    "PNG": "Papua-Neuguinea",
+    "SDN": "Sudan",
+    "SLB": "Salomonen",
+    "SLE": "Sierra Leone",
+    "SSD": "Südsudan",
+    "TLS": "Osttimor",
+    "TZA": "Tansania",
+    "UGA": "Uganda",
+    "VUT": "Vanuatu",
+    "YEM": "Jemen"
+  }
+}

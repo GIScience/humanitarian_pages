@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue';
+import { useI18n } from 'vue-i18n';
 import ReportFooter from '../components/ReportFooter.vue';
 import MetricMap from '../components/MetricMap.vue';
 import IndicatorGaugeCard from '../components/IndicatorGaugeCard.vue';
@@ -13,6 +14,7 @@ import {
   loadRegionIndicatorValues,
   getPMTilesBounds,
   loadTagDistribution,
+  loadFeatureCountLookup,
   loadIndicatorFigure,
   loadLatestTimestamp,
   checkParquetExists,
@@ -20,16 +22,22 @@ import {
 } from '../services/dataService';
 import { clearParquetCache } from '../utils/duckdb';
 import {
-  prettifyTopic,
-  prettifyIndicator,
   topicConfig,
   buildUrls,
   getTagGroupingKey,
   getCountryLayers,
-  setCurrentSchoolSubTopic
+  setCurrentSchoolSubTopic,
+  formatDescriptionHtml,
+  topicLabel,
+  indicatorLabel,
+  attributeLabel,
+  countryLabel
 } from '../utils/helpers';
+import { setLocale, formatNumber, formatPercent, formatDate, SUPPORTED_LOCALES } from '../i18n';
 
 import Plotly from 'plotly.js-dist-min';
+
+const { t, te, locale } = useI18n();
 
 const selectedCountry = ref('');
 const isEmbed = ref(false);
@@ -121,8 +129,12 @@ onMounted(async () => {
 });
 
 const countries = ref<{ value: string; label: string }[]>([]);
+const localizedCountries = computed(() => countries.value
+  .map(c => ({ value: c.value, label: countryLabel(c.value, c.label) }))
+  .sort((a, b) => a.label.localeCompare(b.label, locale.value)));
 const isLoading = ref(false);
 const dataDate = ref('');
+const dataDateText = computed(() => dataDate.value ? formatDate(dataDate.value) : '');
 
 const pmtilesUrl = ref('');
 const parquetUrl = ref('');
@@ -130,7 +142,20 @@ const parquetUrl = ref('');
 const bounds = ref<PMTilesBounds | null>(null);
 
 const currentLayers = computed(() => getCountryLayers(selectedCountry.value));
-const selectedCountryLabel = computed(() => countries.value.find(c => c.value === selectedCountry.value)?.label || 'country');
+const selectedCountryLabel = computed(() => localizedCountries.value.find(c => c.value === selectedCountry.value)?.label || t('region.countryFallback'));
+
+// Extra credit for the boundary polygons themselves, shown by MetricMap's
+// map attribution control alongside the basemap's own OpenStreetMap credit.
+// Only Germany needs a separate line - its boundaries come from BKG (see
+// getCountryLayers() in helpers.ts, and the country override table it reads
+// from), not OpenStreetMap like every other country's do. Every other
+// country's boundaries are already covered by the basemap's own "©
+// OpenStreetMap contributors" credit, so adding a second, identical one
+// here would just be redundant - undefined means MetricMap shows only that
+// one credit, with nothing extra merged in.
+const boundariesAttribution = computed(() => selectedCountry.value === 'DEU'
+  ? `${t('map.boundaries')}: © <a href="https://gdz.bkg.bund.de/" target="_blank" rel="noopener">GeoBasis-DE / BKG</a>`
+  : undefined);
 
 // null = not checked yet for this country (show every layer optimistically,
 // same as before this existed); once loadCountry resolves it, only layers
@@ -177,6 +202,29 @@ function isUnavailableDescription(description: string): boolean {
 // the displayed value instead of being (wrongly) rounded to a bare "1".
 const FORCE_NON_QUALITY_INDICATORS = new Set(['roads-thematic-accuracy', 'land-cover-thematic-accuracy']);
 
+// mapping-saturation's raw value can exceed 1.0 and doesn't always agree
+// with the pipeline's own discretized 1-5 quality_class (two regions with
+// a similar, comfortably-"good" raw ratio can still land in different
+// classes) - unlike FORCE_NON_QUALITY_INDICATORS above, this doesn't
+// change how the indicator is badged or displayed, only which value
+// decides its good/warn/bad *color* (map fill, ring border, hero band
+// border). See loadActiveMapLookup and loadIndicatorCards.
+const QUALITY_CLASS_LEVEL_INDICATORS = new Set([
+  'mapping-saturation',
+  'currentness',
+  'building-comparison',
+  'land-cover-completeness',
+]);
+
+// attribute-completeness_* indicators are named per attribute (e.g.
+// attribute-completeness_surface, attribute-completeness_emergency) rather
+// than under one fixed key, so a plain Set membership check can't cover
+// every one of them - this treats any attribute-completeness_* indicator
+// the same as an explicit QUALITY_CLASS_LEVEL_INDICATORS entry.
+function isQualityClassColored(indicator: string): boolean {
+  return QUALITY_CLASS_LEVEL_INDICATORS.has(indicator) || indicator.startsWith('attribute-completeness_');
+}
+
 interface IndicatorCard {
   indicator: string;
   title: string;
@@ -185,14 +233,31 @@ interface IndicatorCard {
   level: 'good' | 'warn' | 'bad' | 'neutral';
   isCount: boolean;
   description: string;
+  // True when every boundary in the current layer came back with no data
+  // (the pipeline's -999 sentinel, or a missing row) for this indicator -
+  // nothing to show or color the map with, so the card is shown but not
+  // selectable, the same treatment as an unavailable grid layer (§2/§14 of
+  // the maintainer guide). A boundary-by-boundary gap alone doesn't set
+  // this - those still just render grey on the map, see loadActiveMapLookup.
+  disabled: boolean;
+  // True when there's no region selected and the country-level (adm0) file
+  // has no data for this indicator, even though the card itself may still
+  // be enabled (a non-country layer, e.g. adm1, can have data adm0
+  // doesn't). The displayed avg/plot/description are always country-level,
+  // so this is when they'd otherwise silently show a misleading "0%" and
+  // an empty chart instead of explaining that the data lives one layer
+  // down, reachable by clicking a region on the map.
+  noCountryLevelData: boolean;
 }
 interface AttributeOption {
   indicator: string;
   label: string;
   displayValue: string;
   ringPct: number;
-  level: 'good' | 'warn' | 'bad';
+  level: 'good' | 'warn' | 'bad' | 'neutral';
   description: string;
+  disabled: boolean;
+  noCountryLevelData: boolean;
 }
 
 function levelFromAvg(avg: number): 'good' | 'warn' | 'bad' {
@@ -218,17 +283,33 @@ interface ViewPanel {
   attributeOptions: AttributeOption[];
   selectedAttributeIndicator: string;
   mapLookup: Record<string, number>;
+  // Same per-region data as mapLookup, but always the indicator's real
+  // value, never rescaled for map-coloring purposes (see mapLookup's
+  // mapping-saturation special case in loadActiveMapLookup). The hero
+  // band's region-selected display reads from here, not mapLookup, so a
+  // selected region's own percentage stays accurate even when the map's
+  // fill color is driven by something else.
+  mapValueLookup: Record<string, number>;
   activePlotAvailable: boolean;
   featureCount: string;
   totalLength: string;
   tile1Label: string;
   schoolSwitchVisible: boolean;
   schoolSubTopic: string;
+  // Which tag-distribution measure ("area"/"length"/"count") the treemap
+  // shows, and which ones this topic actually has a treemap for. The choice
+  // is kept across topic switches and falls back to the first available
+  // measure when the new topic doesn't have it.
+  treemapMeasure: string | null;
+  treemapMeasures: string[];
   // Which polygon on the map is click-selected, if any - drives the plot
   // below to that one region instead of the whole-country aggregate.
   // Belongs to the current (topic, mapLayer) id-space, so it gets cleared
   // whenever either of those changes.
   selectedGeomId: string | null;
+  // The selected polygon's name from the pmtiles properties, shown in the
+  // hero readouts in place of the granularity label. Null if it has none.
+  selectedRegionName: string | null;
 }
 
 function createPanel(id: string, topic: string, layer: string): ViewPanel {
@@ -236,10 +317,11 @@ function createPanel(id: string, topic: string, layer: string): ViewPanel {
     id, selectedTopic: topic, topicId: 0,
     indicators: [], mapLayer: layer, activeIndicatorKey: 'currentness',
     indicatorCards: [], attributeOptions: [], selectedAttributeIndicator: '',
-    mapLookup: {}, activePlotAvailable: true,
+    mapLookup: {}, mapValueLookup: {}, activePlotAvailable: true,
     featureCount: '', totalLength: '', tile1Label: '',
     schoolSwitchVisible: false, schoolSubTopic: 'operator',
-    selectedGeomId: null
+    treemapMeasure: null, treemapMeasures: [],
+    selectedGeomId: null, selectedRegionName: null
   };
 }
 
@@ -261,12 +343,14 @@ function getActiveCard(panel: ViewPanel): IndicatorCard | null {
   if (panel.activeIndicatorKey === TAG_DISTRIBUTION_KEY) {
     return {
       indicator: TAG_DISTRIBUTION_KEY,
-      title: 'Tag Distribution',
+      title: t('tagDistribution'),
       displayValue: panel.featureCount || '—',
       ringPct: 0,
       level: 'neutral',
       isCount: true,
-      description: 'Distribution of mapped features grouped by tag. The map shows no per-region values for this.'
+      disabled: false,
+      noCountryLevelData: false,
+      description: t('plot.tagDistributionDescription')
     };
   }
 
@@ -277,11 +361,13 @@ function getActiveCard(panel: ViewPanel): IndicatorCard | null {
   if (fromAttr) {
     return {
       indicator: fromAttr.indicator,
-      title: `Attribute Completeness: ${fromAttr.label}`,
+      title: t('attributeCompletenessWithAttr', { attr: fromAttr.label }),
       displayValue: fromAttr.displayValue,
       ringPct: fromAttr.ringPct,
       level: fromAttr.level,
       isCount: false,
+      disabled: fromAttr.disabled,
+      noCountryLevelData: fromAttr.noCountryLevelData,
       description: fromAttr.description
     };
   }
@@ -292,6 +378,16 @@ function isAttributeGroupActive(panel: ViewPanel): boolean {
   return panel.attributeOptions.some(o => o.indicator === panel.activeIndicatorKey);
 }
 
+// True when the active indicator has data somewhere (enabled at all, see
+// noCountryLevelData on IndicatorCard) but not at the country level
+// currently being displayed - the plot/description would otherwise show a
+// misleading empty chart / "0%" instead of explaining where the data
+// actually is. Never true once a region is selected, since the plot then
+// already reads that region's own (non-country) layer.
+function isActiveIndicatorCountryLevelUnavailable(panel: ViewPanel): boolean {
+  return !panel.selectedGeomId && (getActiveCard(panel)?.noCountryLevelData ?? false);
+}
+
 // Forced non-quality indicators (see FORCE_NON_QUALITY_INDICATORS) keep a
 // genuine 0-1 ratio underneath their count-badge treatment - the map's
 // hover popup and legend caps need to know this too, so they read as "95%"
@@ -300,14 +396,34 @@ function showsForcedPercent(panel: ViewPanel): boolean {
   return FORCE_NON_QUALITY_INDICATORS.has(getActiveCard(panel)?.indicator || '');
 }
 
+// What the map's color scale actually represents for whichever indicator is
+// currently active - shown above the legend swatches/gradient so "green"
+// doesn't have to be guessed at. Quality-scored indicators (whether shown as
+// Low/Medium/High bands or a raw percentage) all read as one scale, since
+// they look identical on the map; the count-style indicators each get their
+// own specific label instead of a generic "Count", since what's being
+// counted differs by indicator.
+// Two-word titles are stacked (a literal newline, rendered via the
+// map-legend-title CSS's white-space: pre-line) rather than run side by
+// side, to keep the legend box narrow - it's an absolutely-positioned
+// overlay on top of the map, so its own width directly eats into map space.
+function getMapLegendTitle(panel: ViewPanel): string {
+  const card = getActiveCard(panel);
+  if (!card) return '';
+  if (card.indicator === TAG_DISTRIBUTION_KEY) return t('legend.featuresMapped');
+  if (card.indicator === 'user-activity') return t('legend.users');
+  if (FORCE_NON_QUALITY_INDICATORS.has(card.indicator)) return t('legend.featuresMatched');
+  return card.isCount ? t('legend.count') : t('legend.qualityClass');
+}
+
 function getLegendCapText(panel: ViewPanel, which: 'min' | 'max'): string {
   // Matches the map's own fixedColorRange (see MetricMap usage below) - the
   // legend has to show the same 0%/100% scale the fill color is actually
   // computed against, not this view's own current min/max.
-  if (showsForcedPercent(panel)) return which === 'max' ? '100%' : '0%';
+  if (showsForcedPercent(panel)) return formatPercent(which === 'max' ? 1 : 0);
   const range = getMapLookupRange(panel);
-  if (!range) return which === 'max' ? 'High' : 'Low';
-  return range[which].toLocaleString('en-US');
+  if (!range) return which === 'max' ? t('legend.high') : t('legend.low');
+  return formatNumber(range[which]);
 }
 
 // Cards stay alphabetically sorted by title - "Attribute Completeness" sorts
@@ -335,13 +451,13 @@ function getIndicatorStackItems(panel: ViewPanel): StackItem[] {
   // explicit rank, compared before the title, not folded into one string.)
   const entries: { rank: number; title: string; item: StackItem }[] = panel.indicatorCards.map(card => ({
     rank: card.isCount ? 1 : 0,
-    title: card.title,
+    title: indicatorLabel(card.indicator),
     item: { type: 'indicator', card }
   }));
   if (panel.attributeOptions.length > 0) {
-    entries.push({ rank: 0, title: 'Attribute Completeness', item: { type: 'attribute-group' } });
+    entries.push({ rank: 0, title: t('attributeCompleteness'), item: { type: 'attribute-group' } });
   }
-  entries.sort((a, b) => a.rank - b.rank || a.title.localeCompare(b.title));
+  entries.sort((a, b) => a.rank - b.rank || a.title.localeCompare(b.title, locale.value));
   const items = entries.map(e => e.item);
 
   if (getTagGroupingKey(panel.selectedTopic)) {
@@ -365,31 +481,41 @@ function stackItemKey(item: StackItem): string {
 // district, which pulled the naive mean above 100% too: the hero band could
 // read "101%" while the indicator card, two inches away, read "99%" for the
 // literal same indicator. With a region selected, that region's own value
-// (already sitting in mapLookup - the same per-region data coloring the
-// map) is used instead, which is a real per-district figure, not an average.
+// (from mapValueLookup - the real per-region value, not necessarily what's
+// coloring the map, see mapLookup's mapping-saturation special case) is
+// used instead, which is a real per-district figure, not an average.
 function getHeroBandDisplayValue(panel: ViewPanel): number {
-  if (panel.selectedGeomId && panel.mapLookup[panel.selectedGeomId] != null) {
-    return panel.mapLookup[panel.selectedGeomId];
+  if (panel.selectedGeomId && panel.mapValueLookup[panel.selectedGeomId] != null) {
+    return panel.mapValueLookup[panel.selectedGeomId];
   }
   const card = getActiveCard(panel);
   return card ? card.ringPct / 100 : 0;
 }
+// Reuses the active card's own already-computed level rather than
+// recomputing levelFromAvg(getHeroBandDisplayValue(panel)) independently -
+// those used to always agree (ringPct/avg round-trip through the same
+// thresholds), but mapping-saturation's ring/card level can now come from
+// quality_class instead of the raw value (see loadIndicatorCards), and a
+// second, value-only computation here would silently disagree with it.
 function getHeroBandLevel(panel: ViewPanel): 'good' | 'warn' | 'bad' | 'neutral' {
-  const card = getActiveCard(panel);
-  return card?.isCount ? 'neutral' : levelFromAvg(getHeroBandDisplayValue(panel));
+  return getActiveCard(panel)?.level ?? 'neutral';
 }
 function getHeroBandLevelLabel(panel: ViewPanel): string {
   const card = getActiveCard(panel);
-  if (card?.isCount) return '';
+  // A disabled (no-data) card's level is 'neutral' too, same as a count
+  // indicator's - neither is a "good/bad" verdict worth labeling High/
+  // Medium/Low, so both skip the label the same way.
+  if (card?.isCount || card?.disabled) return '';
   const l = getHeroBandLevel(panel);
-  return l === 'good' ? 'High' : l === 'warn' ? 'Medium' : 'Low';
+  return l === 'good' ? t('legend.high') : l === 'warn' ? t('legend.medium') : t('legend.low');
 }
 // Count indicators (e.g. user-activity, tag distribution) show
 // activeCard.displayValue, which is already region-aware - no separate
-// lookup needed here.
+// lookup needed here. A disabled (no-data) card's displayValue is already
+// '—' rather than a real percentage, for the same reason.
 function getHeroBandValueText(panel: ViewPanel): string {
   const card = getActiveCard(panel);
-  return card?.isCount ? card.displayValue : `${Math.round(getHeroBandDisplayValue(panel) * 100)}%`;
+  return (card?.isCount || card?.disabled) ? card.displayValue : formatPercent(getHeroBandDisplayValue(panel));
 }
 
 function handleHashRouting() {
@@ -425,7 +551,29 @@ watch(selectedCountry, async (newCountry) => {
   await loadCountry(newCountry, true);
 });
 
+// The parquet's own timestamp (when the pipeline actually computed this
+// data), not the object storage's Last-Modified header (which only
+// reflects when the file was last uploaded/copied). Scoped to a specific
+// layer's own tag-distribution file, not hardcoded to the country level -
+// different layers can be processed at different times, so "current as of"
+// should reflect whichever layer is actually selected on screen.
+async function loadDataDateForLayer(code: string, layer: string): Promise<string> {
+  const url = buildUrls(code, layer).tagDistributionUrl;
+  const latestTimestamp = await loadLatestTimestamp(url);
+  return latestTimestamp ?? '';
+}
+
+// Bumped on every loadCountry() call so an older, still-in-flight call can
+// tell it's been superseded (e.g. the user picked a second country before
+// the first one finished loading) and stop touching shared state instead of
+// cross-contaminating it with the newer call's results - confirmed
+// reproducible under a slow connection before this guard was added.
+let loadCountryGeneration = 0;
+
 async function loadCountry(code: string, updateTopics: boolean) {
+  const myGeneration = ++loadCountryGeneration;
+  const isCurrent = () => myGeneration === loadCountryGeneration;
+
   isLoading.value = true;
 
   const layers = getCountryLayers(code);
@@ -434,21 +582,25 @@ async function loadCountry(code: string, updateTopics: boolean) {
   parquetUrl.value = urls.parquetUrl;
 
   try {
-    // The data's own latest timestamp, the pmtiles bounds, and which grid
-    // layers actually have data are all independent network calls - run
-    // them together instead of one after the other.
+    // The pmtiles bounds and which grid layers actually have data are
+    // independent network calls - run them together instead of one after
+    // the other. The "data current as of" timestamp used to be fetched
+    // here too, hardcoded to the country-level layer - it's fetched below
+    // instead, once defaultLayer is known, so it reflects whichever layer
+    // is actually selected rather than always adm0/vg2500_sta.
     const layerCandidates = [...new Set(
       [layers.countryLevel, layers.stateLevel, layers.detailLevel, layers.h3Level].filter(Boolean) as string[]
     )];
 
-    const [latestTimestamp, pmtilesBounds, layerChecks] = await Promise.all([
-      loadLatestTimestamp(urls.tagDistributionUrl),
+    const [pmtilesBounds, layerChecks] = await Promise.all([
       getPMTilesBounds(urls.pmtilesUrl),
       Promise.all(layerCandidates.map(async (layer) => {
         const exists = await checkParquetExists(buildUrls(code, layer).parquetUrl);
         return exists ? layer : null;
       }))
     ]);
+
+    if (!isCurrent()) return;
 
     const newAvailableLayers = new Set(layerChecks.filter((l): l is string => l !== null));
     availableLayers.value = newAvailableLayers;
@@ -462,12 +614,8 @@ async function loadCountry(code: string, updateTopics: boolean) {
       defaultLayer = preferredOrder.find(l => newAvailableLayers.has(l)) || layers.h3Level;
     }
 
-    // The parquet's own timestamp (when the pipeline actually computed this
-    // country's data), not the object storage's Last-Modified header (which
-    // only reflects when the file was last uploaded/copied).
-    dataDate.value = latestTimestamp
-      ? new Date(latestTimestamp).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
-      : '';
+    dataDate.value = await loadDataDateForLayer(code, defaultLayer);
+    if (!isCurrent()) return;
 
     bounds.value = pmtilesBounds;
     if (!bounds.value) {
@@ -478,17 +626,19 @@ async function loadCountry(code: string, updateTopics: boolean) {
     if (updateTopics) {
       // New country - reset to a fresh default topic.
       const availableTopics = await loadAvailableTopics(urls.parquetUrl);
+      if (!isCurrent()) return;
       availableTopicsForCountry.value = availableTopics;
       const firstTopic = availableTopics.includes('roads') ? 'roads' : (availableTopics[0] || '');
       panels.value = [createPanel('a', firstTopic, defaultLayer)];
     }
 
     await loadPanelTopicData(0);
+    if (!isCurrent()) return;
     updateHash(code, panels.value[0]?.selectedTopic || '');
   } catch (e) {
     console.error('Failed to load country:', e);
   } finally {
-    isLoading.value = false;
+    if (isCurrent()) isLoading.value = false;
   }
 }
 
@@ -510,48 +660,115 @@ async function loadIndicatorCards(panelIdx: number, topicName: string) {
 
   const allIndicators = panel.indicators;
 
-  let getValue: (indicator: string, i: number) => { avg: number; description: string };
+  let getValue: (indicator: string, i: number) => { avg: number; qualityClass: number | null; description: string; hasData: boolean; countryLevelHasData: boolean };
   if (panel.selectedGeomId) {
     const regionUrl = buildUrls(selectedCountry.value, panel.mapLayer).parquetUrl;
     const regionValues = await loadRegionIndicatorValues(regionUrl, topicName, panel.selectedGeomId, allIndicators);
-    getValue = (indicator) => ({ avg: regionValues[indicator]?.value ?? 0, description: regionValues[indicator]?.description || '' });
+    getValue = (indicator) => ({
+      avg: regionValues[indicator]?.value ?? 0,
+      qualityClass: regionValues[indicator]?.qualityClass ?? null,
+      description: regionValues[indicator]?.description || '',
+      hasData: regionValues[indicator]?.hasData ?? false,
+      // Not applicable once a region is picked - the plot/description
+      // already come from that region's own layer at that point, not the
+      // country level, so nothing needs the "click a region" nudge.
+      countryLevelHasData: true
+    });
   } else {
-    const results = await loadIndicatorLookups(parquetUrl.value, topicName, allIndicators);
-    getValue = (_, i) => ({ avg: results[i]?.avg ?? 0, description: results[i]?.description || '' });
+    const layerUrl = buildUrls(selectedCountry.value, panel.mapLayer).parquetUrl;
+    // The displayed average/description are deliberately always the
+    // country-level figure (see getHeroBandDisplayValue) - but whether an
+    // indicator is disabled has to reflect the layer actually on screen,
+    // not the country-level file: adm0 having no data for an indicator
+    // doesn't mean adm1 or h3 don't, and vice versa. Only re-query when the
+    // selected layer isn't the country level to begin with (adm0 selected
+    // means both URLs are already the same file).
+    const [results, layerResults] = await Promise.all([
+      loadIndicatorLookups(parquetUrl.value, topicName, allIndicators),
+      layerUrl === parquetUrl.value
+        ? Promise.resolve(null)
+        : loadIndicatorLookups(layerUrl, topicName, allIndicators)
+    ]);
+    getValue = (_, i) => ({
+      avg: results[i]?.avg ?? 0,
+      qualityClass: results[i]?.qualityClassAvg ?? null,
+      description: results[i]?.description || '',
+      // Enabled/disabled follows the layer on screen (adm1 having data is
+      // enough to keep the card clickable even if adm0 has none) - but the
+      // avg/plot/description above are still the country-level ones, so a
+      // card can be enabled *and* have nothing real to show at the same
+      // time. That combination is flagged separately via
+      // countryLevelHasData rather than folded into hasData/disabled, so
+      // the UI can tell "truly nothing anywhere" apart from "nothing at
+      // this administrative level, but there is data one click away".
+      hasData: (layerResults ?? results)[i]?.hasData ?? false,
+      countryLevelHasData: results[i]?.hasData ?? false
+    });
   }
 
   const regularCards: IndicatorCard[] = [];
   const attrOptions: AttributeOption[] = [];
 
   allIndicators.forEach((indicator, i) => {
-    const { avg, description } = getValue(indicator, i);
+    const { avg, qualityClass, description, hasData, countryLevelHasData } = getValue(indicator, i);
     if (isUnavailableDescription(description)) return;
 
     const isRawCount = isNoQualityDescription(description);
     const isCount = isRawCount || FORCE_NON_QUALITY_INDICATORS.has(indicator);
+    // Same reasoning as the map's fixedColorRange/color source (see
+    // loadActiveMapLookup): mapping-saturation's raw value can exceed 1.0
+    // and doesn't always agree with the pipeline's own discretized
+    // judgment, so the ring/band *color* is driven by quality_class here
+    // too, kept in sync with the map by reusing the same rescale-then-
+    // levelFromAvg formula. The displayed percentage itself is untouched -
+    // still the real value, not the coarser 1-5 class. avg/qualityClass
+    // are country-level, so it's countryLevelHasData that governs whether
+    // they're meaningful here, not hasData (which can be true purely from
+    // a non-country layer having data - see countryLevelHasData above).
+    const level = !countryLevelHasData
+      ? 'neutral'
+      : isCount
+        ? 'neutral'
+        : (isQualityClassColored(indicator) && qualityClass != null)
+          ? levelFromAvg((qualityClass - 1) / 4)
+          : levelFromAvg(avg);
+
+    // A country-level row can carry a real description even when its value
+    // is the -999/null "no data" sentinel (loadIndicatorLookups records the
+    // description before it knows whether the value is usable). Once
+    // noCountryLevelData is showing the "click a region" message in the
+    // plot panel, the "About this indicator" box needs to stay empty
+    // instead of contradicting it with a leftover country-level blurb -
+    // v-if="...description" on that box already hides it for an empty
+    // string, so blanking it here is enough.
+    const displayedDescription = countryLevelHasData ? description : '';
 
     if (indicator.startsWith('attribute-completeness_')) {
       attrOptions.push({
         indicator,
-        label: prettifyIndicator(indicator.replace('attribute-completeness_', '')),
-        displayValue: `${Math.round(avg * 100)}%`,
-        ringPct: Math.round(avg * 100),
-        level: levelFromAvg(avg),
-        description
+        label: attributeLabel(indicator.replace('attribute-completeness_', '')),
+        displayValue: countryLevelHasData ? formatPercent(avg) : '—',
+        ringPct: countryLevelHasData ? Math.round(avg * 100) : 0,
+        level: countryLevelHasData ? levelFromAvg(avg) : 'neutral',
+        description: displayedDescription,
+        disabled: !hasData,
+        noCountryLevelData: !countryLevelHasData
       });
     } else {
       regularCards.push({
         indicator,
-        title: prettifyIndicator(indicator),
+        title: indicatorLabel(indicator),
         // isRawCount (not isCount) here: roads-thematic-accuracy is forced
         // into the non-quality/count-badge treatment below, but its own
         // value is still a real 0-1 ratio, not a raw count - rounding that
         // to a bare integer would (wrongly) show "1" instead of "95%".
-        displayValue: isRawCount ? Math.round(avg).toLocaleString('en-US') : `${Math.round(avg * 100)}%`,
-        ringPct: isRawCount ? 0 : Math.round(avg * 100),
-        level: isCount ? 'neutral' : levelFromAvg(avg),
+        displayValue: !countryLevelHasData ? '—' : isRawCount ? formatNumber(Math.round(avg)) : formatPercent(avg),
+        ringPct: !countryLevelHasData ? 0 : isRawCount ? 0 : Math.round(avg * 100),
+        level,
         isCount,
-        description
+        disabled: !hasData,
+        noCountryLevelData: !countryLevelHasData,
+        description: displayedDescription
       });
     }
   });
@@ -561,11 +778,17 @@ async function loadIndicatorCards(panelIdx: number, topicName: string) {
 
   if (attrOptions.length > 0) {
     const preferred = topicConfig[topicName]?.completenessIndicator;
-    const stillValid = attrOptions.some(o => o.indicator === panel.selectedAttributeIndicator);
+    const stillValid = attrOptions.some(o => o.indicator === panel.selectedAttributeIndicator && !o.disabled);
     if (!stillValid) {
-      panel.selectedAttributeIndicator = (preferred && attrOptions.some(o => o.indicator === preferred))
-        ? preferred
-        : attrOptions[0].indicator;
+      // Prefer a variant that actually has data - falls back to the
+      // product-preferred one (or the first option) only when every variant
+      // is disabled, since there's no better choice available then anyway.
+      const availableOptions = attrOptions.filter(o => !o.disabled);
+      const preferredAvailable = preferred && availableOptions.find(o => o.indicator === preferred);
+      panel.selectedAttributeIndicator = preferredAvailable
+        ? preferredAvailable.indicator
+        : availableOptions[0]?.indicator
+          ?? (preferred && attrOptions.some(o => o.indicator === preferred) ? preferred : attrOptions[0].indicator);
     }
   } else {
     panel.selectedAttributeIndicator = '';
@@ -573,7 +796,16 @@ async function loadIndicatorCards(panelIdx: number, topicName: string) {
 
   const selectableKeys = [...regularCards.map(c => c.indicator), ...attrOptions.map(o => o.indicator)];
   if (!selectableKeys.includes(panel.activeIndicatorKey) && panel.activeIndicatorKey !== TAG_DISTRIBUTION_KEY) {
-    panel.activeIndicatorKey = selectableKeys.includes('currentness') ? 'currentness' : (selectableKeys[0] || 'currentness');
+    // Prefer an indicator that actually has data for this layer over one
+    // that's disabled - only fall back to a disabled one (or 'currentness'
+    // by name) when literally everything is empty, so a topic switch
+    // doesn't land on a blank-map indicator while a usable one sits right
+    // next to it in the list.
+    const availableKeys = [...regularCards.filter(c => !c.disabled).map(c => c.indicator), ...attrOptions.filter(o => !o.disabled).map(o => o.indicator)];
+    panel.activeIndicatorKey = availableKeys.includes('currentness')
+      ? 'currentness'
+      : availableKeys[0]
+        ?? (selectableKeys.includes('currentness') ? 'currentness' : (selectableKeys[0] || 'currentness'));
   }
 }
 
@@ -582,18 +814,42 @@ async function loadActiveMapLookup(panelIdx: number, topicName: string) {
   const card = panel && getActiveCard(panel);
   if (!panel || !card || !selectedCountry.value) return;
 
-  // Tag distribution has no per-region value to color the map with - an
-  // empty lookup makes every feature fall back to MetricMap's default grey
-  // (see buildFillColorExpression), same as "not loaded yet".
+  // Tag distribution colors the map by each region's own feature count
+  // instead of a quality value - the same "count" measure the treemap's
+  // own totals are built from (see loadPanelTreemap), just broken out per
+  // boundary via loadFeatureCountLookup() instead of summed to one number.
   if (card.indicator === TAG_DISTRIBUTION_KEY) {
-    panel.mapLookup = {};
+    const groupingKey = getTagGroupingKey(topicName);
+    if (!groupingKey) {
+      panel.mapLookup = {};
+      return;
+    }
+    const urls = buildUrls(selectedCountry.value, panel.mapLayer);
+    const lookup = await loadFeatureCountLookup(urls.tagDistributionUrl, topicName, groupingKey);
+    panel.mapValueLookup = lookup;
+    panel.mapLookup = lookup;
     return;
   }
 
   const urls = buildUrls(selectedCountry.value, panel.mapLayer);
   const [result] = await loadIndicatorLookups(urls.parquetUrl, topicName, [card.indicator]);
   if (!result) return;
-  panel.mapLookup = result.lookup;
+
+  panel.mapValueLookup = result.lookup;
+
+  // mapping-saturation's raw value is unbounded above 1.0 (a fully-mapped
+  // area can "overshoot" 100%), which the map's fixed 0/25/75% color steps
+  // don't handle meaningfully - two regions at 99% and 110% both just read
+  // as "the same green", so nothing is actually lost by not coloring off
+  // the raw ratio here. Color by the pipeline's own discretized 1-5
+  // quality_class instead, rescaled onto the same 0-1 scale the color
+  // steps expect (1 -> 0, 5 -> 1), so a class of 3 or below still lands in
+  // the same red/amber bands those thresholds already define.
+  panel.mapLookup = isQualityClassColored(card.indicator)
+    ? Object.fromEntries(
+        Object.entries(result.qualityClassLookup).map(([id, qc]) => [id, (qc - 1) / 4])
+      )
+    : result.lookup;
 }
 
 // Same margin/automargin/legend/multi-axis handling as the pipeline's other
@@ -712,12 +968,24 @@ async function handleMapLayerChange(panelIdx: number, layer: string) {
   // before this feature, but now they can be showing a just-cleared
   // region's data too, so they need refreshing here as well.
   panel.selectedGeomId = null;
-  await Promise.all([
+  panel.selectedRegionName = null;
+  const dataDatePromise = selectedCountry.value
+    ? loadDataDateForLayer(selectedCountry.value, layer)
+    : Promise.resolve('');
+  const [newDataDate] = await Promise.all([
+    dataDatePromise,
     loadActiveMapLookup(panelIdx, panel.selectedTopic),
     loadActiveIndicatorPlot(panelIdx),
     loadIndicatorCards(panelIdx, panel.selectedTopic),
     loadPanelTreemap(panelIdx)
   ]);
+  // Only apply if this is still the active layer - a fast second layer
+  // click before this one's timestamp fetch resolves shouldn't let the
+  // stale one win (same reasoning as loadCountry's generation guard,
+  // scoped down to this one field instead of a full guard object).
+  if (panel.mapLayer === layer) {
+    dataDate.value = newDataDate;
+  }
 }
 
 // Clicking a polygon switches every data-driven box (hero band, indicator
@@ -727,10 +995,11 @@ async function handleMapLayerChange(panelIdx: number, layer: string) {
 // geomId itself). The map coloring itself (mapLookup) doesn't need
 // reloading - it's already the full per-region lookup for the active
 // indicator, this just reads one entry out of it.
-function handleRegionClick(panelIdx: number, geomId: string | null) {
+function handleRegionClick(panelIdx: number, geomId: string | null, regionName: string | null = null) {
   const panel = panels.value[panelIdx];
   if (!panel) return;
   panel.selectedGeomId = geomId;
+  panel.selectedRegionName = geomId ? regionName : null;
   loadIndicatorCards(panelIdx, panel.selectedTopic);
   loadActiveIndicatorPlot(panelIdx);
   loadPanelTreemap(panelIdx);
@@ -768,6 +1037,31 @@ async function loadTrueFeatureCount(topicName: string): Promise<number | null> {
   }
 }
 
+const TREEMAP_MEASURE_ORDER = ['area', 'length', 'count'];
+function measureRank(measure: string): number {
+  const i = TREEMAP_MEASURE_ORDER.indexOf(measure);
+  return i === -1 ? TREEMAP_MEASURE_ORDER.length : i;
+}
+
+function getMeasureLabel(measure: string): string {
+  const key = `measures.${measure}`;
+  return te(key) || te(key, 'en') ? t(key) : measure.charAt(0).toUpperCase() + measure.slice(1);
+}
+
+// The user's chosen measure if this topic has it, else the default one.
+function getShownTreemapMeasure(panel: ViewPanel): string | undefined {
+  return panel.treemapMeasure && panel.treemapMeasures.includes(panel.treemapMeasure)
+    ? panel.treemapMeasure
+    : panel.treemapMeasures[0];
+}
+
+function handleTreemapMeasureSwitch(panelIdx: number, measure: string) {
+  const panel = panels.value[panelIdx];
+  if (!panel || panel.treemapMeasure === measure) return;
+  panel.treemapMeasure = measure;
+  loadPanelTreemap(panelIdx);
+}
+
 async function loadPanelTreemap(panelIdx: number) {
   const panel = panels.value[panelIdx];
   if (!panel || !selectedCountry.value) return;
@@ -793,10 +1087,16 @@ async function loadPanelTreemap(panelIdx: number) {
       geomId ? Promise.resolve(null) : loadTrueFeatureCount(topicName)
     ]);
 
-    const mainMeasure = byMeasure['area'] || byMeasure['length'] || byMeasure['count'];
-    if (!mainMeasure?.treemap) return;
+    // Default order is area, then length, then count; any other measure the
+    // pipeline adds later just goes after those.
+    const available = Object.keys(byMeasure)
+      .filter(m => byMeasure[m]?.treemap)
+      .sort((a, b) => measureRank(a) - measureRank(b));
+    panel.treemapMeasures = available;
+    const measure = getShownTreemapMeasure(panel);
+    if (!measure) return;
 
-    const fig = mainMeasure.treemap;
+    const fig = byMeasure[measure]!.treemap;
     fig.layout = fig.layout || {};
     fig.layout.margin = { t: 40, r: 10, l: 10, b: 10 };
     fig.layout.paper_bgcolor = 'rgba(0,0,0,0)';
@@ -815,20 +1115,17 @@ async function loadPanelTreemap(panelIdx: number) {
 
     const countMeasure = byMeasure['count'];
     const featureTotal = trueFeatureCount ?? countMeasure?.sumValue;
-    panel.featureCount = featureTotal != null ? Number(featureTotal).toLocaleString('en-US') : '';
+    panel.featureCount = featureTotal != null ? formatNumber(Number(featureTotal)) : '';
 
-    const topicSimple = topicName.toLowerCase().includes('road')
-      ? 'roads'
-      : topicName.toLowerCase().includes('building')
-        ? 'buildings'
-        : prettifyTopic(topicName);
+    const inlineKey = `topicsInline.${topicName}`;
+    const topicInline = te(inlineKey) || te(inlineKey, 'en') ? t(inlineKey) : topicLabel(topicName);
 
     if (byMeasure['area']?.sumValue != null) {
-      panel.totalLength = (byMeasure['area'].sumValue / 1_000_000).toLocaleString('en-US', { maximumFractionDigits: 0 });
-      panel.tile1Label = `km² of ${topicSimple}`;
+      panel.totalLength = formatNumber(byMeasure['area'].sumValue / 1_000_000, { maximumFractionDigits: 0 });
+      panel.tile1Label = t('hero.areaOf', { topic: topicInline });
     } else if (byMeasure['length']?.sumValue != null) {
-      panel.totalLength = (byMeasure['length'].sumValue / 1000).toLocaleString('en-US', { maximumFractionDigits: 0 });
-      panel.tile1Label = `km of ${topicSimple}`;
+      panel.totalLength = formatNumber(byMeasure['length'].sumValue / 1000, { maximumFractionDigits: 0 });
+      panel.tile1Label = t('hero.lengthOf', { topic: topicInline });
     } else {
       panel.totalLength = '';
       panel.tile1Label = '';
@@ -850,12 +1147,21 @@ async function loadPanelTopicData(panelIdx: number) {
   const newIndicators = await loadIndicators(parquetUrl.value, topicName);
   panel.indicators = newIndicators;
 
-  await loadIndicatorCards(panelIdx, topicName);
-  await refreshActiveIndicator(panelIdx, topicName);
-  await loadPanelTreemap(panelIdx);
+  // The treemap reads its own (tag-distribution) parquet file and doesn't
+  // depend on the indicator cards or active-indicator refresh below, so it
+  // can fetch/load in parallel with them instead of waiting for both to
+  // finish first - loadIndicatorCards does have to go before
+  // refreshActiveIndicator though, since it's what sets activeIndicatorKey.
+  await Promise.all([
+    (async () => {
+      await loadIndicatorCards(panelIdx, topicName);
+      await refreshActiveIndicator(panelIdx, topicName);
+    })(),
+    loadPanelTreemap(panelIdx)
+  ]);
 
-  const t = topicName.toLowerCase();
-  panel.schoolSwitchVisible = t.startsWith('school') || t.startsWith('hospital') || t.startsWith('healthcare-primary');
+  const topicLower = topicName.toLowerCase();
+  panel.schoolSwitchVisible = topicLower.startsWith('school') || topicLower.startsWith('hospital') || topicLower.startsWith('healthcare-primary');
 }
 
 async function handlePanelTopicChange(panelIdx: number, newTopic: string) {
@@ -864,6 +1170,7 @@ async function handlePanelTopicChange(panelIdx: number, newTopic: string) {
   panel.selectedTopic = newTopic;
   panel.topicId++;
   panel.selectedGeomId = null;
+  panel.selectedRegionName = null;
   await loadPanelTopicData(panelIdx);
 }
 
@@ -873,6 +1180,16 @@ function handlePanelSchoolSwitch(panelIdx: number, subTopic: string) {
   panel.schoolSubTopic = subTopic;
   setCurrentSchoolSubTopic(subTopic);
   loadPanelTreemap(panelIdx);
+}
+
+watch(locale, () => {
+  if (selectedCountry.value && !isLoading.value) loadPanelTopicData(0);
+});
+
+function handleLocaleChange(newLocale: string) {
+  if ((SUPPORTED_LOCALES as readonly string[]).includes(newLocale)) {
+    setLocale(newLocale as typeof SUPPORTED_LOCALES[number]);
+  }
 }
 
 onUnmounted(() => {
@@ -891,71 +1208,82 @@ onUnmounted(() => {
         <aside class="sidebar">
           <div class="sidebar-brand">
             <img :src="ohsomeLogo" alt="ohsome quality api" class="sidebar-logo" />
-            <strong>ohsome Country Quality Report</strong>
+            <strong>{{ t('app.title') }}</strong>
+            <div class="lang-switch" role="group" :aria-label="t('app.language')">
+              <button
+                v-for="l in SUPPORTED_LOCALES"
+                :key="l"
+                type="button"
+                :class="{ active: locale === l }"
+                :aria-pressed="locale === l"
+                @click="handleLocaleChange(l)"
+              >{{ l.toUpperCase() }}</button>
+            </div>
           </div>
 
           <div class="sidebar-section">
-            <span class="sidebar-label">Select a Country</span>
+            <span class="sidebar-label">{{ t('sidebar.selectCountry') }}</span>
             <select class="country-select" v-model="selectedCountry">
-              <option value="" disabled>Loading countries…</option>
-              <option v-for="country in countries" :key="country.value" :value="country.value">
+              <option value="" disabled>{{ t('sidebar.loadingCountries') }}</option>
+              <option v-for="country in localizedCountries" :key="country.value" :value="country.value">
                 {{ country.label }}
               </option>
             </select>
           </div>
 
           <div class="sidebar-section">
-            <span class="sidebar-label">Select a Layer</span>
+            <span class="sidebar-label">{{ t('sidebar.selectLayer') }}</span>
             <div class="layer-switch">
               <button
                 :class="{ active: mainPanel.mapLayer === currentLayers.countryLevel }"
                 :disabled="!isLayerAvailable(currentLayers.countryLevel)"
                 @click="handleMapLayerChange(0, currentLayers.countryLevel)"
-              >{{ currentLayers.countryLevelLabel }}</button>
+              >{{ t(currentLayers.countryLevelLabel) }}</button>
               <button
                 v-if="currentLayers.stateLevel"
                 :class="{ active: mainPanel.mapLayer === currentLayers.stateLevel }"
                 :disabled="!isLayerAvailable(currentLayers.stateLevel)"
                 @click="handleMapLayerChange(0, currentLayers.stateLevel!)"
-              >{{ currentLayers.stateLevelLabel }}</button>
+              >{{ t(currentLayers.stateLevelLabel!) }}</button>
               <button
                 :class="{ active: mainPanel.mapLayer === currentLayers.detailLevel }"
                 :disabled="!isLayerAvailable(currentLayers.detailLevel)"
                 @click="handleMapLayerChange(0, currentLayers.detailLevel)"
-              >{{ currentLayers.detailLevelLabel }}</button>
+              >{{ t(currentLayers.detailLevelLabel) }}</button>
               <button
                 :class="{ active: mainPanel.mapLayer === currentLayers.h3Level }"
                 :disabled="!isLayerAvailable(currentLayers.h3Level)"
-                :title="!isLayerAvailable(currentLayers.h3Level) ? 'Not processed for this country yet' : ''"
+                :title="!isLayerAvailable(currentLayers.h3Level) ? t('sidebar.layerNotProcessed') : ''"
                 @click="handleMapLayerChange(0, currentLayers.h3Level)"
-              >{{ currentLayers.h3LevelLabel }}</button>
+              >{{ t(currentLayers.h3LevelLabel) }}</button>
             </div>
           </div>
 
           <div class="sidebar-section">
-            <span class="sidebar-label">Select a Topic</span>
+            <span class="sidebar-label">{{ t('sidebar.selectTopic') }}</span>
             <div class="topic-pills-row">
               <button
-                v-for="t in availableTopicsForCountry"
-                :key="t"
+                v-for="topic in availableTopicsForCountry"
+                :key="topic"
                 class="pill"
-                :class="{ active: t === mainPanel.selectedTopic }"
-                @click="handlePanelTopicChange(0, t)"
-              >{{ prettifyTopic(t) }}</button>
+                :class="{ active: topic === mainPanel.selectedTopic }"
+                @click="handlePanelTopicChange(0, topic)"
+              >{{ topicLabel(topic) }}</button>
             </div>
           </div>
 
           <div class="sidebar-section sidebar-section--grow">
-            <span class="sidebar-label">Select an Indicator</span>
+            <span class="sidebar-label">{{ t('sidebar.selectIndicator') }}</span>
             <div class="indicator-list">
               <template v-for="item in getIndicatorStackItems(mainPanel)" :key="stackItemKey(item)">
                 <IndicatorGaugeCard
                   v-if="item.type === 'indicator'"
-                  :title="item.card.title"
+                  :title="indicatorLabel(item.card.indicator)"
                   :displayValue="item.card.displayValue"
                   :ringPct="item.card.ringPct"
                   :level="item.card.level"
                   :active="item.card.indicator === mainPanel.activeIndicatorKey"
+                  :disabled="item.card.disabled"
                   @click="selectIndicatorCard(0, item.card.indicator)"
                 />
                 <AttributeCompletenessCard
@@ -963,11 +1291,12 @@ onUnmounted(() => {
                   :options="mainPanel.attributeOptions"
                   :selected="mainPanel.selectedAttributeIndicator"
                   :active="isAttributeGroupActive(mainPanel)"
+                  :disabled="mainPanel.attributeOptions.every(o => o.disabled)"
                   @select="(indicator: string) => selectAttributeOption(0, indicator)"
                 />
                 <IndicatorGaugeCard
                   v-else
-                  title="Tag Distribution"
+                  :title="t('tagDistribution')"
                   :displayValue="mainPanel.featureCount || '—'"
                   :ringPct="0"
                   level="neutral"
@@ -986,19 +1315,19 @@ onUnmounted(() => {
                  this banner is the one loud, unmissable place that says so. -->
             <div class="region-banner" v-if="mainPanel.selectedGeomId">
               <span class="region-banner-text">
-                <strong>Selected region</strong> — every box below is scoped to this region, not all of {{ selectedCountryLabel }}
+                <strong>{{ t('region.selected') }}</strong> {{ t('region.scopedNote', { country: selectedCountryLabel }) }}
               </span>
               <button type="button" class="region-banner-back" @click="handleRegionClick(0, null)">
-                ← Back to all of {{ selectedCountryLabel }}
+                {{ t('region.back', { country: selectedCountryLabel }) }}
               </button>
             </div>
             <div class="band" :data-level="getHeroBandLevel(mainPanel)">
-              <span class="band-label">{{ getActiveCard(mainPanel)?.title || 'Quality' }}</span>
+              <span class="band-label">{{ getActiveCard(mainPanel)?.title || t('hero.quality') }}</span>
               <span class="band-value">{{ getHeroBandLevelLabel(mainPanel) }}<span class="band-pct">{{ getHeroBandValueText(mainPanel) }}</span></span>
             </div>
             <div class="readouts" :class="{ 'readouts--3col': !mainPanel.totalLength }">
               <div class="readout">
-                <span class="readout-label">Features mapped</span>
+                <span class="readout-label">{{ t('hero.featuresMapped') }}</span>
                 <span class="readout-value">{{ mainPanel.featureCount || '—' }}</span>
               </div>
               <div class="readout" v-if="mainPanel.totalLength">
@@ -1006,15 +1335,16 @@ onUnmounted(() => {
                 <span class="readout-value">{{ mainPanel.totalLength }}</span>
               </div>
               <div class="readout">
-                <span class="readout-label">Data current as of</span>
-                <span class="readout-value">{{ dataDate || '—' }}</span>
+                <span class="readout-label">{{ t('hero.dataCurrentAsOf') }}</span>
+                <span class="readout-value">{{ dataDateText || '—' }}</span>
               </div>
               <div class="readout">
-                <span class="readout-label">Granularity shown</span>
-                <span class="readout-value">{{ mainPanel.mapLayer === currentLayers.countryLevel ? currentLayers.countryLevelLabel
-                  : mainPanel.mapLayer === currentLayers.stateLevel ? currentLayers.stateLevelLabel
-                  : mainPanel.mapLayer === currentLayers.detailLevel ? currentLayers.detailLevelLabel
-                  : currentLayers.h3LevelLabel }}</span>
+                <span class="readout-label">{{ mainPanel.selectedGeomId && mainPanel.selectedRegionName ? t('hero.regionShown') : t('hero.adminLevelShown') }}</span>
+                <span class="readout-value">{{ mainPanel.selectedGeomId && mainPanel.selectedRegionName ? mainPanel.selectedRegionName
+                  : mainPanel.mapLayer === currentLayers.countryLevel ? t(currentLayers.countryLevelLabel)
+                  : mainPanel.mapLayer === currentLayers.stateLevel ? t(currentLayers.stateLevelLabel!)
+                  : mainPanel.mapLayer === currentLayers.detailLevel ? t(currentLayers.detailLevelLabel)
+                  : t(currentLayers.h3LevelLabel) }}</span>
               </div>
             </div>
           </section>
@@ -1026,6 +1356,7 @@ onUnmounted(() => {
                 :containerId="'main_map_' + mainPanel.id"
                 :pmtilesUrl="pmtilesUrl"
                 :lookup="mainPanel.mapLookup"
+                :valueLookup="mainPanel.mapValueLookup"
                 :indicatorName="getActiveCard(mainPanel)?.indicator || ''"
                 :bounds="bounds"
                 :layerName="mainPanel.mapLayer"
@@ -1035,20 +1366,27 @@ onUnmounted(() => {
                 :showAsPercent="showsForcedPercent(mainPanel)"
                 :fixedColorRange="showsForcedPercent(mainPanel) ? [0, 1] : undefined"
                 :selectedGeomId="mainPanel.selectedGeomId"
-                @regionClick="handleRegionClick(0, $event)"
+                :boundariesAttribution="boundariesAttribution"
+                @regionClick="(geomId, regionName) => handleRegionClick(0, geomId, regionName)"
               />
-              <template v-if="mainPanel.activeIndicatorKey !== 'tag-distribution'">
-                <div class="map-legend" v-if="!getActiveCard(mainPanel)?.isCount">
-                  <div><i style="background:#F44336;"></i>0&ndash;25%</div>
-                  <div><i style="background:#FFEB3B;"></i>25&ndash;75%</div>
-                  <div><i style="background:#4CAF50;"></i>75&ndash;100%</div>
-                </div>
-                <div class="map-legend map-legend--gradient" v-else>
-                  <span class="legend-cap">{{ getLegendCapText(mainPanel, 'max') }}</span>
-                  <div class="legend-gradient-bar"></div>
-                  <span class="legend-cap">{{ getLegendCapText(mainPanel, 'min') }}</span>
-                </div>
-              </template>
+              <div class="map-legend" v-if="!getActiveCard(mainPanel)?.isCount && isQualityClassColored(getActiveCard(mainPanel)?.indicator || '')">
+                <span class="map-legend-title">{{ getMapLegendTitle(mainPanel) }}</span>
+                <div><i style="background:#009E73;"></i>{{ t('legend.high') }}</div>
+                <div><i style="background:#F0E442;"></i>{{ t('legend.medium') }}</div>
+                <div><i style="background:#D55E00;"></i>{{ t('legend.low') }}</div>
+              </div>
+              <div class="map-legend" v-else-if="!getActiveCard(mainPanel)?.isCount">
+                <span class="map-legend-title">{{ getMapLegendTitle(mainPanel) }}</span>
+                <div><i style="background:#009E73;"></i>75&ndash;100%</div>
+                <div><i style="background:#F0E442;"></i>25&ndash;75%</div>
+                <div><i style="background:#D55E00;"></i>0&ndash;25%</div>
+              </div>
+              <div class="map-legend map-legend--gradient" v-else-if="getActiveCard(mainPanel)">
+                <span class="map-legend-title">{{ getMapLegendTitle(mainPanel) }}</span>
+                <span class="legend-cap">{{ getLegendCapText(mainPanel, 'max') }}</span>
+                <div class="legend-gradient-bar"></div>
+                <span class="legend-cap">{{ getLegendCapText(mainPanel, 'min') }}</span>
+              </div>
             </div>
           </section>
 
@@ -1065,8 +1403,8 @@ onUnmounted(() => {
               <div class="plotpanel-main">
                 <div v-show="mainPanel.activeIndicatorKey === 'tag-distribution'">
                   <div class="panel-head">
-                    <h3>Tag Distribution</h3>
-                    <span class="muted">grouped by <span class="mono">{{ getTagGroupingKey(mainPanel.selectedTopic) }}</span></span>
+                    <h3>{{ t('tagDistribution') }}</h3>
+                    <span class="muted">{{ t('plot.groupedBy') }} <span class="mono">{{ getTagGroupingKey(mainPanel.selectedTopic) }}</span></span>
                   </div>
                   <div class="grouping-toggle" v-if="mainPanel.schoolSwitchVisible">
                     <button :class="{ active: mainPanel.schoolSubTopic === 'operator' }" @click="handlePanelSchoolSwitch(0, 'operator')">operator:type</button>
@@ -1074,17 +1412,24 @@ onUnmounted(() => {
                       {{ mainPanel.selectedTopic?.toLowerCase().startsWith('hospital') || mainPanel.selectedTopic?.toLowerCase().startsWith('healthcare') ? 'healthcare:speciality' : 'isced:level' }}
                     </button>
                   </div>
+                  <div class="grouping-toggle" v-if="mainPanel.treemapMeasures.length > 1">
+                    <button v-for="m in mainPanel.treemapMeasures" :key="m"
+                      :class="{ active: m === getShownTreemapMeasure(mainPanel) }"
+                      @click="handleTreemapMeasureSwitch(0, m)">{{ getMeasureLabel(m) }}</button>
+                  </div>
                   <div class="plot-container" :id="'tag-treemap-' + mainPanel.id"></div>
                 </div>
                 <div v-show="mainPanel.activeIndicatorKey !== 'tag-distribution'">
-                  <h3>{{ getActiveCard(mainPanel) ? prettifyIndicator(getActiveCard(mainPanel)!.indicator) : '' }}</h3>
-                  <p v-if="!mainPanel.activePlotAvailable" class="plot-unavailable">No chart available for this indicator.</p>
+                  <h3>{{ getActiveCard(mainPanel) ? indicatorLabel(getActiveCard(mainPanel)!.indicator) : '' }}</h3>
+                  <p v-if="isActiveIndicatorCountryLevelUnavailable(mainPanel)" class="plot-unavailable">{{ t('plot.notAvailableCountryLevel') }}</p>
+                  <p v-else-if="!mainPanel.activePlotAvailable" class="plot-unavailable">{{ t('plot.noChart') }}</p>
                   <div v-show="mainPanel.activePlotAvailable" class="plot-container" :id="'active-indicator-plot-' + mainPanel.id"></div>
                 </div>
               </div>
               <div class="plotpanel-desc" v-if="getActiveCard(mainPanel)?.description">
-                <span class="plotpanel-desc-label">About this indicator</span>
-                <p>{{ getActiveCard(mainPanel)?.description }}</p>
+                <span class="plotpanel-desc-label">{{ t('plot.aboutIndicator') }}</span>
+                <!-- formatDescriptionHtml escapes everything except known markup (units, links). -->
+                <p v-html="formatDescriptionHtml(getActiveCard(mainPanel)?.description || '')"></p>
               </div>
             </div>
           </section>
@@ -1092,7 +1437,7 @@ onUnmounted(() => {
       </div>
     </div>
 
-    <ReportFooter :parquetDate="dataDate" />
+    <ReportFooter :parquetDate="dataDateText" />
   </div>
 </template>
 
@@ -1121,14 +1466,23 @@ onUnmounted(() => {
 }
 
 .sidebar-brand {
-  display: flex; align-items: center; gap: 0.6rem;
+  display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap;
   padding-bottom: 1.1rem; border-bottom: 1px solid var(--line);
 }
 .sidebar-brand img { height: 2.2rem; width: auto; display: block; flex: none; }
 .sidebar-brand strong {
-  font-family: var(--font-display); font-weight: 700; font-size: 0.98rem;
+  font-family: var(--font-display); font-weight: 700; font-size: 1.2rem;
   letter-spacing: 0.01em; color: var(--ink); line-height: 1.2;
 }
+/* Same look as .layer-switch, just smaller, pushed to the brand row's right edge. */
+.lang-switch { display: flex; gap: 0.2rem; margin-left: auto; flex: none; }
+.lang-switch button {
+  border: 1px solid var(--line-strong); background: transparent; color: var(--ink-soft);
+  font-family: var(--font-body); font-size: 0.72rem; font-weight: 700; padding: 0.2rem 0.4rem;
+  border-radius: var(--radius); cursor: pointer;
+}
+.lang-switch button:hover { border-color: var(--accent); color: var(--ink); }
+.lang-switch button.active { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
 
 .country-select {
   font-family: var(--font-body); font-weight: 600; font-size: 0.9rem; color: var(--ink);
@@ -1158,7 +1512,7 @@ onUnmounted(() => {
 .layer-switch { display: flex; gap: 0.3rem; flex-wrap: wrap; }
 .layer-switch button {
   border: 1px solid var(--line-strong); background: transparent; color: var(--ink-soft);
-  font-family: var(--font-body); font-size: 0.76rem; font-weight: 600; padding: 0.35rem 0.65rem;
+  font-family: var(--font-body); font-size: 0.85rem; font-weight: 600; padding: 0.35rem 0.65rem;
   border-radius: var(--radius);
 }
 .layer-switch button.active { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
@@ -1241,11 +1595,19 @@ onUnmounted(() => {
 }
 .map-legend div { display: flex; align-items: center; gap: 0.4rem; }
 .map-legend i { width: 0.7rem; height: 0.7rem; display: inline-block; flex: none; border-radius: 2px; }
+.map-legend-title {
+  font-weight: 700; color: var(--ink); text-transform: uppercase;
+  letter-spacing: 0.02em; font-size: 0.66rem; margin-bottom: 0.05rem;
+  /* Renders a literal \n from getMapLegendTitle() as a line break, so a
+     two-word title stacks instead of widening the legend box. */
+  white-space: pre-line; line-height: 1.15;
+}
 /* Count indicators (e.g. user-activity) are colored on a continuous
    min-to-max gradient, not fixed quality bands - a row of static swatches
    would be misleading there, so this shows the actual scale as a bar with
    the real min/max values from what's currently loaded on the map. */
 .map-legend--gradient { align-items: center; gap: 0.3rem; }
+.map-legend--gradient .map-legend-title { text-align: center; }
 .legend-gradient-bar {
   width: 14px; height: 84px;
   background: linear-gradient(180deg, #154360, #EAF2F8);
@@ -1270,8 +1632,17 @@ onUnmounted(() => {
   color: var(--ink-soft); text-transform: uppercase; letter-spacing: 0.06em;
 }
 .plotpanel-desc p {
-  margin: 0; font-size: 0.82rem; line-height: 1.5; color: var(--ink-soft);
+  margin: 0; font-size: 0.95rem; line-height: 1.5; color: var(--ink-soft);
 }
+/* Links come in via v-html (formatDescriptionHtml), which scoped styles
+   don't reach without :deep(). */
+.plotpanel-desc p :deep(a) {
+  color: var(--accent); font-weight: 600; text-decoration: underline;
+  text-decoration-thickness: 1px; text-underline-offset: 2px;
+  transition: text-decoration-thickness 0.15s;
+}
+.plotpanel-desc p :deep(a)::after { content: " ↗"; font-size: 0.8em; }
+.plotpanel-desc p :deep(a:hover) { text-decoration-thickness: 2px; }
 @media (max-width: 720px) {
   .plotpanel-layout { flex-direction: column; }
   .plotpanel-desc { border-left: none; border-top: 1px solid var(--line); padding: 0.75rem 0 0; max-height: none; }

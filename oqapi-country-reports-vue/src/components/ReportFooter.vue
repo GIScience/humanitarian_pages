@@ -4,9 +4,9 @@
 <template>
   <footer class="footer">
     <div class="footer-left">
-      <a class="footer-btn" href="https://heigit.org/contact/" target="_blank">Contact</a>
-      <a class="footer-btn" href="https://heigit.org/privacy-policy/" target="_blank">Privacy Policy</a>
-      <a class="footer-btn" href="https://heigit.org/imprint/" target="_blank">Imprint</a>
+      <a class="footer-btn" href="https://heigit.org/contact/" target="_blank">{{ $t('footer.contact') }}</a>
+      <a class="footer-btn" href="https://heigit.org/privacy-policy/" target="_blank">{{ $t('footer.privacy') }}</a>
+      <a class="footer-btn" href="https://heigit.org/imprint/" target="_blank">{{ $t('footer.imprint') }}</a>
     </div>
 
     <div class="footer-center">

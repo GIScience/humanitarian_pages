@@ -6,14 +6,18 @@ export interface AttributeOption {
   label: string;
   displayValue: string;
   ringPct: number;
-  level: 'good' | 'warn' | 'bad';
+  level: 'good' | 'warn' | 'bad' | 'neutral';
   description: string;
+  disabled: boolean;
 }
 
 const props = defineProps<{
   options: AttributeOption[];
   selected: string;
   active: boolean;
+  // True when every option has no data - the whole card is then shown but
+  // not selectable, same treatment as an unavailable grid layer.
+  disabled?: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -34,12 +38,13 @@ const dashOffset = computed(() => {
 <template>
   <article
     class="indicator-card attribute-card"
-    :class="{ active }"
+    :class="{ active, disabled }"
     role="button"
-    tabindex="0"
-    @click="emit('select', current?.indicator || selected)"
-    @keydown.enter="emit('select', current?.indicator || selected)"
-    @keydown.space.prevent="emit('select', current?.indicator || selected)"
+    :tabindex="disabled ? -1 : 0"
+    :aria-disabled="disabled"
+    @click="!disabled && emit('select', current?.indicator || selected)"
+    @keydown.enter="!disabled && emit('select', current?.indicator || selected)"
+    @keydown.space.prevent="!disabled && emit('select', current?.indicator || selected)"
   >
     <div class="gaugewrap">
       <svg viewBox="0 0 72 72">
@@ -57,14 +62,20 @@ const dashOffset = computed(() => {
     </div>
     <div class="indicator-body">
       <div class="indicator-title-row">
-        <span class="indicator-title">Attribute Completeness</span>
+        <span class="indicator-title">{{ $t('attributeCompleteness') }}</span>
         <select
           class="attribute-select"
           :value="selected"
+          :disabled="disabled"
           @click.stop
           @change="emit('select', ($event.target as HTMLSelectElement).value)"
         >
-          <option v-for="opt in options" :key="opt.indicator" :value="opt.indicator">{{ opt.label }}</option>
+          <!-- A variant with no data for every boundary is disabled on its
+               own option, even when the group as a whole still has other,
+               selectable variants (disabled only wholesale-disables the
+               <select> itself, see the group-level `disabled` above for
+               "every variant is empty"). -->
+          <option v-for="opt in options" :key="opt.indicator" :value="opt.indicator" :disabled="opt.disabled">{{ opt.label }}</option>
         </select>
       </div>
     </div>
@@ -88,6 +99,16 @@ const dashOffset = computed(() => {
 .indicator-card:hover { border-color: var(--line-strong); }
 .indicator-card.active { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent), var(--shadow); }
 .indicator-card:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+/* Same treatment as an unavailable grid-layer pill (.layer-switch
+   button:disabled in MainView.vue) - dashed border, muted text, not
+   selectable, but still visible in the list rather than removed outright. */
+.indicator-card.disabled {
+  cursor: not-allowed;
+  border-style: dashed;
+  color: var(--disabled);
+}
+.indicator-card.disabled:hover { border-color: var(--line); }
+.indicator-card.disabled .indicator-title { color: var(--disabled); }
 
 .gaugewrap { flex: none; position: relative; width: 4.6rem; height: 4.6rem; }
 .gaugewrap svg { width: 100%; height: 100%; transform: rotate(-90deg); }
@@ -96,6 +117,7 @@ const dashOffset = computed(() => {
 .ring-value.level-good { stroke: var(--good); }
 .ring-value.level-warn { stroke: var(--warn); }
 .ring-value.level-bad { stroke: var(--bad); }
+.ring-value.level-neutral { stroke: var(--disabled); }
 
 .gauge-pct {
   position: absolute; inset: 0;

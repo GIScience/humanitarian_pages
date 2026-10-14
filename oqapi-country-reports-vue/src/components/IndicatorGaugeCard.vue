@@ -11,13 +11,22 @@ const props = withDefaults(defineProps<{
   // the count value inside the circle. 'tag' is for indicators that aren't
   // a count at all (e.g. Tag Distribution) - a plain icon, no number.
   icon?: 'people' | 'tag';
+  // True when every boundary in the current layer has no data for this
+  // indicator - shown but not clickable, same treatment as an unavailable
+  // grid-layer pill (.layer-switch button:disabled in MainView.vue).
+  disabled?: boolean;
 }>(), {
-  icon: 'people'
+  icon: 'people',
+  disabled: false
 });
 
-defineEmits<{
+const emit = defineEmits<{
   (e: 'click'): void;
 }>();
+
+function handleClick() {
+  if (!props.disabled) emit('click');
+}
 
 const RADIUS = 30;
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
@@ -28,12 +37,13 @@ const dashOffset = computed(() => CIRCUMFERENCE * (1 - Math.max(0, Math.min(100,
 <template>
   <article
     class="indicator-card"
-    :class="{ active }"
+    :class="{ active, disabled }"
     role="button"
-    tabindex="0"
-    @click="$emit('click')"
-    @keydown.enter="$emit('click')"
-    @keydown.space.prevent="$emit('click')"
+    :tabindex="disabled ? -1 : 0"
+    :aria-disabled="disabled"
+    @click="handleClick"
+    @keydown.enter="handleClick"
+    @keydown.space.prevent="handleClick"
   >
     <!-- A percentage ring implies a graded quality score, which doesn't apply
          to a raw count (see isNoQualityDescription in MainView.vue) - a
@@ -90,6 +100,16 @@ const dashOffset = computed(() => CIRCUMFERENCE * (1 - Math.max(0, Math.min(100,
 .indicator-card:hover { border-color: var(--line-strong); }
 .indicator-card.active { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent), var(--shadow); }
 .indicator-card:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+/* Same treatment as an unavailable grid-layer pill (.layer-switch
+   button:disabled in MainView.vue) - dashed border, muted text, not
+   selectable, but still visible in the list rather than removed outright. */
+.indicator-card.disabled {
+  cursor: not-allowed;
+  border-style: dashed;
+}
+.indicator-card.disabled:hover { border-color: var(--line); }
+.indicator-card.disabled .indicator-title,
+.indicator-card.disabled .count-value { color: var(--disabled); }
 
 .gaugewrap { flex: none; position: relative; width: 4.6rem; height: 4.6rem; }
 .gaugewrap svg { width: 100%; height: 100%; transform: rotate(-90deg); }

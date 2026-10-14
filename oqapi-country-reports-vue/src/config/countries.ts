@@ -15,11 +15,31 @@
  * one place to add a country.
  */
 export const CANDIDATE_COUNTRIES: string[] = [
+  "AFG",
+  "BGD",
+  "CAF",
+  "COD",
   "DEU",
+  "ETH",
+  "GIN",
+  "HTI",
   "KEN",
-  "NPL",
+  "LBR",
+  "MDG",
+  "MMR",
+  "MOZ",
   "MWI",
   "NGA",
+  "NPL",
+  "PHL",
+  "PNG",
+  "SDN",
+  "SLB",
+  "SLE",
+  "SSD",
+  "TLS",
   "TZA",
-  "VEN",
+  "UGA",
+  "VUT",
+  "YEM"
 ];

@@ -283,7 +283,7 @@
     <div class="toc-group">
       <div class="toc-group-label">How it works</div>
       <a href="#booting">5. How the app boots</a>
-      <a href="#two-faces">6. The two faces of MainView.vue</a>
+      <a href="#two-faces">6. Embed mode: one layout, not two</a>
       <a href="#data-layer">7. Where the data comes from</a>
       <a href="#view-panel">8. State &amp; the ViewPanel model</a>
       <a href="#life-of-a-click">9. Life of a click</a>
@@ -409,15 +409,18 @@
         </div>
 
         <div class="callout warn">
-          <div class="callout-label">Two completely different UIs live in one file, on purpose</div>
+          <div class="callout-label">A second, visually different layout used to live in this same file</div>
           <p>
-            <span class="filechip">MainView.vue</span> renders either the modern Single View /
-            Split View dashboard, or a much older, visually different "iframe-2col" layout,
-            depending on how the page was loaded. They share one Vue component and a few pieces
-            of state, but otherwise run as two independent code paths inside the same template.
-            Section <a href="#two-faces">6</a> covers this in full. For now: if you're editing
-            the map or the indicator cards and your change doesn't show up, check which of the
-            two branches you're actually looking at in the browser.
+            Until recently, <span class="filechip">MainView.vue</span> rendered either the
+            modern dashboard or a much older "iframe-2col" layout (a fixed two-tile grid used by
+            HeiGIT's HDX platform), depending on how the page was loaded, as two independent
+            code paths sharing one component. That legacy branch has since been removed: the
+            embed case is now the exact same layout in a more compact CSS mode, not a different
+            template. Section <a href="#two-faces">6</a> covers what's left of that history and
+            what replaced it. If you find a stale reference to "Split View", "iframe-2col", or
+            <code>ReportHeader.vue</code> somewhere, a comment, an old branch name, this
+            document, treat the current source code as correct and flag the reference as
+            outdated.
           </p>
         </div>
 
@@ -449,21 +452,22 @@ oqapi-country-reports-vue/
 ├── tsconfig.node.json<span class="c">            TypeScript config that (accidentally) compiles vite.config.ts</span>
 ├── tailwind.config.js<span class="c">            Tailwind setup - present, but barely used (see §11)</span>
 ├── postcss.config.js<span class="c">             wires Tailwind + autoprefixer into the CSS build</span>
-├── test-iframe.html<span class="c">              manual test harness: loads the app in a real &lt;iframe&gt;</span>
-│                                    to exercise the legacy iframe-2col path (see §6)
+├── test-iframe.html<span class="c">              manual test harness: a bare &lt;iframe&gt; pointed at the</span>
+│                                    dev server, so real-iframe embedding (isEmbed) is
+│                                    reachable locally - it no longer selects a different
+│                                    template, just the compact .embed-mode CSS (see §6)
 └── src/
     ├── main.ts<span class="c">                   creates the Vue app, the router, mounts to #app</span>
     ├── App.vue<span class="c">                   just a &lt;router-view /&gt; - there is exactly one route</span>
     ├── vite-env.d.ts<span class="c">              one-line Vite type reference, never needs editing</span>
     ├── assets/
-    │   └── main.css<span class="c">              global styles + every design token (see §11)</span>
+    │   └── main.css<span class="c">              global styles + design tokens, several now dead (see §11)</span>
     ├── views/
-    │   └── MainView.vue<span class="c">          the whole app. ~2,600 lines. see §6-9</span>
+    │   └── MainView.vue<span class="c">          the whole app. ~1,400 lines. see §6-9</span>
     ├── components/
-    │   ├── ReportHeader.vue<span class="c">      top bar: brand, view toggle, country/topic pickers</span>
     │   ├── ReportFooter.vue<span class="c">      bottom bar: legal links + ohsome dashboard badge</span>
-    │   ├── MetricMap.vue<span class="c">         one MapLibre GL map instance (reused per panel)</span>
-    │   ├── IndicatorGaugeCard.vue<span class="c"> one round gauge + description card (Single View)</span>
+    │   ├── MetricMap.vue<span class="c">         one MapLibre GL map instance</span>
+    │   ├── IndicatorGaugeCard.vue<span class="c"> one round gauge (or count badge) card in the sidebar</span>
     │   └── AttributeCompletenessCard.vue<span class="c"> gauge card with a built-in attribute dropdown</span>
     ├── services/
     │   └── dataService.ts<span class="c">        every function that fetches or queries remote data</span>
@@ -478,6 +482,18 @@ oqapi-country-reports-vue/
           <code>public/</code> folder either. Every external asset, fonts, the MapLibre
           stylesheet, the ohsome logo, loads from a full URL instead of getting bundled.
         </p>
+        <div class="callout info">
+          <div class="callout-label"><code>ReportHeader.vue</code> is gone</div>
+          <p>
+            It used to hold the brand mark and the country/topic/view-mode pickers as a top bar.
+            All of that moved into a left sidebar directly inside <code>MainView.vue</code>
+            (branding block, country <code>&lt;select&gt;</code>, layer pills, topic pills,
+            indicator list), so the component had nothing left to own and was deleted rather than
+            kept as a near-empty wrapper. If you're looking for where the logo or the country
+            picker renders now, search <code>MainView.vue</code> for <code>.sidebar-brand</code>
+            and <code>.country-select</code>, not a separate component file.
+          </p>
+        </div>
       </section>
 
       <section class="doc-section" id="running-locally">
@@ -540,84 +556,88 @@ npm run dev
           <li>
             <strong><span class="filechip">src/views/MainView.vue</span></strong>
             Vue Router renders this for the <code>"/"</code> path. This one component is the
-            application: all the state, all the data-fetching orchestration, and, through
-            <code>v-if</code>/<code>v-else</code> at the top of its template, both possible
-            layouts. From here on, this guide is really an explanation of how MainView.vue works.
+            application: all the state, all the data-fetching orchestration, and the entire
+            template. From here on, this guide is really an explanation of how MainView.vue works.
           </li>
           <li>
             <strong>MainView's own <code>onMounted()</code></strong>
-            Detects whether the page is embedded in an iframe (§6), calls
-            <code>fetchAvailableCountries()</code> to build the real country list (§2), wires up
-            hash-based routing so a URL like <code>#/DEU/roads</code> restores a country and
-            topic on load, and starts a <code>ResizeObserver</code> that keeps MapLibre and
-            Plotly canvases sized correctly as their containers change.
+            Detects whether the page is embedded in an iframe, to switch on compact
+            <code>.embed-mode</code> styling (§6), calls <code>fetchAvailableCountries()</code>
+            to build the real country list (§2), wires up hash-based routing so a URL like
+            <code>#/DEU/roads</code> restores a country and topic on load, and starts a
+            <code>ResizeObserver</code> that keeps MapLibre and Plotly canvases sized correctly
+            as their containers change.
           </li>
         </ol>
         <div class="callout info">
-          <div class="callout-label">Nothing in this app loads from a third-party CDN</div>
+          <div class="callout-label">Most external assets are self-hosted, but not all - two CDN dependencies remain</div>
           <p>
-            That wasn't always true. Fonts used to come from Google Fonts, and MapLibre's CSS and
-            the pmtiles protocol handler used to load as global <code>&lt;script&gt;</code> tags
-            from a CDN with a <code>window.pmtiles</code> global. All three are gone now.
+            Fonts used to come from Google Fonts, and MapLibre's CSS and the pmtiles protocol
+            handler used to load as global <code>&lt;script&gt;</code> tags from a CDN with a
+            <code>window.pmtiles</code> global. All three of those are gone now.
             <span class="filechip">src/assets/fonts/</span> holds the actual woff2 files (Archivo
-            for the legacy iframe-2col layout, Lato for everything else), declared through plain
+            for the removed legacy layout, Lato for everything else), declared through plain
             <code>@font-face</code> rules at the top of <span class="filechip">main.css</span>.
             <code>pmtiles</code> and <code>maplibre-gl</code> are regular npm dependencies now,
             imported directly (<code>import { PMTiles, Protocol } from "pmtiles"</code>), so
-            there's no <code>window.pmtiles</code> global left to declare or depend on. If you're
-            adding a new external asset, font, icon set, script, think twice before reaching for
-            a CDN link; self-hosting it through npm or a bundled file is the pattern this
-            codebase has settled on.
+            there's no <code>window.pmtiles</code> global left to declare or depend on.
+          </p>
+          <p>
+            Two genuine third-party network dependencies remain, though, and there's no plan to
+            remove either: DuckDB-WASM's own engine bundle, fetched from a jsDelivr CDN at
+            runtime (§7), and the map's basemap style/tiles/glyphs, served from VersaTiles'
+            public tile server at <code>tiles.versatiles.org</code> (generated in-process by the
+            <code>@versatiles/style</code> npm package, see <a href="#components">§10</a>'s
+            <code>MetricMap.vue</code> entry). Both were deliberate choices, not oversights: a
+            WASM SQL engine and a full basemap vector tileset aren't things this project bundles
+            or self-hosts. The basemap specifically was chosen to match the same VersaTiles style
+            HeiGIT already uses in its Climate Action Navigator and Hazard-Risk-Composer tools,
+            not picked at random. If you're adding a new external asset, font, icon set, script,
+            still think twice before reaching for a CDN link for anything that <em>can</em> be
+            self-hosted or bundled through npm; that's the pattern this codebase otherwise
+            follows.
           </p>
         </div>
       </section>
 
       <section class="doc-section" id="two-faces">
-        <h2><span class="num">06</span> The two faces of MainView.vue</h2>
+        <h2><span class="num">06</span> Embed mode: one layout, not two</h2>
         <p>
-          Near the top of <code>onMounted()</code>, the app decides which of two entirely
-          different UIs to show:
+          This app used to render two entirely different UIs from one component: a modern
+          Single View / Split View dashboard, and a separate, older "iframe-2col" layout (a
+          fixed two-tile grid: one tile with a treemap and tag-coverage bars, one tile with a
+          single map and a small comparison plot) used when HeiGIT's HDX platform embedded this
+          app in an <code>&lt;iframe&gt;</code>. That's gone now. There is exactly one template,
+          one set of state, and one layout: a left sidebar (country, layer, topic, indicator
+          selection) beside a map and a plot/treemap box. What used to be a second, structurally
+          different UI is now the same layout with a compact <code>.embed-mode</code> CSS class
+          applied to it, nothing more.
         </p>
+        <p>Near the top of <code>onMounted()</code>, the app still detects embedding:</p>
         <pre><code>const inIframe = window.self !== window.top;
 const hasEmbedParam = new URLSearchParams(window.location.search).has('embed');
 const hasIframe2ColParam = new URLSearchParams(window.location.search).has('iframe-2col');
 ...
-isEmbed.value = inIframe || hasEmbedParam;
-isIframe2Col.value = inIframe || hasIframe2ColParam;</code></pre>
+isEmbed.value = inIframe || hasEmbedParam || hasIframe2ColParam;</code></pre>
         <p>
-          In plain terms: if this page ever loads inside a real <code>&lt;iframe&gt;</code>
-          (from anywhere), or the URL carries <code>?iframe-2col</code>,
-          <code>isIframe2Col</code> becomes <code>true</code> and stays true for the rest of the
-          session. <span class="filechip">test-iframe.html</span> in the project root exists
-          purely to trigger this path during local development.
-        </p>
-        <table>
-          <tr><th></th><th>Normal mode <span class="badge new">current</span></th><th>iframe-2col mode <span class="badge legacy">legacy</span></th></tr>
-          <tr><td>Who sees it</td><td>Anyone visiting the site directly (the GitHub Pages URL)</td><td>HeiGIT's HDX platform, which embeds this app in an <code>&lt;iframe&gt;</code> on their own pages</td></tr>
-          <tr><td>Layout</td><td>Single View (one map + one stack of gauge cards) or Split View (two independent columns side by side)</td><td>A fixed two-tile grid: one tile with a treemap + tag-coverage bars, one tile with a single map + a small comparison plot</td></tr>
-          <tr><td>State it reads/writes</td><td>The <code>panels</code> array, see <a href="#view-panel">§8</a></td><td>Older, flat refs: <code>selectedTopic</code>, <code>indicators</code>, <code>map1Indicator</code>/<code>map1Layer</code>/<code>map1Lookup</code>, <code>banner1Level</code>, <code>tagCoverage</code>, <code>schoolSwitchVisible</code>, and so on</td></tr>
-          <tr><td>Topic/indicator picking</td><td>Per-column pill rows above each map</td><td>One shared indicator/grid <code>&lt;select&gt;</code> dropdown</td></tr>
-        </table>
-        <p>
-          This split runs all the way down through the template with
-          <code>v-if="!isIframe2Col"</code> / <code>v-else</code>, and through the script with
-          functions that only make sense in one mode.
-          <code>loadPanelTopicData(panelIdx)</code> belongs to Normal mode;
-          <code>loadMapData()</code> and <code>loadTreemap()</code> belong to iframe-2col. Both
-          branches lean on some shared helpers (<code>buildUrls</code>,
-          <code>getTagGroupingKey</code>, the DuckDB query functions), but they don't share UI
-          state.
+          The old <code>?iframe-2col</code> param, and the <code>isIframe2Col</code> ref it used
+          to set, predate this layout: they used to select the separate two-tile template.
+          Today they're just another way to ask for the same compact styling as
+          <code>?embed</code>, kept so any link or embed already using that param doesn't break.
+          <span class="filechip">test-iframe.html</span> in the project root still exists, a
+          bare <code>&lt;iframe&gt;</code> pointed at the dev server, so real-iframe embedding
+          is reachable locally, but it no longer reaches a different code path, only
+          <code>.embed-mode</code>'s CSS.
         </p>
         <div class="callout warn">
-          <div class="callout-label">Why keep two modes in one file at all?</div>
+          <div class="callout-label">If you find a reference to the old two-mode split</div>
           <p>
-            HeiGIT's HDX platform embeds this exact app by URL, and that embed's layout
-            (<code>id="tile5"</code> / <code>id="tile6"</code>, specific CSS classes) is a
-            contract with that other system. Rebuilding Single/Split View this year didn't
-            change what HDX embeds, so the old layout was left alone on purpose instead of
-            migrated, and the two now sit side by side in the same file. If you're not working
-            on the HDX embed, treat everything under <code>v-else</code> as off-limits, and
-            everything under <code>v-if="!isIframe2Col"</code> as "the app."
+            A stale comment, a variable name, someone's memory of how this worked, treat it as
+            historical, not current. <code>isIframe2Col</code>, <code>viewMode</code>,
+            <code>setViewMode</code>, <code>ChipItem</code>/<code>getChipItems</code>, and
+            <code>ReportHeader.vue</code> (§3) are all gone from the codebase; grepping for any
+            of them in <span class="filechip">src/</span> returns nothing. What replaced Split
+            View's <code>panels</code>-array-of-two is covered in <a href="#view-panel">§8</a>.
           </p>
         </div>
       </section>
@@ -640,7 +660,7 @@ isIframe2Col.value = inIframe || hasIframe2ColParam;</code></pre>
           <tr><th>File</th><th>URL pattern</th><th>Format</th><th>What it's for</th></tr>
           <tr><td>Boundaries</td><td><code>&lt;CODE&gt;/&lt;CODE&gt;_boundaries.pmtiles</code></td><td>PMTiles (vector tiles)</td><td>The map shapes themselves, one file per country, shared by every grid layer</td></tr>
           <tr><td>Indicator data</td><td><code>&lt;CODE&gt;/&lt;CODE&gt;_&lt;layer&gt;_long.parquet</code></td><td>Apache Parquet</td><td>One row per region, topic and indicator: the value, its description, its pre-rendered Plotly figure</td></tr>
-          <tr><td>Tag distribution</td><td><code>&lt;CODE&gt;/&lt;CODE&gt;_&lt;layer&gt;_tag_distribution.parquet</code></td><td>Apache Parquet</td><td>Pre-rendered treemap figures per topic, grouping tag and measure</td></tr>
+          <tr><td>Tag distribution</td><td><code>&lt;CODE&gt;/&lt;CODE&gt;_&lt;layer&gt;_tag_distribution.parquet</code></td><td>Apache Parquet</td><td>Pre-rendered treemap figures per topic, grouping tag and measure, plus a <code>timestamp</code> column recording when the pipeline computed that run - the country-level file's copy of this column is also where the "Data current as of" readout gets its date, see below</td></tr>
         </table>
         <p>
           <code>&lt;CODE&gt;</code> is a 3-letter country code (<code>DEU</code>,
@@ -664,6 +684,37 @@ isIframe2Col.value = inIframe || hasIframe2ColParam;</code></pre>
             <code>ohsome-quality-country-reports/</code>, this particular file didn't move with
             it. Confirm with a direct request before ever "fixing" this path to match the other
             one; the last time this got checked, the old path was the one that actually resolved.
+          </p>
+        </div>
+
+        <div class="callout info">
+          <div class="callout-label">Performance: a few sequential waterfalls were flattened into parallel loads</div>
+          <p>
+            A handful of independent network/query steps used to run one after another purely
+            because of the order they were <code>await</code>ed, not because of any real data
+            dependency - each one adding its full round-trip to how long the dashboard felt slow
+            to load or switch:
+          </p>
+          <ul>
+            <li><code>fetchAvailableCountries()</code> used to <code>await</code> the
+            <code>countries.yaml</code> fetch (plus its dynamic <code>js-yaml</code> import)
+            before starting the <code>CANDIDATE_COUNTRIES</code> existence checks above, even
+            though the display-name YAML and the existence checks don't depend on each other.
+            Both now run in one <code>Promise.all</code> - this gates the very first map render,
+            so it shaves a full round-trip off every initial page load.</li>
+            <li><code>loadPanelTopicData()</code> used to <code>await loadIndicatorCards()</code>
+            and <code>refreshActiveIndicator()</code> in full before even starting
+            <code>loadPanelTreemap()</code>, even though the treemap reads its own
+            (tag-distribution) parquet file and doesn't depend on either. The treemap load now
+            runs in <code>Promise.all</code> alongside that chain - it still has to run
+            <em>after</em> <code>loadIndicatorCards()</code> sets <code>activeIndicatorKey</code>
+            and <em>before</em> <code>refreshActiveIndicator()</code> reads it, which is the one
+            real dependency in that pipeline, see §9.</li>
+          </ul>
+          <p>
+            <code>handleMapLayerChange()</code> already parallelized its equivalent set of calls
+            with <code>Promise.all</code>; <code>loadPanelTopicData()</code> was the one place
+            that hadn't been brought in line with that pattern.
           </p>
         </div>
 
@@ -703,8 +754,32 @@ isIframe2Col.value = inIframe || hasIframe2ColParam;</code></pre>
             chain that runs strictly one operation at a time. If you ever add a new
             data-loading function, call the query through <code>runQuery()</code>, never
             <code>conn.query()</code> directly, or you'll reintroduce this bug the moment two
-            things load at once. Split View's two columns loading together is exactly that
-            moment.
+            things load at once, which happens routinely: switching topic triggers several
+            data-loading functions in parallel via <code>Promise.all</code>.
+          </p>
+        </div>
+
+        <div class="callout danger">
+          <div class="callout-label"><code>MAX()</code>/<code>MIN()</code> over a VARCHAR column silently truncates in this DuckDB-WASM build</div>
+          <p>
+            Confirmed directly: <code>SELECT MAX(timestamp) FROM read_parquet(...)</code>
+            against a column of full ISO-8601 strings like
+            <code>"2026-09-11T13:13:51Z"</code> came back as the string
+            <code>"2026-09-"</code>, eight characters, every time. Not an error, no exception,
+            just quietly wrong data that happened to still parse as a (wrong) date. This looks
+            like DuckDB's internal <code>string_t</code> layout (a short inline buffer for
+            strings, a pointer to heap-allocated bytes for longer ones) not getting fully copied
+            when an aggregate result crosses back over the WASM/JS boundary. A plain row
+            projection of the same column, no aggregate function involved, reads correctly, the
+            same as every other <code>varchar</code> field this app already reads. The fix, and
+            the pattern to follow for anything similar: replace
+            <code>SELECT MAX(col) FROM ...</code> with
+            <code>SELECT col FROM ... ORDER BY col DESC LIMIT 1</code>.
+            <code>loadLatestTimestamp()</code> in <span class="filechip">dataService.ts</span> is
+            the concrete example. Don't reach for <code>MAX()</code>/<code>MIN()</code> on a
+            <code>varchar</code> column in this codebase again without testing the raw string
+            length of what comes back; a numeric column was not tested and may or may not share
+            this bug.
           </p>
         </div>
 
@@ -714,14 +789,27 @@ isIframe2Col.value = inIframe || hasIframe2ColParam;</code></pre>
           <tr><td><code>fetchAvailableCountries()</code></td><td>Every code in <code>CANDIDATE_COUNTRIES</code> (§2) whose boundaries file actually exists on S3, prettified into a display name via <code>countries.yaml</code>.</td></tr>
           <tr><td><code>checkParquetExists(url)</code></td><td><code>boolean</code>, a cheap HEAD-request existence check, used to decide which grid layers, and which candidate countries, are selectable.</td></tr>
           <tr><td><code>loadAvailableTopics(parquetUrl)</code></td><td>Every distinct <code>topic</code> value in a country-level parquet file (e.g. <code>["roads","buildings","schools",...]</code>).</td></tr>
-          <tr><td><code>loadIndicators(parquetUrl, topic)</code></td><td>Every distinct <code>indicator</code> name for one topic (e.g. <code>currentness</code>, <code>attribute-completeness_surface</code>).</td></tr>
+          <tr><td><code>loadIndicators(parquetUrl, topic)</code></td><td>Every distinct <code>indicator</code> name for one topic (e.g. <code>currentness</code>, <code>attribute-completeness_surface</code>). Includes indicators the pipeline skipped for this country, see the <code>UNAVAILABLE_MARKER</code> callout in §8.</td></tr>
           <tr><td><code>loadIndicatorLookups(parquetUrl, topic, indicatorNames[])</code></td><td>For each indicator: a <code>{regionId → value}</code> lookup for map coloring, a country-wide average, and its description text.</td></tr>
           <tr><td><code>loadRegionIndicatorValues(parquetUrl, topic, geomId, indicatorNames[])</code></td><td>The same shape as <code>loadIndicatorLookups</code>, but scoped to one selected region's own row instead of the whole country. Backs the region drill-down feature, see §9.</td></tr>
           <tr><td><code>getPMTilesBounds(url)</code></td><td>The <code>[minLon, minLat, maxLon, maxLat]</code> bounding box baked into a PMTiles file's own metadata, used to fly the map to the right place.</td></tr>
-          <tr><td><code>loadTagCoverage(parquetUrl)</code></td><td>Every <code>attribute-completeness_*</code> indicator's value, sorted highest first, feeds the "Attribute completeness" bar list.</td></tr>
+          <tr><td><code>loadLatestTimestamp(tagDistributionUrl)</code></td><td>The most recent <code>timestamp</code> value in a tag-distribution parquet, as a raw ISO-8601 string - the "Data current as of" readout's source. See the truncation-bug callout above for why this is an <code>ORDER BY ... LIMIT 1</code>, not a <code>MAX()</code>.</td></tr>
           <tr><td><code>loadTagDistribution(parquetUrl, topic, groupingKey, geomId?)</code></td><td>One pre-rendered Plotly treemap figure (plus a raw total) per measure (<code>count</code>/<code>area</code>/<code>length</code>), feeds the "Tag distribution" box. Pass a <code>geomId</code> to scope it to one selected region instead of the whole country.</td></tr>
+          <tr><td><code>loadFeatureCountLookup(parquetUrl, topic, groupingKey)</code></td><td>A <code>{regionId → count}</code> lookup, every region's own <code>count</code>-measure total from the same tag-distribution parquet <code>loadTagDistribution()</code> reads - colors the map when Tag Distribution is the active indicator, see §9.</td></tr>
           <tr><td><code>loadIndicatorFigure(parquetUrl, topic, indicator, geomId?)</code></td><td>One indicator's pre-rendered Plotly gauge/bar figure, the small chart under the map. Same optional region scoping as above.</td></tr>
         </table>
+        <div class="callout warn">
+          <div class="callout-label"><code>loadTagCoverage()</code> is dead code</div>
+          <p>
+            It's still exported from <span class="filechip">dataService.ts</span>, but nothing in
+            the app calls it, grepping <span class="filechip">src/</span> finds zero call sites.
+            It used to feed a standalone "Attribute completeness" bar-chart box that was removed
+            (§10); the per-attribute values it would have returned are now read directly out of
+            <code>loadIndicatorCards()</code>'s own <code>attrOptions</code> instead. Safe to
+            delete the next time you're in this file; just confirm nothing new started calling it
+            first.
+          </p>
+        </div>
         <p>
           Two more things worth knowing about this file. The pipeline's treemap figures always
           label values "km" no matter what the actual measure is, so
@@ -737,14 +825,15 @@ isIframe2Col.value = inIframe || hasIframe2ColParam;</code></pre>
         <h2><span class="num">08</span> State &amp; the <code>ViewPanel</code> model</h2>
         <p>
           There's no Pinia or Vuex store in this app, even though Pinia is the usual choice for a
-          Vue 3 project this size. The reason is structural. Single View shows one independent
-          map/topic/indicator combination. Split View shows two, side by side, each fully
-          independent of the other. Rather than model that as two parallel sets of global refs,
-          which is exactly what the legacy iframe-2col code does, and exactly why that code
-          resists extension, Normal mode represents each visible column as one plain object:
+          Vue 3 project this size. Historically the reason was structural: Split View showed two
+          independent map/topic/indicator combinations side by side, and modeling those as one
+          plain object per column, rather than two parallel sets of global refs (which is what
+          the old iframe-2col code did, and exactly why that code resisted extension), was the
+          simpler option. Split View is gone (§6), but the shape it left behind is still exactly
+          how the app is structured today:
         </p>
         <pre><code>interface ViewPanel {
-  id: string;                          // 'a' or 'b' - used to build unique DOM ids
+  id: string;                          // always 'a' now - see below
   selectedTopic: string;               // e.g. "roads"
   topicId: number;                     // bumped on every topic change, forces map re-render
   indicators: string[];                // every indicator name for this topic
@@ -754,50 +843,90 @@ isIframe2Col.value = inIframe || hasIframe2ColParam;</code></pre>
   attributeOptions: AttributeOption[]; // one entry per attribute-completeness_* indicator
   selectedAttributeIndicator: string;
   mapLookup: Record&lt;string, number&gt;;  // {regionId → value} driving the map's colors
-  selectedGeomId: string | null;       // set when a single region is clicked on the map
   activePlotAvailable: boolean;
   featureCount: string;
   totalLength: string;
   tile1Label: string;
-  tagCoverage: TagCoverageItem[];
-  showTagCoverage: boolean;
   schoolSwitchVisible: boolean;        // schools/hospitals only: operator:type vs isced:level toggle
   schoolSubTopic: string;
-}</code></pre>
+  selectedGeomId: string | null;       // set when a single region is clicked on the map
+}
+
+// One dashboard view (there's no more Split View) - kept as a one-element
+// array rather than a lone object so the per-panel functions below
+// (loadIndicatorCards, handleRegionClick, etc.) didn't all need their
+// panelIdx parameter ripped out for this redesign.
+const panels = ref&lt;ViewPanel[]&gt;([createPanel('a', '', 'h3')]);
+const mainPanel = computed(() =&gt; panels.value[0]);</code></pre>
         <p>
-          <code>const panels = ref&lt;ViewPanel[]&gt;([...])</code> holds one or two of these.
-          <code>selectedGeomId</code> is what makes clicking a single district on the map narrow
-          every box in that panel down to that one region instead of the whole country; §9 walks
-          through that flow end to end. <code>viewMode</code> (<code>'single' | 'split'</code>)
-          controls how many panels there are.
-          <code>setViewMode('split')</code> keeps the existing first panel and adds a second one,
-          defaulting to a different topic than the first so the two columns don't start out
-          identical. <code>setViewMode('single')</code> just truncates the array back to one.
+          There is now always exactly one panel. Everything that mutates state still goes through
+          a function that takes a <code>panelIdx: number</code> as its first argument
+          (<code>loadIndicatorCards(panelIdx, topicName)</code>,
+          <code>selectIndicatorCard(panelIdx, indicator)</code>,
+          <code>handleMapLayerChange(panelIdx, layer)</code>), and every call site in the template
+          and script just passes the literal <code>0</code>. Read-only helpers called from the
+          template take a <code>panel: ViewPanel</code> object directly
+          (<code>getActiveCard(panel)</code>, <code>getMapLookupRange(panel)</code>), and the
+          template reads through the <code>mainPanel</code> computed instead of looping over the
+          array. This is a deliberate "leave the working plumbing alone" choice, not an oversight:
+          rewriting every one of those functions to drop <code>panelIdx</code> entirely would have
+          touched most of the file for a rename with no behavior change. If you're adding
+          something new that only ever needs to reason about "the current view," it's fine to
+          read straight from <code>mainPanel.value</code> and skip the index parameter; you don't
+          need to preserve the pattern for new code, only understand it for the code that already
+          uses it.
         </p>
         <p>
-          Everything that would otherwise be a single global ref becomes one of two things
-          instead: a function that takes a <code>panelIdx: number</code> as its first argument,
-          for anything that mutates a panel (<code>loadIndicatorCards(panelIdx, topicName)</code>,
-          <code>selectIndicatorCard(panelIdx, indicator)</code>,
-          <code>handleMapLayerChange(panelIdx, layer)</code>), or a function that takes a
-          <code>panel: ViewPanel</code> object directly, for read-only helpers called straight
-          from the template (<code>getActiveCard(panel)</code>,
-          <code>getMapLookupRange(panel)</code>, <code>getChipItems(panel)</code>). The template
-          then just runs <code>v-for="(panel, idx) in panels"</code> and every child element
-          renders once per panel automatically. Single View and Split View are the same
-          template, rendered against an array of length one or two.
+          <code>selectedGeomId</code> is what makes clicking a single district on the map narrow
+          every box down to that one region instead of the whole country; §9 walks through that
+          flow end to end. Two fields present in an earlier version, <code>tagCoverage</code> and
+          <code>showTagCoverage</code>, are gone: they backed a standalone attribute-completeness
+          bar chart that no longer exists (§10).
         </p>
         <div class="callout info">
           <div class="callout-label">Why this instead of Pinia?</div>
           <p>
-            With a store, two independent copies of the same feature usually mean either two
-            separate store modules (duplicated logic) or one module keyed by an id (extra
-            indirection for a fairly small app). Given there are only ever one or two panels, and
-            nothing outside <code>MainView.vue</code> needs this state, a local
-            <code>ref&lt;ViewPanel[]&gt;</code> plus plain functions is the simpler option, and
-            this project's own guidance favors simple when simple is enough. If a third,
-            genuinely independent page ever needs this same data, that's the moment to reach for
-            Pinia instead.
+            Nothing outside <code>MainView.vue</code> needs this state, and there's only ever one
+            panel, so a local <code>ref&lt;ViewPanel[]&gt;</code> plus plain functions stays the
+            simpler option, this project's own guidance favors simple when simple is enough. If a
+            second, genuinely independent view of this same data ever comes back, that's the
+            moment to reach for Pinia, and probably also the moment to finally drop the
+            one-element-array indirection described above.
+          </p>
+        </div>
+        <div class="callout warn">
+          <div class="callout-label">Indicators the pipeline skipped for a country don't just show as 0%</div>
+          <p>
+            Reference-dataset comparison indicators, <code>roads-thematic-accuracy</code>,
+            <code>building-comparison</code>, <code>land-cover-thematic-accuracy</code>, only
+            have a match reference for a handful of countries (Germany, currently). For every
+            other country the pipeline still writes a placeholder row, value <code>0</code>,
+            description exactly <code>"skipped: indicator not available for this country"</code>,
+            rather than omitting the row. <code>UNAVAILABLE_MARKER</code> and
+            <code>isUnavailableDescription()</code> in <span class="filechip">MainView.vue</span>
+            filter that placeholder out of <code>loadIndicatorCards()</code>'s output entirely, so
+            Nepal's sidebar simply never lists Roads Thematic Accuracy rather than showing it
+            stuck at 0%. If a genuinely new "not available" wording ever shows up from the
+            pipeline, it won't match this exact string and will silently render as a real 0%
+            indicator again, worth checking for if a country's sidebar looks wrong.
+          </p>
+        </div>
+        <div class="callout warn">
+          <div class="callout-label">Some indicators are forced into "non-quality" treatment even though their value is a real percentage</div>
+          <p>
+            <code>roads-thematic-accuracy</code> and <code>land-cover-thematic-accuracy</code>
+            both store a genuine 0-1 match/agreement ratio, not a raw count, so they don't trip
+            the data-driven <code>isNoQualityDescription()</code> check the way
+            <code>user-activity</code> does. But a match rate against a reference dataset isn't a
+            "good/bad" quality verdict either, so <code>FORCE_NON_QUALITY_INDICATORS</code> (a
+            hardcoded <code>Set</code> of indicator names) pushes them into the same count-badge
+            treatment by product decision: grey circle instead of a colored ring, no red/amber/
+            green judgment on the map. Their percentage is still shown correctly, not rounded to
+            a bare integer the way a true raw count would be, and the map's color gradient is
+            fixed to a 0-100% range (<code>fixedColorRange</code>, §10) instead of auto-scaling to
+            whatever narrow range the currently visible regions happen to span. Adding a future
+            indicator to this same treatment means adding its name to this one <code>Set</code>,
+            not writing new branching logic.
           </p>
         </div>
       </section>
@@ -806,29 +935,107 @@ isIframe2Col.value = inIframe || hasIframe2ColParam;</code></pre>
         <h2><span class="num">09</span> Life of a click: choosing a topic</h2>
         <p>
           The clearest way to see how the pieces fit together is to trace one concrete action
-          from start to finish: clicking "Schools" in a Split View column's Topic row.
+          from start to finish: clicking "Schools" in the sidebar's Topic row.
         </p>
         <ol class="steps">
-          <li><strong>The click handler fires.</strong> The Topic pill's <code>@click</code> calls <code>handlePanelTopicChange(idx, 'schools')</code>.</li>
-          <li><strong>The panel's topic and id update.</strong> <code>panel.selectedTopic = 'schools'</code>; <code>panel.topicId++</code>. <code>&lt;MetricMap&gt;</code> is keyed only on <code>panel.id</code> ('a' or 'b'), not on <code>topicId</code>, so the map instance is <em>not</em> torn down and recreated on a topic change, it stays mounted and just receives <code>topicId</code> as a normal reactive prop. <code>MetricMap.vue</code>'s own <code>watch()</code> on that prop calls <code>updateMapData()</code> to rebuild the colored layer in place. Keeping the same instance across a topic change is what let map-sync and click-to-select-a-region keep working without resetting every time you pick a different topic.</li>
-          <li><strong><code>loadPanelTopicData(idx)</code> runs.</strong> This is the one per-panel pipeline function, and it does, roughly in parallel where it can:
+          <li><strong>The click handler fires.</strong> The Topic pill's <code>@click</code> calls <code>handlePanelTopicChange(0, 'schools')</code>. The <code>0</code> is always <code>0</code>, see §8.</li>
+          <li><strong>The panel's topic and id update.</strong> <code>panel.selectedTopic = 'schools'</code>; <code>panel.topicId++</code>. <code>&lt;MetricMap&gt;</code> is keyed only on <code>panel.id</code> (always <code>'a'</code>), not on <code>topicId</code>, so the map instance is <em>not</em> torn down and recreated on a topic change, it stays mounted and just receives <code>topicId</code> as a normal reactive prop. <code>MetricMap.vue</code>'s own <code>watch()</code> on that prop calls <code>updateMapData()</code> to rebuild the colored layer in place. Keeping the same instance across a topic change is what lets click-to-select-a-region keep working without resetting every time you pick a different topic.</li>
+          <li><strong><code>loadPanelTopicData(0)</code> runs.</strong> This is the one pipeline function, and it does, roughly in parallel where it can:
             <ul>
-              <li><code>loadIndicators()</code> and <code>loadTagCoverage()</code>: what indicators exist for "schools", and which of them are attribute-completeness bars</li>
-              <li><code>loadIndicatorCards(idx, 'schools')</code>: turns each indicator into a card, its display value, its gauge-ring percentage, its good/warn/bad/neutral level, and, through <code>isNoQualityDescription()</code>, whether it's a raw count like <code>user-activity</code> rather than a quality percentage</li>
-              <li><code>refreshActiveIndicator(idx, 'schools')</code>: loads the map-coloring lookup and the small detail plot for whichever indicator ends up active</li>
-              <li><code>loadPanelTreemap(idx)</code>: the "Tag distribution" treemap for schools' grouping key, <code>operator:type</code>, or <code>isced:level</code> if that sub-toggle is on</li>
+              <li><code>loadIndicators()</code>: what indicators exist for "schools"</li>
+              <li><code>loadIndicatorCards(0, 'schools')</code>: turns each available indicator into a card, its display value, its gauge-ring percentage, its good/warn/bad/neutral level, and, through <code>isNoQualityDescription()</code> and <code>FORCE_NON_QUALITY_INDICATORS</code>, whether it's a raw count or a forced non-quality indicator rather than a graded quality percentage; also filters out indicators the pipeline marked unavailable for this country (§8)</li>
+              <li><code>refreshActiveIndicator(0, 'schools')</code>: loads the map-coloring lookup and the small detail plot for whichever indicator ends up active</li>
+              <li><code>loadPanelTreemap(0)</code>: the "Tag distribution" treemap for schools' grouping key, <code>operator:type</code>, or <code>isced:level</code> if that sub-toggle is on</li>
               <li>updates <code>schoolSwitchVisible</code> so the operator/isced toggle only shows up for schools and hospitals</li>
             </ul>
           </li>
-          <li><strong>Vue re-renders on its own.</strong> None of the above touches the DOM directly. Every one of those calls just assigns new values onto <code>panel.*</code> properties (or the <code>ChipItem[]</code> a computed helper derives from them), and Vue's reactivity re-renders whatever template expression reads them: the hero band's headline number, the indicator chip row, the map's <code>:lookup</code> prop, the plot container.</li>
-          <li><strong><code>MetricMap.vue</code> reacts to its own prop changes</strong> through <code>watch()</code>. A new <code>topicId</code> triggers <code>updateMapData()</code>, which rebuilds the colored layer, but does <em>not</em> re-fit the camera to the country's bounds; a <code>lastFittedBoundsKey</code> guard makes sure <code>fitBounds()</code> only fires when the <code>bounds</code> prop itself actually changes, which only happens on a real country switch. A new <code>lookup</code> object patches each shape's <code>feature-state</code> without a full rebuild, unless it's a count-type indicator, whose color scale depends on the lookup's own min and max and has to rebuild regardless.</li>
-          <li><strong>Plotly draws the plot.</strong> <code>loadActiveIndicatorPlot(idx)</code> and <code>loadPanelTreemap(idx)</code> both end in a <code>Plotly.react(containerId, fig.data, fig.layout, {...})</code> call against a uniquely-id'd <code>&lt;div&gt;</code> (<code>active-indicator-plot-a</code>, <code>tag-treemap-b</code>, and so on). <code>Plotly.react</code>, not <code>Plotly.newPlot</code>, runs everywhere, so re-rendering the same chart with new data updates it instead of tearing the whole thing down and rebuilding it.</li>
+          <li><strong>Vue re-renders on its own.</strong> None of the above touches the DOM directly. Every one of those calls just assigns new values onto <code>panel.*</code> properties, and Vue's reactivity re-renders whatever template expression reads them: the hero band's headline number, the sidebar's indicator list, the map's <code>:lookup</code> prop, the plot container.</li>
+          <li><strong><code>MetricMap.vue</code> reacts to its own prop changes</strong> through <code>watch()</code>. A new <code>topicId</code> triggers <code>updateMapData()</code>, which removes and re-adds the fill/outline <em>layers</em> - but, since the fix described below, reuses the underlying pmtiles vector <em>source</em> as long as the country hasn't changed, instead of tearing it down and re-fetching every visible tile from scratch. It does <em>not</em> re-fit the camera to the country's bounds; a <code>lastFittedBoundsKey</code> guard makes sure <code>fitBounds()</code> only fires when the <code>bounds</code> prop itself actually changes, which only happens on a real country switch. A new <code>lookup</code> object patches each shape's <code>feature-state</code> through <code>applyLookupFeatureStates()</code> without a full rebuild, unless it's a count-type indicator, whose color scale depends on the lookup's own min and max (or a <code>fixedColorRange</code>, §10) and has to rebuild regardless.</li>
+          <li><strong>Plotly draws the plot.</strong> <code>loadActiveIndicatorPlot(0)</code> and <code>loadPanelTreemap(0)</code> both end in a <code>Plotly.react(containerId, fig.data, fig.layout, {...})</code> call against a uniquely-id'd <code>&lt;div&gt;</code> (<code>active-indicator-plot-a</code>, <code>tag-treemap-a</code>). <code>Plotly.react</code>, not <code>Plotly.newPlot</code>, runs everywhere, so re-rendering the same chart with new data updates it instead of tearing the whole thing down and rebuilding it. Both calls are followed by <code>await nextTick()</code> then an explicit <code>Plotly.Plots.resize(containerId)</code>, see the callout below for why.</li>
         </ol>
+        <div class="callout warn">
+          <div class="callout-label">Fixed: some regions could stay grey ("no data") after a topic switch</div>
+          <p>
+            Before this fix, step 5 above (<code>updateMapData()</code>) unconditionally removed
+            and re-added the pmtiles <em>source</em> on every topic/indicator/layer switch, even
+            though the source is one file covering every grid layer and only actually needs to
+            change on a real country switch. That forced MapLibre to re-fetch and re-parse every
+            visible tile from scratch on each switch - and because that re-parse is async, it
+            could race against step 3's new <code>lookup</code> arriving: the topic-change's
+            <code>updateMapData()</code> ran immediately (using whichever lookup was <em>still</em>
+            bound at that instant, i.e. the previous topic's), wiping the source; the new topic's
+            lookup then arrived and patched feature-state, but if the freshly re-added source's
+            tiles hadn't finished reloading yet, those tiles came up with no matching
+            feature-state once they did load - stuck grey until some later switch's timing
+            happened to land the other way. Confirmed reproducible at the adm1 layer (larger,
+            more numerous tiles than adm0 make the race window wider), matching a real bug report
+            (Venezuela, Hospitals topic). Fixed by only rebuilding the source when the pmtiles URL
+            itself changes (<code>currentSourceUrl</code> tracking in <code>MetricMap.vue</code>);
+            since the source is no longer wiped on every switch, stale feature-state now has to be
+            cleared explicitly instead, which <code>applyLookupFeatureStates()</code> does via
+            <code>removeFeatureState()</code> for exactly the ids that dropped out of the new
+            lookup.
+          </p>
+        </div>
         <p>
           Switching countries (<code>loadCountry()</code>) is the same idea, one level up.
-          Re-derive the available layers and topics, reset every panel to a fresh default topic,
-          and call <code>loadPanelTopicData(idx)</code> for each one.
+          Re-derive the available layers and topics, reset the panel to a fresh default topic,
+          and call <code>loadPanelTopicData(0)</code>.
         </p>
+        <div class="callout info">
+          <div class="callout-label">Fixed: <code>loadCountry()</code> now guards against overlapping calls</div>
+          <p>
+            If a user switched country again before the previous <code>loadCountry()</code> call
+            had finished (plausible on a slow connection, since indicator data for one country
+            can still be loading when the next one is selected), both calls used to run
+            concurrently, and whichever finished last simply overwrote the other's results,
+            including <code>panel.mapLayer</code>, which could leave the map layer from country A
+            paired with country B's code in a subsequent query, or a "Data current as of" date
+            from the wrong country. Confirmed reproducible under a throttled connection. Fixed
+            with a request-generation counter (<code>loadCountryGeneration</code> /
+            <code>isCurrent()</code> in <code>loadCountry()</code>): each call captures its own
+            generation number when it starts, and bails out at every subsequent <code>await</code>
+            once a newer call has superseded it, instead of writing stale results over the newer
+            call's state.
+          </p>
+        </div>
+
+        <h3>Life of a click: selecting Tag Distribution as the active indicator</h3>
+        <p>
+          Tag Distribution sits in the sidebar's indicator list alongside every real quality
+          indicator, styled as a plain count-badge card with a tag icon (<code>icon="tag"</code>
+          on <code>IndicatorGaugeCard</code>) and no number inside it, even though it isn't a
+          quality indicator at all, it's the same treemap the pipeline always computes per topic.
+          Treating it as "just another indicator" instead of a permanently-visible separate box is
+          the more recent design; the mechanics behind it are worth understanding before touching
+          this area.
+        </p>
+        <ol class="steps">
+          <li><strong>It's a pinned, synthetic list entry, not a real indicator.</strong> <code>getIndicatorStackItems()</code> appends a <code>{ type: 'tag-distribution' }</code> entry after every real indicator card (and after the attribute-completeness group), for any topic where <code>getTagGroupingKey()</code> returns a non-empty grouping tag. It never comes from <code>loadIndicators()</code>'s parquet query.</li>
+          <li><strong>Selecting it sets the same <code>activeIndicatorKey</code> other indicators use,</strong> to a reserved string, <code>TAG_DISTRIBUTION_KEY</code> (<code>'tag-distribution'</code>). <code>getActiveCard()</code> special-cases this key at the top and returns a synthesized <code>IndicatorCard</code> (title, the topic's feature count as its display value, <code>isCount: true</code>) instead of looking one up in <code>panel.indicatorCards</code>.</li>
+          <li><strong>The map colors by each region's own feature count.</strong> <code>loadActiveMapLookup()</code> checks for this same key and calls <code>loadFeatureCountLookup()</code> (<span class="filechip">dataService.ts</span>) instead of <code>loadIndicatorLookups()</code> - a query against the same tag-distribution parquet <code>loadTagDistribution()</code> already reads for the treemap, just <code>SELECT geomID, sum_value ... WHERE measure = 'count'</code> with no <code>geomID</code> filter, so it comes back with every region's own count in one pass rather than the whole-layer sum a single region's row would give. The result feeds <code>panel.mapLookup</code> directly, and because the synthesized Tag Distribution card already carries <code>isCount: true</code> (previous step), it renders through the same auto-scaled blue gradient any other count indicator uses, no change needed in <code>MetricMap.vue</code> itself. This used to just set <code>panel.mapLookup = {}</code> and let every shape fall back to grey - <code>loadFeatureCountLookup()</code> only exists to color it instead.</li>
+          <li><strong>The plot box swaps content, but both halves stay mounted.</strong> The regular per-indicator plot container and the treemap container are both always in the DOM, toggled with <code>v-show</code>, not <code>v-if</code>/<code>v-else</code>. This matters: <code>loadPanelTreemap()</code> runs on every topic/region change regardless of which indicator is active, and needs its target <code>&lt;div&gt;</code> to exist whenever it fires. An earlier version used <code>v-if</code>/<code>v-else</code> here and the treemap render threw ("No DOM element with id 'tag-treemap-a' exists") every time the div wasn't currently mounted, an exception that aborted the function before it reached the lines further down that set <code>featureCount</code>/<code>totalLength</code>/<code>tile1Label</code>, which is why those readouts appeared permanently stuck. If you ever reach for <code>v-if</code> on one of these two plot containers, this is why not to.</li>
+        </ol>
+        <div class="callout warn">
+          <div class="callout-label">Keeping both plot containers mounted created its own follow-on bug</div>
+          <p>
+            With both containers always in the DOM, the inactive one sits there
+            <code>display: none</code>. The shared <code>ResizeObserver</code> set up in
+            <code>onMounted()</code> watches both permanently now, and calling
+            <code>Plotly.Plots.resize()</code> on a hidden plot throws ("Resize must be passed a
+            displayed plot div element"). The observer callback now checks
+            <code>el.offsetParent !== null</code> (null exactly for a <code>display: none</code>
+            element in this plain-flow layout) before calling <code>resize()</code>. Separately,
+            Plotly can measure a container mid-layout, right after it's <code>v-show</code>n
+            visible, or before the sidebar/main-column flex widths have settled, and lock its SVG
+            to that narrower snapshot; <code>responsive: true</code> only reacts to a later resize
+            <em>event</em>, it doesn't recheck proactively. That's why <code>loadActiveIndicatorPlot()</code>
+            and <code>loadPanelTreemap()</code> both follow their <code>Plotly.react()</code> call
+            with <code>await nextTick()</code> then an explicit <code>Plotly.Plots.resize()</code>
+            against the now-settled DOM, this is what actually fixed charts intermittently
+            rendering into only the left half of their box.
+          </p>
+        </div>
 
         <h3>Life of a click: selecting one district on the map</h3>
         <p>
@@ -849,58 +1056,94 @@ isIframe2Col.value = inIframe || hasIframe2ColParam;</code></pre>
       <section class="doc-section" id="components">
         <h2><span class="num">10</span> Components reference</h2>
 
-        <h3><code>ReportHeader.vue</code></h3>
-        <p>
-          The top bar. Purely presentational: it owns no data of its own, only props and emits.
-          Left to right, it's brand mark, then Country, then Topic, then View: the ohsome
-          quality-api logo plus the "ohsome Country Quality Report" title
-          (<span class="filechip">src/assets/images/ohsome-quality-api_2000px.png</span>,
-          imported like any other module asset, not loaded from a URL), followed by the three
-          selector fields below.
-        </p>
-        <table>
-          <tr><th>Prop</th><th>Purpose</th></tr>
-          <tr><td><code>selectedCountry</code>, <code>countries</code></td><td>Drives the country <code>&lt;select&gt;</code>. Emits <code>update:selectedCountry</code>.</td></tr>
-          <tr><td><code>selectedTopic</code>, <code>topics</code>, <code>showTopicSelector</code></td><td>The Topic pill row, only shown in Single View and the legacy iframe-2col mode (Split View moves topic-picking into each column instead).</td></tr>
-          <tr><td><code>viewMode</code>, <code>showViewModeToggle</code></td><td>The Single View / Split View pill toggle. Emits <code>update:viewMode</code>, and renders last, on the right.</td></tr>
-        </table>
+        <div class="callout info">
+          <div class="callout-label">Where the top bar went</div>
+          <p>
+            There is no header component any more. The brand mark (ohsome quality-api logo plus
+            "ohsome Country Quality Report" title,
+            <span class="filechip">src/assets/images/ohsome-quality-api_2000px.png</span>,
+            imported like any other module asset) now sits at the top of the sidebar, inline in
+            <span class="filechip">MainView.vue</span>'s own template
+            (<code>.sidebar-brand</code>), directly above the country <code>&lt;select&gt;</code>.
+            See §3.
+          </p>
+        </div>
 
         <h3><code>MetricMap.vue</code></h3>
         <p>
-          One MapLibre GL instance. It gets used three times in the codebase: once per
-          Single/Split View panel, dynamically through <code>v-for</code>, and once more,
-          statically, inside the legacy iframe-2col template. Rebuilding the colored layer is
-          driven entirely by prop watchers, see the walkthrough in §9. Two more things worth
-          knowing:
+          One MapLibre GL instance, one per page now that Split View is gone. Rebuilding the
+          colored layer is driven entirely by prop watchers, see the walkthrough in §9. A few
+          things worth knowing:
         </p>
         <ul>
-          <li><strong>Count versus percentage coloring.</strong> <code>isCountIndicator</code> switches the fill-color logic from a fixed red/amber/green quality scale to a continuous blue gradient stretched to the current data's own min and max. A raw count like "4,077 active users" has no universal good/bad threshold the way a 0 to 100% score does.</li>
-          <li><strong>Split View's synchronized pan and zoom.</strong> Each map emits a <code>move</code> event, but only for a genuine user gesture. The handler latches a flag on <code>movestart</code>, checking <code>e.originalEvent</code> (only set for real mouse, touch or wheel input, never for a programmatic <code>fitBounds</code> or <code>easeTo</code>), and holds it until <code>moveend</code>. That way a whole animated gesture, including inertial wheel-zoom, which fires many <code>move</code> events but only tags the first, gets treated as one unit. <code>MainView.vue</code> listens for this and calls the other panel's exposed <code>setView()</code> (through <code>defineExpose</code>), which applies the camera instantly with <code>jumpTo</code> under an <code>isSyncingView</code> guard, so the sync can never trigger itself.</li>
+          <li><strong>Count versus percentage coloring.</strong> <code>isCountIndicator</code> switches the fill-color logic from a fixed red/amber/green quality scale to a continuous blue gradient. A raw count like "4,077 active users" has no universal good/bad threshold the way a 0 to 100% score does.</li>
+          <li><strong>The color gradient's range can be fixed instead of auto-scaled.</strong> By default, the blue gradient stretches to the current data's own min and max, fine for an open-ended count, but misleading for a forced-non-quality percentage indicator (§8): a 90% match rate would render as the single darkest color just because no visible region happened to score higher. An optional <code>fixedColorRange: [number, number]</code> prop overrides this with an absolute range instead, <code>MainView.vue</code> passes <code>[0, 1]</code> for anything in <code>FORCE_NON_QUALITY_INDICATORS</code>.</li>
+          <li><strong>Hover-tooltip formatting is a separate decision from the color scale.</strong> An <code>isCountIndicator</code> value normally displays as a raw number in the hover popup (<code>4,077</code>, not <code>407700%</code>). But <code>roads-thematic-accuracy</code> and <code>land-cover-thematic-accuracy</code> are <code>isCountIndicator</code> for their color treatment while still storing a real 0-1 ratio underneath, so an extra <code>showAsPercent</code> prop overrides the hover format back to a percentage independently of the color-scale decision. The two props exist separately on purpose; don't assume one implies the other.</li>
           <li><strong>Re-fitting only happens on a real country change.</strong> A <code>lastFittedBoundsKey</code> ref remembers the last bounds the map actually flew to. <code>updateMapData()</code> runs on every topic, indicator and layer change, but only calls <code>fitBounds()</code> when the incoming <code>bounds</code> prop's key differs from that remembered one. Without this guard, picking a new topic re-ran the same fly-to animation for no reason, even though the view didn't need to move.</li>
           <li><strong>Clicking a shape selects a region.</strong> A <code>selectedGeomId</code> prop and a <code>regionClick</code> emit drive the drill-down feature walked through in <a href="#life-of-a-click">§9</a>. The component itself just reports clicks and draws the outline for whatever id it's told is selected; it doesn't decide what "selected" means to the rest of the app.</li>
+          <li><strong>The basemap is VersaTiles' "colorful" style, not a hardcoded style URL.</strong> <code>BASEMAP_STYLE</code>, a module-level constant built once via <code>colorful({ baseUrl: "https://tiles.versatiles.org" })</code> from the <code>@versatiles/style</code> npm package, is passed as the map's <code>style</code> option instead of a plain URL string. It used to be a bare string pointing at OpenFreeMap (<code>tiles.openfreemap.org</code>); that was replaced to match the same basemap HeiGIT's other tools already use, see the callout in §5. The style JSON itself is generated in-process, not fetched, only the vector tiles/glyphs/sprites it references are fetched over the network, from <code>tiles.versatiles.org</code>.</li>
+          <li><strong>The map shows attribution now, in the bottom-right corner (the small "i" toggle on narrow widths).</strong> <code>attributionControl: { compact: true, customAttribution: '...' }</code> is passed at map creation - it used to be <code>false</code>, showing nothing at all. Reads <code>MapLibre | © OpenStreetMap contributors [| Boundaries: © ...]</code>: <code>customAttribution</code> is a credit for the library itself (goodwill, not a license requirement - MapLibre GL JS is BSD-3-Clause, no on-screen credit obligation) and is always prepended first, before every source-derived attribution the control collects. The basemap's own OpenStreetMap attribution needs no extra code beyond that - it's baked into <code>@versatiles/style</code>'s generated source definition already, and covers every country's boundaries too, since all of them except Germany's are themselves OpenStreetMap-derived (this one <em>is</em> a license condition of OSM's ODbL, not just a nicety). Only Germany needs a third, separate credit merged in, since its boundaries come from BKG instead - a <code>boundariesAttribution</code> string prop, <code>undefined</code> for every other country (nothing extra to add on top of the basemap's own OSM credit), set by <code>MainView.vue</code> since it already knows the selected country, and applied by <code>MetricMap.vue</code> as the boundaries vector source's own <code>attribution</code> field when adding it. Add a new per-country boundary source that isn't OSM-derived and this is the one place that needs updating to credit it correctly.</li>
         </ul>
+        <div class="callout warn">
+          <div class="callout-label">The map needs an explicit <code>height</code>, not just <code>min-height</code></div>
+          <p>
+            <code>MetricMap.vue</code>'s root element fills its container with inline
+            <code>height: 100%</code>. A percentage height only resolves against an ancestor
+            whose own height is definite. <code>.mappanel</code>/<code>.map-stage</code> in
+            <span class="filechip">MainView.vue</span> used to declare only
+            <code>min-height</code>, which still produces a correctly-sized box visually (the
+            flex/content-driven layout genuinely renders at the right size), but leaves every
+            ancestor's <em>declared</em> height as <code>auto</code>. A descendant's
+            <code>height: 100%</code> doesn't resolve against an "auto" ancestor, it collapses to
+            0, confirmed directly: the map's container div measured 0px tall via
+            <code>getBoundingClientRect()</code> even though its parent measured the expected
+            ~520px. The fix was switching <code>.mappanel</code> to an explicit
+            <code>height</code> (not <code>min-height</code>), which gives the whole percentage
+            chain a real, definite size to resolve against. If a future layout change ever makes
+            the map (or anything else relying on <code>height: 100%</code> to fill its box)
+            render blank again, check for exactly this: a <code>min-height</code>-only ancestor
+            somewhere up the chain.
+          </p>
+        </div>
 
         <h3><code>IndicatorGaugeCard.vue</code> &amp; <code>AttributeCompletenessCard.vue</code></h3>
         <p>
-          Used only in Single View's indicator stack. Split View replaced this with the compact
-          topic/indicator/layer cluster described in §11, a deliberate difference, not an
-          oversight. <code>IndicatorGaugeCard</code> shows one indicator as a gauge ring plus a
-          description, or, for a count-type indicator, a plain number badge instead of a ring (a
-          percentage ring would imply a graded score that a raw count doesn't have).
-          <code>AttributeCompletenessCard</code> is the same shape but bundles a
+          The sidebar's indicator list. <code>IndicatorGaugeCard</code> shows one indicator as a
+          gauge ring, or, for a count-type indicator (<code>level === 'neutral'</code>), a plain
+          badge instead of a ring, a percentage ring would imply a graded score that a raw count
+          doesn't have. That badge's icon is now configurable through an <code>icon</code> prop:
+          <code>'people'</code> (default, used for genuine counts like User Activity) shows a
+          small people icon plus the count; <code>'tag'</code> (used for the Tag Distribution
+          entry, §9) shows a plain tag icon with no number at all, since Tag Distribution isn't a
+          count of anything in the sense the number would suggest.
+          <code>AttributeCompletenessCard</code> is the same card shape but bundles a
           <code>&lt;select&gt;</code>, so one card can represent several attribute-completeness
           indicators, surface, maxspeed, name, switching which one shows without needing a
           separate card per attribute.
         </p>
         <p>
-          Both cards fold shut by default (<code>const expanded = ref(false)</code> in each), and
-          each card tracks its own fold state independently, expanding one doesn't touch the
-          others. A chevron button toggles it, the description fades in and out through a
-          <code>&lt;Transition&gt;</code>, and <code>.indicator-stack</code> stays a fixed
-          two-column CSS grid the whole time, an expanded card grows taller in its own column
-          rather than spanning both. Whatever free space that leaves next to a short, folded card
-          is intentional, not a layout bug to fix.
+          Neither component owns a description or a fold/expand toggle any more. Both used to:
+          each card had its own <code>expanded</code> ref and a chevron button that faded a
+          description paragraph in and out. That's gone, the active indicator's description now
+          renders once, centrally, in the plot box's right-hand column
+          (<code>.plotpanel-desc</code>, §11), not duplicated per card. If you're adding a new
+          card type, don't reintroduce a per-card description, wire its text into
+          <code>getActiveCard()</code>'s returned <code>description</code> field instead so it
+          shows up in that one shared place.
         </p>
+        <div class="callout warn">
+          <div class="callout-label">The standalone "Attribute completeness" bar-chart box is gone</div>
+          <p>
+            An earlier version had a separate, always-visible box below the indicator list showing
+            every <code>attribute-completeness_*</code> indicator as a horizontal bar, in addition
+            to the single value <code>AttributeCompletenessCard</code>'s own dropdown showed. That
+            box was removed as redundant; the dropdown card is the only place attribute-
+            completeness values show now. <code>panel.tagCoverage</code> and
+            <code>panel.showTagCoverage</code>, which fed it, are gone from <code>ViewPanel</code>
+            too (§8), and <code>loadTagCoverage()</code> in <code>dataService.ts</code> is now
+            dead code as a result (§7).
+          </p>
+        </div>
 
         <h3><code>ReportFooter.vue</code></h3>
         <p>Static legal links (Contact, Privacy, Imprint) and the ohsome dashboard badge. No props, no state. Safe to edit freely.</p>
@@ -909,7 +1152,7 @@ isIframe2Col.value = inIframe || hasIframe2ColParam;</code></pre>
       <section class="doc-section" id="design-system">
         <h2><span class="num">11</span> The design system</h2>
         <p>
-          Every color, font and shadow in the redesigned Normal-mode UI is a CSS custom property,
+          Every color, font and shadow in the current UI is a CSS custom property,
           defined once in <span class="filechip">src/assets/main.css</span> and consumed with
           <code>var(--token-name)</code> everywhere else, mostly inside <code>MainView.vue</code>'s
           own <code>&lt;style scoped&gt;</code> block, plus each component's own scoped styles.
@@ -921,57 +1164,66 @@ isIframe2Col.value = inIframe || hasIframe2ColParam;</code></pre>
           <tr><td><code>--ink</code> / <code>--ink-soft</code> / <code>--ink-faint</code></td><td>near-black / gray / lighter gray</td><td>Primary / secondary / caption text</td></tr>
           <tr><td><code>--accent</code></td><td>#2185D0</td><td>Links, active pills, focus rings, matches HeiGIT's real ohsome-dashboard product on purpose, not an invented brand color</td></tr>
           <tr><td><code>--brand</code></td><td>#CA2334</td><td>The logo mark only, never used for interactive UI</td></tr>
-          <tr><td><code>--good</code> / <code>--warn</code> / <code>--bad</code></td><td>green / amber / red</td><td>Quality levels, matches the map's own 0 to 25% / 25 to 75% / 75 to 100% legend exactly, so a color always means the same thing everywhere on the page</td></tr>
-          <tr><td><code>--font-display</code> / <code>--font-body</code> / <code>--font-mono</code></td><td>all set to Lato</td><td>The whole redesigned UI uses one typeface family, self-hosted as a local woff2 file rather than loaded from Google Fonts, there's no separate mono/code font in the product UI itself</td></tr>
-          <tr><td><code>--radius</code></td><td>8px</td><td>Corner radius for cards, pills and chips across the redesigned UI. Deliberately small and consistent, not the older, sharper 4px the legacy iframe-2col layout still uses</td></tr>
+          <tr><td><code>--good</code> / <code>--warn</code> / <code>--bad</code></td><td>#009E73 bluish green / #F0E442 yellow / #D55E00 vermillion</td><td>Quality levels, matches the map's own 0 to 25% / 25 to 75% / 75 to 100% legend exactly, so a color always means the same thing everywhere on the page. A colorblind-safe triple (Okabe-Ito), deliberately not red/yellow/green (the original scheme) - that relies on a hue distinction red-green color-blindness can't reliably make.</td></tr>
+          <tr><td><code>--font-display</code> / <code>--font-body</code> / <code>--font-mono</code></td><td>all set to Lato</td><td>The whole UI uses one typeface family, self-hosted as a local woff2 file rather than loaded from Google Fonts, there's no separate mono/code font in the product UI itself</td></tr>
+          <tr><td><code>--radius</code></td><td>8px</td><td>Corner radius for cards, pills and chips throughout the UI. The removed iframe-2col layout used a sharper 4px instead; that value never mattered outside that now-deleted template</td></tr>
         </table>
         <div class="callout warn">
-          <div class="callout-label">A legacy set of tokens still exists too</div>
+          <div class="callout-label">A legacy set of tokens still exists, now mostly dead</div>
           <p>
-            <code>--font-sans</code>, <code>--color-bg</code>, <code>--color-card-bg</code> and a
-            few others near the top of <code>main.css</code> exist only so the untouched
-            iframe-2col layout keeps rendering exactly as it always has (it uses the Archivo
-            font, not Lato). If you're styling something in Normal mode, ignore these. If you're
-            carefully touching the iframe-2col template, these are the tokens it actually reads.
+            <code>--font-sans</code>, <code>--color-bg</code>, <code>--color-card-bg</code>,
+            <code>--color-text</code>, <code>--border-radius</code> and
+            <code>--font-size-text</code>, near the top of <code>main.css</code>, existed to keep
+            the old iframe-2col layout rendering in its own Archivo-based style. That layout is
+            gone (§6), and grepping <span class="filechip">src/</span> confirms every one of
+            those tokens now has zero references anywhere outside its own <code>:root</code>
+            declaration, dead weight, not in active use. Two exceptions:
+            <code>--color-border</code>, still read once, by the loading spinner
+            (<code>.spinner</code> in <code>MainView.vue</code>), and <code>--spacing</code>,
+            used twice inside <code>main.css</code> itself on the plain <code>body</code>
+            selector. Removing the fully-dead ones is a safe, low-risk cleanup whenever someone's
+            next in this file; just grep each name first to confirm nothing new started using it.
           </p>
         </div>
-        <p>A few visual patterns repeat across the whole redesigned UI, and it helps to know them by name.</p>
+        <p>A few visual patterns repeat across the current UI, and it helps to know them by name.</p>
         <p>
           The <strong>pill</strong> is a bordered, rounded button that turns solid
-          <code>--accent</code> when active. It shows up for topic selection, the view-mode
-          toggle, and layer switching, and it's defined slightly differently in a couple of
-          separate scoped <code>&lt;style&gt;</code> blocks: <code>ReportHeader.vue</code>'s
-          <code>.pill</code>, <code>MainView.vue</code>'s <code>.topic-pills-row .pill</code>.
-          That's not really a choice, it's unavoidable: Vue's <code>&lt;style scoped&gt;</code>
-          doesn't share CSS between components even when the class name matches. If a pill
-          somewhere looks unstyled, this is almost always why. The component rendering it never
-          defined its own copy of the rule.
+          <code>--accent</code> when active. It shows up for topic selection and layer
+          selection in the sidebar, both defined in <code>MainView.vue</code>'s own scoped
+          <code>&lt;style&gt;</code> (<code>.topic-pills-row .pill</code>,
+          <code>.layer-switch button</code>). If you add a new pill-style control elsewhere and
+          it looks unstyled, remember Vue's <code>&lt;style scoped&gt;</code> doesn't share CSS
+          between components even when the class name matches, the component rendering it needs
+          its own copy of the rule.
         </p>
         <p>
-          The <strong>chip</strong> is Split View's compact indicator picker: a small dot colored
-          by quality level, plus a label, no ring, no description text (that's kept for Single
-          View, where there's room for it). Look at <code>getChipItems(panel)</code> and
-          <code>.chip</code> / <code>.chip-dot</code> in <code>MainView.vue</code>. In Split View
-          this chip row sits directly above the map, stacked with a Topic pill row above it and
-          the Layer switch below it, one control cluster for everything that changes what a given
-          map shows, rather than Topic living far away at the top of the column the way it did
-          before this redesign.
+          The <strong>sidebar</strong> (<code>.sidebar</code>) is the app's left column: the
+          brand block, then a labeled section each for country, layer, topic and indicator
+          selection (<code>.sidebar-section</code>, <code>.sidebar-label</code>). The
+          <strong>hero band</strong> (<code>.band</code>) is the large "Medium 61%"-style
+          headline box at the top of the main column, next to the plain readouts row
+          (<code>.readouts</code>), summarizing whichever indicator is currently active. The
+          active indicator's description used to render inside this band; it was moved out into
+          the plot box instead (next paragraph), so <code>.band</code> today is just the
+          label/level/percentage, nothing else.
         </p>
         <p>
-          <strong>CSS Subgrid</strong> handles Split View's row alignment.
-          <code>.view-columns--split &gt; .view-column</code> uses
-          <code>grid-template-rows: subgrid</code>, so column A's "mainview" section and column
-          B's "mainview" section always start at the same height and take up the same height
-          (whichever one is taller sets it), with zero JavaScript height-measuring involved. It
-          degrades gracefully too: browsers without subgrid support just fall back to
-          independent flex stacking per column, slightly misaligned but never broken.
+          The <strong>plot box's description column</strong> (<code>.plotpanel-desc</code>) is a
+          roughly 1/3-width column to the right of the chart or treemap
+          (<code>.plotpanel-main</code>, 2/3 width, both inside <code>.plotpanel-layout</code>),
+          separated by a vertical divider, holding the active indicator's description text under
+          an "About this indicator" label. This is a deliberate, requested placement, not an
+          arbitrary one, it replaced an earlier version that put the same text inside the hero
+          band, and an even earlier one that put it inside each sidebar card's fold-out (§10). If
+          this moves again, <code>getActiveCard(panel)?.description</code> is the one place that
+          feeds all of them; only the template markup around it needs to change.
         </p>
         <h3>Tailwind: present, but mostly unused</h3>
         <p>
           Tailwind is installed and configured (<span class="filechip">tailwind.config.js</span>,
           <span class="filechip">postcss.config.js</span>), and its <code>@tailwind</code>
           directives sit at the top of <code>main.css</code>. In practice, almost none of the
-          redesigned UI actually uses Tailwind utility classes. The design system above,
+          UI actually uses Tailwind utility classes. The design system above,
           hand-written CSS custom properties plus scoped <code>&lt;style&gt;</code> blocks, is
           what you'll be editing most of the time. Tailwind is effectively legacy plumbing at
           this point. Use its utility classes for something new if you want to, but don't expect
@@ -1054,8 +1306,30 @@ jobs:
           <div class="recipe-head">Change the map's quality color scale</div>
           <div class="recipe-body">
             <ol>
-              <li>The colors live in two places that have to stay in sync: <code>buildFillColorExpression()</code> in <span class="filechip">MetricMap.vue</span> (the actual MapLibre paint expression) and every <code>.map-legend</code> block in <span class="filechip">MainView.vue</span>'s template (the on-screen key, currently hardcoded inline as <code>style="background:#F44336"</code> and so on, once per map instance).</li>
-              <li>The three quality-band colors also exist as design tokens, <code>--good</code> / <code>--warn</code> / <code>--bad</code> in <span class="filechip">main.css</span>, used by the indicator gauge rings and chip dots. Change the map's colors without changing these too, and the map will visibly disagree with the cards describing the same data.</li>
+              <li>The colors live in <strong>three</strong> places that have to stay in sync, by hand - none of them read from a shared source: <code>buildFillColorExpression()</code> in <span class="filechip">MetricMap.vue</span> (the actual MapLibre paint expression, currently <code>#D55E00</code> / <code>#F0E442</code> / <code>#009E73</code>), every <code>.map-legend</code> block in <span class="filechip">MainView.vue</span>'s template (the on-screen key, hardcoded inline as <code>style="background:#D55E00"</code> and so on - MapLibre paint expressions and inline template styles can't read CSS custom properties, which is why these two can't just reference the token below), and the <code>--good</code> / <code>--warn</code> / <code>--bad</code> design tokens in <span class="filechip">main.css</span> (used by the indicator gauge rings and the hero band's left border). Change one without the other two and the map will visibly disagree with the cards describing the same data.</li>
+              <li>If you're instead changing a <em>count-style</em> indicator's gradient (the blue scale), remember there are two separate range behaviors: auto-scaled to the current data's own min/max by default, or a fixed <code>fixedColorRange</code> for anything in <code>FORCE_NON_QUALITY_INDICATORS</code> (§8, §10). Match the legend caps (<code>getLegendCapText()</code>) to whichever one the map is actually using, they read the same flag.</li>
+            </ol>
+          </div>
+        </div>
+
+        <div class="recipe">
+          <div class="recipe-head">Mark an indicator as "non-quality" without a matching data-driven marker</div>
+          <div class="recipe-body">
+            <ol>
+              <li>Confirm first, with a real query against the parquet, whether the indicator's own description already contains the exact marker <code>isNoQualityDescription()</code> checks for. If it does, you don't need this recipe, it'll already get count-badge treatment for free.</li>
+              <li>If not, and it's still not a "good/bad" quality verdict (a match rate against a reference dataset, say), add its indicator name to <code>FORCE_NON_QUALITY_INDICATORS</code> in <span class="filechip">MainView.vue</span> (§8).</li>
+              <li>Check whether the indicator's underlying value is a genuine 0-1 ratio (most likely) or an actual raw count. If it's a ratio, its <code>displayValue</code> must stay computed off <code>isRawCount</code>, not <code>isCount</code>, in <code>loadIndicatorCards()</code>, or it'll round to a bare, wrong integer instead of showing a percentage. See the callout in §8 for exactly this mistake.</li>
+              <li>Test it in a real browser against a country where the indicator actually has data, not just one where it's unavailable (next recipe), the 0%/unavailable case can't tell you whether the percentage formatting is right.</li>
+            </ol>
+          </div>
+        </div>
+
+        <div class="recipe">
+          <div class="recipe-head">Hide an indicator that's unavailable for some countries</div>
+          <div class="recipe-body">
+            <ol>
+              <li>Query the parquet directly for a country where the pipeline doesn't compute this indicator, and check the exact wording of its placeholder description. If it matches <code>UNAVAILABLE_MARKER</code> in <span class="filechip">MainView.vue</span> already (<code>"skipped: indicator not available for this country"</code>), nothing else to do, <code>isUnavailableDescription()</code> already filters it out of <code>loadIndicatorCards()</code>'s output (§8).</li>
+              <li>If the pipeline uses different wording for this case, either normalize it upstream, or extend the check here, but confirm the new wording is stable and topic-agnostic before matching on it.</li>
             </ol>
           </div>
         </div>
@@ -1064,9 +1338,9 @@ jobs:
           <div class="recipe-head">Add a brand-new topic-specific config (like schools/hospitals have)</div>
           <div class="recipe-body">
             <ol>
-              <li>Add an entry to <code>topicConfig</code> in <span class="filechip">helpers.ts</span> if the legacy iframe-2col mode needs to know this topic's default comparison and completeness indicators.</li>
+              <li>Add an entry to <code>topicConfig</code> in <span class="filechip">helpers.ts</span> only if you need a preferred default attribute-completeness indicator for the topic, that's its one remaining use, inside <code>loadIndicatorCards()</code>. It's no longer read by anything else.</li>
               <li>If the new topic needs its own tag-distribution grouping key, add a branch to <code>getTagGroupingKey()</code> in the same file.</li>
-              <li>Normal mode mostly doesn't need topic-specific code at all. <code>loadIndicatorCards</code> and <code>getChipItems</code> already work generically off whatever indicators the parquet file actually contains for that topic. Special-case only genuinely special behavior, like the schools/hospitals operator-type / isced-level sub-toggle. Search for <code>schoolSwitchVisible</code> to see everywhere that toggle reaches.</li>
+              <li>Most topics don't need topic-specific code at all beyond that. <code>loadIndicatorCards</code> already works generically off whatever indicators the parquet file actually contains for that topic. Special-case only genuinely special behavior, like the schools/hospitals operator-type / isced-level sub-toggle. Search for <code>schoolSwitchVisible</code> to see everywhere that toggle reaches.</li>
             </ol>
           </div>
         </div>
@@ -1088,13 +1362,17 @@ jobs:
         <h2><span class="num">14</span> Known rough edges</h2>
         <p>A punch list, in one place. Nothing here is broken today, but all of it is worth knowing before you assume the surrounding code behaves normally.</p>
         <ul>
-          <li>Two Vite config files, wrong one active. §2 and the first recipe above.</li>
+          <li>Two Vite config files, wrong one active. Still physically present (confirmed both <code>vite.config.js</code> and <code>vite.config.ts</code> exist at the project root, most recently touched at the same timestamp). §2 and the first recipe above.</li>
           <li>Country list needs manual maintenance. Adding a country means editing <code>CANDIDATE_COUNTRIES</code> by hand, because the S3 <code>ListBucket</code> permission this could otherwise be automated with is still blocked. §2.</li>
           <li>No automated tests of any kind. Type-checking (<code>vue-tsc</code>) is the only automated gate; manual browser verification is mandatory for every change.</li>
           <li>No ESLint or Prettier configuration. Code style is whatever the existing file already looks like. Match it by hand.</li>
-          <li>Two UI modes sharing one file. §6. Easy to edit the wrong branch, or to couple them by accident.</li>
-          <li><code>MainView.vue</code> is a single file, past 2,800 lines and still growing. There's no enforced component boundary between map controls, the hero band, indicator picking, the region drill-down, and so on. If this file keeps growing, pulling some of that out into dedicated components, the way <code>MetricMap.vue</code> and the two indicator card components already are, is a reasonable next step.</li>
+          <li><code>MAX()</code>/<code>MIN()</code> over a <code>varchar</code> column silently truncates in the current DuckDB-WASM build. Confirmed directly, cost real debugging time before the root cause was found. Use <code>ORDER BY ... LIMIT 1</code> instead. §7.</li>
+          <li>Several design tokens in <code>main.css</code> are now fully dead (<code>--font-sans</code>, <code>--color-bg</code>, <code>--color-card-bg</code>, <code>--color-text</code>, <code>--border-radius</code>, <code>--font-size-text</code>), left over from the removed iframe-2col layout. Safe to delete, just grep first. §11.</li>
+          <li><code>loadTagCoverage()</code> in <code>dataService.ts</code> is exported but has zero call sites, left over from a removed attribute-completeness bar chart. Safe to delete. §7, §10.</li>
+          <li><code>MainView.vue</code> is a single file, around 1,400 lines. There's no enforced component boundary between sidebar controls, the hero band, indicator picking, the region drill-down, and so on. If this file keeps growing, pulling some of that out into dedicated components, the way <code>MetricMap.vue</code> and the two indicator card components already are, is a reasonable next step. It's noticeably smaller than it used to be (it briefly exceeded 2,800 lines before the Split View and iframe-2col removal), so this is less urgent than it once was.</li>
           <li>Tailwind is installed but mostly dead weight. §11. Not harmful, just don't expect to find conventions for using it.</li>
+          <li>Every parquet file is fetched as a whole file into memory (<code>registerParquetFile()</code>, §7) rather than queried in place over HTTP range requests, even when a query only touches one topic/indicator. Worth investigating whether DuckDB-WASM's native remote-parquet reading could cut bytes transferred for the larger grid-layer files, once <code>hot.storage.heigit.org</code>'s range-request/CORS support is confirmed. Not started.</li>
+          <li>Every DuckDB-WASM query, across every card/plot/treemap, is serialized through one shared connection and one operation queue (<code>enqueue()</code> in <code>duckdb.ts</code>, §7) - safe (this is what fixes the "No magic bytes found" corruption), but means queries never actually run concurrently even when they're unrelated. Opening a second connection for independent query sets might allow real parallelism, but needs a deliberate concurrency-safety test first, not just a config flip. Not started.</li>
         </ul>
       </section>
 
@@ -1109,11 +1387,11 @@ jobs:
           <dt>Parquet</dt><dd>A compact, columnar binary file format for tabular data. This app treats every parquet file as a small queryable database through DuckDB-WASM, instead of parsing it into JSON up front.</dd>
           <dt>DuckDB-WASM</dt><dd>A full SQL database engine compiled to WebAssembly, running entirely in the visitor's browser inside a Web Worker. It lets this app run real SQL queries against remote parquet files with no server-side query API. See §7.</dd>
           <dt>ohsome-quality-api / ohsome-api</dt><dd>HeiGIT's separate backend services, not part of this repository, that the Dagster pipeline calls to actually compute quality indicators from OpenStreetMap history data. This app only ever reads their pre-computed output files from S3.</dd>
-          <dt>Panel</dt><dd>One independent map, topic and indicator combination in Normal mode. See <code>ViewPanel</code>, §8. Single View has one; Split View has two.</dd>
-          <dt>Single View / Split View</dt><dd>The two Normal-mode layouts, toggled in the header: one column, or two independent side-by-side columns.</dd>
-          <dt>iframe-2col</dt><dd>The legacy layout used when this app is embedded in an <code>&lt;iframe&gt;</code> by HeiGIT's HDX platform. See §6.</dd>
-          <dt>Hero band</dt><dd>The large "Medium 72%"-style headline box at the top of each panel, summarizing whichever indicator is currently active.</dd>
-          <dt>Region drill-down</dt><dd>Clicking a single district (or state, or hex cell) on the map to scope every box in that panel to just that region. Backed by <code>panel.selectedGeomId</code>. See §9.</dd>
+          <dt>Panel</dt><dd>The one active map/topic/indicator combination, modeled as a single-element array of <code>ViewPanel</code> (a shape left over from a removed two-panel Split View, see §8), exposed to the template as <code>mainPanel</code>.</dd>
+          <dt>Embed mode</dt><dd>A compact CSS styling mode (<code>.embed-mode</code>, <code>isEmbed</code>), applied to the same single layout when the page is embedded in an <code>&lt;iframe&gt;</code> or loaded with <code>?embed</code>/<code>?iframe-2col</code>. Used to be a structurally different template; no longer is. See §6.</dd>
+          <dt>Non-quality indicator</dt><dd>An indicator shown as a plain count-style badge instead of a graded quality ring, because its number isn't a "good/bad" verdict: a genuine raw count (<code>user-activity</code>), or a match/agreement rate forced into the same treatment by product decision (<code>roads-thematic-accuracy</code>, <code>land-cover-thematic-accuracy</code>, via <code>FORCE_NON_QUALITY_INDICATORS</code>). See §8.</dd>
+          <dt>Hero band</dt><dd>The large "Medium 61%"-style headline box at the top of the main column, summarizing whichever indicator is currently active. No longer holds the description text, see §11.</dd>
+          <dt>Region drill-down</dt><dd>Clicking a single district (or state, or hex cell) on the map to scope every box to just that region. Backed by <code>panel.selectedGeomId</code>. See §9.</dd>
           <dt>Candidate country list</dt><dd><code>CANDIDATE_COUNTRIES</code> in <span class="filechip">src/config/countries.ts</span>, the hand-maintained array of country codes the dropdown checks against S3. See §2.</dd>
         </dl>
       </section>
@@ -1123,20 +1401,22 @@ jobs:
         <p>Suggested reading order if you're starting from zero, in one sitting:</p>
         <ol>
           <li>Read this whole document once, top to bottom, without touching code.</li>
-          <li><code>npm run dev</code> the app and click through Single View and Split View for a few minutes, watching the Network tab to see the pmtiles and parquet requests happen live.</li>
+          <li><code>npm run dev</code> the app and click through a few countries, topics and indicators, including Tag Distribution, for a few minutes, watching the Network tab to see the pmtiles and parquet requests happen live.</li>
           <li>Open <span class="filechip">src/views/MainView.vue</span> side by side with §6 through §9 of this guide and trace one topic switch by hand, matching what you read here to the actual lines.</li>
           <li>Check whatever project instructions live in <span class="filechip">CLAUDE.md</span> at the repo root for house rules on how changes should be made (small, surgical, verified in a real browser). Those apply to this project just as much as to any AI assistant working on it.</li>
           <li>Pick one item from <a href="#rough-edges">§14</a> and fix it, as practice, before attempting a real feature.</li>
         </ol>
         <p class="end-note">
-          This document describes the codebase as of the redesign that introduced Single View,
-          Split View, the CSS-subgrid row alignment, the region drill-down feature, the
-          self-hosted fonts and logo, and the current S3 path and candidate-country-list
-          mechanism. It will drift out of date again as the app keeps changing, that's normal, not
-          a sign this guide was written carelessly. Treat it as a map of the territory on the day
-          it was last updated, not a promise about the future. When in doubt, the source code is
-          the final authority. This guide's only job is to make that source code fast to
-          understand.
+          This document describes the codebase as of the sidebar redesign that removed Split View
+          and the legacy iframe-2col layout in favor of one unified template, moved the brand and
+          country/topic/layer/indicator pickers into a left sidebar, folded Tag Distribution into
+          the indicator list instead of a permanently-visible box, moved indicator descriptions
+          into the plot box, added the non-quality-indicator and unavailable-indicator filtering
+          described in §8, and switched "Data current as of" to the parquet's own timestamp. It
+          will drift out of date again as the app keeps changing, that's normal, not a sign this
+          guide was written carelessly. Treat it as a map of the territory on the day it was last
+          updated, not a promise about the future. When in doubt, the source code is the final
+          authority. This guide's only job is to make that source code fast to understand.
         </p>
       </section>
 
